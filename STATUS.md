@@ -12,14 +12,15 @@ control repo:      ignaciomagana/darksirens-rebuild
 
 ```text
 PHASE 3 — POPULATION MODELS
-status: VALIDATION COMPLETE / PENDING PR MERGE
+status: PR VALIDATION IN PROGRESS
 working repo:   ignaciomagana/darksirens-core
 working branch: rebuild/phase3-population
-accepted SHA:   b4e476db727036fea9e97cdb8fb111206a5fba5d
+pull request:   #2
+current SHA:    2461954c47df587ed70f711769a42779775be692
 ```
 
-Do not begin Phase 4 until the Phase-3 PR is reviewed, merged to core `main`, and
-the merge SHA is recorded in this repository.
+Do not begin Phase 4 until PR #2 is green at the exact current head, squash-
+merged to core `main`, and the merged SHA is recorded here.
 
 ## Completed
 
@@ -62,41 +63,43 @@ cosmology/shared redshift grids, standardized GW PE/selection store contracts,
 `GWStore`/`SelectionStore`, PE/injection loaders, and current
 `chieff_reference` selection support.
 
-## Phase 3 — validation complete
+## Phase 3 progress
 
-Population models are reconstructed under `darksirens.population` on
-`rebuild/phase3-population`. The accepted branch contains parametric models,
-mixtures/components, component-spin, grammar/registry, fixed GWTC sets, GP
-models and normalization machinery. Legacy proposal/PPC `population.sampling`
-and application CLI wiring remain intentionally outside this phase.
+Population models are reconstructed under `darksirens.population`: parametric
+models, mixtures/components, component-spin, grammar/registry, fixed GWTC sets,
+GP models and normalization machinery. Legacy proposal/PPC
+`population.sampling` and application CLI wiring remain intentionally outside
+this phase.
 
-Final clean acceptance gate:
+The fully cleaned scientific gate previously passed at
+`b4e476db727036fea9e97cdb8fb111206a5fba5d`:
 
 ```text
 workflow run: 34437051423
 job:          102744211460
-head SHA:     b4e476db727036fea9e97cdb8fb111206a5fba5d
-status:       SUCCESS
-```
-
-Results:
-
-```text
-ruff F/E9: PASS
-Phase-2 regressions: 14 passed
 full reconstructed suite: 125 passed, 1 regen-only skip
-legacy population probe: PASS
-reconstructed population probe: PASS
 legacy/new max_abs = 0
 legacy/new max_rel = 0
 comparison rtol = 1e-12
 ordinary population import leaves tinygp unloaded: PASS
 ```
 
-The copied cross-phase inference/CLI assertions were physically separated from
-the Phase-3 tests rather than hidden by permanent deselection. The permanent
-workflow now runs plain `python -m pytest -q` in addition to focused physics
-tests. No scientific tolerance was relaxed.
+PR #2 then exposed three test-only F401s in the older Phase-2 PR lint workflow:
+
+```text
+ComponentSpinModel
+get_q_grid
+ModelNameError
+```
+
+Only those unused imports were removed. The one-shot lint-fix workflow was then
+deleted. Scientific code and numerical tolerances were unchanged. Because the
+head changed, the full branch and PR acceptance gates are being rerun from
+scratch at:
+
+```text
+2461954c47df587ed70f711769a42779775be692
+```
 
 Detailed record: `phases/03_population.md`.
 
@@ -104,21 +107,21 @@ Detailed record: `phases/03_population.md`.
 
 ### `darksirens-core`
 
-Phase 2 is complete on `main` at:
+`main` remains Phase 2 at:
 
 ```text
 450b9bdb66d2dc2d6e7f927143f9b4b4b9f9cec6
 ```
 
-Phase 3 is validation-complete on branch:
+Phase 3 is under PR #2 at current head:
 
 ```text
 rebuild/phase3-population
-b4e476db727036fea9e97cdb8fb111206a5fba5d
+2461954c47df587ed70f711769a42779775be692
 ```
 
-Pending: PR review and merge. Catalog/redshift, hierarchical likelihood, GW
-selection, samplers and the high-level `model/infer` API are not yet migrated.
+Catalog/redshift, hierarchical likelihood, GW selection, samplers and the
+high-level `model/infer` API are not yet migrated.
 
 ### `darksirens-surveys`
 
@@ -142,12 +145,12 @@ These remain deferred until ordinary core likelihood parity.
 
 ## Scientific questions
 
-None opened. No scientific behavior change has been accepted through the
-Phase-3 reconstruction. Phase-3 legacy/new population parity is exact on the
-accepted branch.
+None opened. No scientific behavior change has been accepted through Phase 3.
+No tolerance has been relaxed.
 
 ## Next action
 
-Open/review the Phase-3 pull request against core `main`; merge only at accepted
-head SHA `b4e476db727036fea9e97cdb8fb111206a5fba5d` after checks pass. Record the
-PR and merged `main` SHA here before Phase 4 begins.
+Require `reference-integrity`, `phase2-foundation`, and `phase3-population` to
+all pass for PR #2 at head `2461954c47df587ed70f711769a42779775be692`.
+Review the final diff, squash-merge only at that head, and record the merged
+core `main` SHA before starting Phase 4.
