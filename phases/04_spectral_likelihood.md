@@ -9,15 +9,17 @@ core repository:  ignaciomagana/darksirens-core
 base core SHA:     e0b40fef65261a27b67aa9657a97216df3e8444f
 working branch:    rebuild/phase4-spectral-likelihood
 accepted head:     cfdb138d40d66614bf9b1264c2574d0b497b812d
+PR:                #3
+squash merge SHA:  0f97feff7eb283a1f541bef9a776c9347084e70e
 ```
 
 ## Status
 
-BRANCH ACCEPTED. The complete Phase-4 catalog-free spectral-siren likelihood and
-GW-selection slice is green at the exact branch head above, including strict
-separate-process numerical parity against the pinned legacy implementation.
-Next action is PR review and exact-head historical workflow validation before
-squash merge. No Phase-5 work may begin until that merge is verified on `main`.
+COMPLETE. Phase 4 was accepted at the exact branch head, all historical and
+Phase-4 PR workflows passed at that same head, the complete changed-file diff was
+reviewed for ownership/scientific-boundary violations, PR #3 was squash-merged
+with `expected_head_sha`, and `main` was verified at the merge SHA above. The
+post-merge frozen-reference workflow also passed.
 
 ## Scientific scope
 
@@ -268,24 +270,98 @@ comparison atol = 0
 The workflow imports legacy and reconstructed `darksirens` in separate Python
 processes, so package-name collision cannot mask parity errors.
 
-## Branch diff at acceptance
+## PR exact-head gate
 
-Relative to Phase-3 `main` (`e0b40fef...`), accepted head `cfdb138d...` is 21
-commits ahead and 0 behind. The diff is restricted to Phase-4-owned core runtime,
-likelihood/selection code, tests/probes, and the Phase-4 workflow. No catalog,
-LSS, lensing, flow, sampler, or high-level CLI implementation was imported.
+PR #3 was opened with base `main` at Phase-3 SHA `e0b40fef...` and head fixed at
+`cfdb138d...`. The head remained unchanged through review. All required
+PR-triggered workflows passed at that exact head:
 
-## PR acceptance gate
+```text
+reference-integrity
+  run: 34446633557
+  job: 102772728746
+  result: SUCCESS
 
-Before merge, the PR must be at the exact accepted head and require all relevant
-historical workflows plus the Phase-4 workflow to pass. Then review the complete
-PR diff, squash merge with expected-head protection, verify `main`, and record
-the merge here and in `STATUS.md`.
+phase2-foundation
+  run: 34446633595
+  job: 102772729079
+  result: SUCCESS
+
+phase3-population
+  run: 34446633551
+  job: 102772729151
+  result: SUCCESS
+
+phase4-spectral-likelihood
+  run: 34446633527
+  job: 102772728950
+  result: SUCCESS
+```
+
+The Phase-4 PR job again passed its focused tests, full reconstructed suite,
+dependency audit, independent legacy and candidate probes, and strict fixed-theta
+parity. The historical Phase-3 job again passed its population legacy/candidate
+comparison and optional-dependency boundary.
+
+## Diff review
+
+Relative to Phase-3 `main`, the accepted branch was 21 commits ahead and 0
+behind, with 25 changed files, 3254 additions and 2 deletions. The review covered
+the Phase-4 workflow; `_numerics`; cosmology volume helper; GW runtime/type and
+namespace deltas; likelihood event/hierarchical/weight code; selection estimator
+and guard code; focused coordinate, variance, batching, gradient, spectral and
+spin tests; and both parity tools.
+
+No blocker was found. The changed scientific/runtime code stays within the
+frozen Phase-4 ownership boundary. No concrete catalog, survey, LSS, lensing,
+flow, sampler, or CLI dependency entered the reconstructed likelihood/selection
+runtime. The component-spin shape not present in the chi-eff-only legacy parity
+fixture is separately pinned by runtime, padding, batched-selection, and
+population-forwarding tests.
+
+## Merge and main verification
+
+PR #3 was squash-merged with:
+
+```text
+expected head:    cfdb138d40d66614bf9b1264c2574d0b497b812d
+merge method:     squash
+merge SHA:        0f97feff7eb283a1f541bef9a776c9347084e70e
+merged:           2026-09-10 06:51:15 UTC
+```
+
+GitHub `main` was then fetched directly and points exactly to:
+
+```text
+0f97feff7eb283a1f541bef9a776c9347084e70e
+```
+
+The merge commit has parent `e0b40fef65261a27b67aa9657a97216df3e8444f`
+and tree `da49fb40eb97c63707314751fc3ce0bd3643a42e`, the accepted branch tree.
+The post-merge push-triggered frozen-reference check also passed:
+
+```text
+reference-integrity run: 34447108888
+job:                    102774202182
+result:                 SUCCESS
+```
+
+## Phase-4 conclusion
+
+Phase 4 reproduces the pinned legacy catalog-free spectral likelihood and GW
+selection machinery without a scientific behavior change. The accepted core
+`main` for the next phase is:
+
+```text
+0f97feff7eb283a1f541bef9a776c9347084e70e
+```
 
 ## Next action
 
-Open the Phase-4 PR from `rebuild/phase4-spectral-likelihood` into `main`, require
-all exact-head PR workflows to pass, inspect every changed file for ownership and
-scientific-boundary violations, squash merge only if the head remains
-`cfdb138d40d66614bf9b1264c2574d0b497b812d`, verify the resulting `main`, then
-start Phase 5 from that verified merge SHA.
+Begin Phase 5 only from the verified merge SHA above. Read the control-plane
+catalog/dark/bright-siren phase prompt and ownership documents before creating a
+branch. Phase 5 must add the smallest core catalog contract and complete/incomplete
+dark-siren likelihood composition while preserving the existing spectral path;
+bright-siren counterpart support is included only according to the frozen phase
+contract. LSS, survey construction, lensing, flows, samplers, and the old
+application dispatcher remain out of scope.
