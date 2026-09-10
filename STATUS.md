@@ -12,15 +12,15 @@ control repo:      ignaciomagana/darksirens-rebuild
 
 ```text
 PHASE 3 — POPULATION MODELS
-status: PR VALIDATION IN PROGRESS
+status: READY FOR GUARDED SQUASH MERGE
 working repo:   ignaciomagana/darksirens-core
 working branch: rebuild/phase3-population
 pull request:   #2
-current SHA:    2461954c47df587ed70f711769a42779775be692
+accepted SHA:   2461954c47df587ed70f711769a42779775be692
 ```
 
-Do not begin Phase 4 until PR #2 is green at the exact current head, squash-
-merged to core `main`, and the merged SHA is recorded here.
+Do not begin Phase 4 until PR #2 is squash-merged at the exact accepted head and
+the merged core `main` SHA is recorded here.
 
 ## Completed
 
@@ -63,7 +63,7 @@ cosmology/shared redshift grids, standardized GW PE/selection store contracts,
 `GWStore`/`SelectionStore`, PE/injection loaders, and current
 `chieff_reference` selection support.
 
-## Phase 3 progress
+## Phase 3 — ready for merge
 
 Population models are reconstructed under `darksirens.population`: parametric
 models, mixtures/components, component-spin, grammar/registry, fixed GWTC sets,
@@ -71,12 +71,10 @@ GP models and normalization machinery. Legacy proposal/PPC
 `population.sampling` and application CLI wiring remain intentionally outside
 this phase.
 
-The fully cleaned scientific gate previously passed at
-`b4e476db727036fea9e97cdb8fb111206a5fba5d`:
+The first clean scientific acceptance passed at
+`b4e476db727036fea9e97cdb8fb111206a5fba5d`, with:
 
 ```text
-workflow run: 34437051423
-job:          102744211460
 full reconstructed suite: 125 passed, 1 regen-only skip
 legacy/new max_abs = 0
 legacy/new max_rel = 0
@@ -84,22 +82,33 @@ comparison rtol = 1e-12
 ordinary population import leaves tinygp unloaded: PASS
 ```
 
-PR #2 then exposed three test-only F401s in the older Phase-2 PR lint workflow:
-
-```text
-ComponentSpinModel
-get_q_grid
-ModelNameError
-```
-
-Only those unused imports were removed. The one-shot lint-fix workflow was then
-deleted. Scientific code and numerical tolerances were unchanged. Because the
-head changed, the full branch and PR acceptance gates are being rerun from
-scratch at:
+PR #2 then exposed three test-only F401s in the older Phase-2 PR lint workflow.
+Only those unused imports were removed; scientific code and tolerances were
+unchanged. The complete gate was rerun from scratch at the final accepted head:
 
 ```text
 2461954c47df587ed70f711769a42779775be692
 ```
+
+All PR-triggered checks pass at that exact SHA:
+
+```text
+reference-integrity: SUCCESS
+phase2-foundation:   SUCCESS
+phase3-population:   SUCCESS
+```
+
+Final Phase-3 run:
+
+```text
+workflow run: 34437645424
+job:          102745952311
+status:       SUCCESS
+```
+
+Final diff sanity contains exactly 23 intended Phase-3 files and no temporary
+workflow, marker, stale dependency report, or unrelated file. No scientific or
+numerical tolerance was relaxed.
 
 Detailed record: `phases/03_population.md`.
 
@@ -107,13 +116,13 @@ Detailed record: `phases/03_population.md`.
 
 ### `darksirens-core`
 
-`main` remains Phase 2 at:
+`main` remains Phase 2 until PR #2 merges:
 
 ```text
 450b9bdb66d2dc2d6e7f927143f9b4b4b9f9cec6
 ```
 
-Phase 3 is under PR #2 at current head:
+Phase 3 accepted head:
 
 ```text
 rebuild/phase3-population
@@ -150,7 +159,7 @@ No tolerance has been relaxed.
 
 ## Next action
 
-Require `reference-integrity`, `phase2-foundation`, and `phase3-population` to
-all pass for PR #2 at head `2461954c47df587ed70f711769a42779775be692`.
-Review the final diff, squash-merge only at that head, and record the merged
-core `main` SHA before starting Phase 4.
+Squash-merge `ignaciomagana/darksirens-core#2` with expected head
+`2461954c47df587ed70f711769a42779775be692`. Verify the merged core `main` SHA,
+record it here and in `phases/03_population.md`, mark Phase 3 COMPLETE, and only
+then start Phase 4.
