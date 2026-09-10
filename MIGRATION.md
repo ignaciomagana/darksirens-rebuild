@@ -33,7 +33,7 @@ DO_NOT_MIGRATE
 
 | Repository | Role | Status | Latest migration SHA/PR |
 |---|---|---|---|
-| `darksirens-core` | core HBI/siren package | Phase 1 reference harness complete; science migration not started | `74559ef33931b3fe0400ada9a0cb11d3f9fbe48b` |
+| `darksirens-core` | core HBI/siren package | Phase 2 foundation + GW data contracts complete | `450b9bdb66d2dc2d6e7f927143f9b4b4b9f9cec6`, PR #1 |
 | `darksirens-surveys` | survey/catalog construction | not started | |
 | `darksirens-lss` | LSS/completion/latent fields | not started | |
 | `darksirens-lensing` | weak/strong lensing | not started | |
@@ -42,45 +42,75 @@ DO_NOT_MIGRATE
 
 | Legacy domain | Destination | Mode | Status |
 |---|---|---|---|
-| `core` | core physical owners + lensing/LSS state removed | SPLIT | inventoried |
-| `utils` | core physical owners/private helpers | SPLIT | inventoried |
-| GW store/sample code | core `gw` | REIMPLEMENT_INTERFACE | inventoried |
-| `gw/populations` | core `population` | MOVE_AND_RENAME/SPLIT | inventoried |
-| GP population models | core `population` | MOVE_AND_RENAME | inventoried |
-| ordinary catalog runtime | core `catalog` | SPLIT | inventoried |
-| depth/raw survey construction | surveys | SPLIT | inventoried |
-| ordinary redshift/completeness | core cosmology/catalog/selection | SPLIT | inventoried |
-| Q_LSS/lognormal/latent/multitracer | LSS | SPLIT | inventoried |
-| ordinary event/hierarchical likelihood | core likelihood | SPLIT | inventoried |
-| GW MC selection | core selection | MOVE_AND_RENAME | inventoried |
-| WL/pair/cluster likelihood | lensing | SPLIT | inventoried |
-| inference orchestration | core + extension-owned state | SPLIT | inventoried |
-| Q provenance | LSS | MOVE_AND_RENAME | inventoried |
-| generic host marks | core catalog/hosts | SPLIT | inventoried |
-| reusable angular sky models | core population/angular | SPLIT | inventoried |
-| ordinary results/settings | core IO | MOVE_AND_RENAME | inventoried |
-| legacy CLIs | all owners or legacy | REIMPLEMENT_INTERFACE | inventoried |
-| experiments/scripts | selective only | TEST_ONLY/DO_NOT_MIGRATE | inventoried |
+| `core` | core physical owners + lensing/LSS state removed | SPLIT | migration active |
+| `utils` | core physical owners/private helpers | SPLIT | cosmology migrated; remainder pending |
+| GW store/sample code | core `gw` | REIMPLEMENT_INTERFACE | Phase 2 complete, exact parity |
+| `gw/populations` | core `population` | MOVE_AND_RENAME/SPLIT | next phase |
+| GP population models | core `population` | MOVE_AND_RENAME | next phase |
+| ordinary catalog runtime | core `catalog` | SPLIT | pending |
+| depth/raw survey construction | surveys | SPLIT | pending |
+| ordinary redshift/completeness | core cosmology/catalog/selection | SPLIT | cosmology/grid part complete; remainder pending |
+| Q_LSS/lognormal/latent/multitracer | LSS | SPLIT | pending |
+| ordinary event/hierarchical likelihood | core likelihood | SPLIT | pending |
+| GW MC selection | core selection | MOVE_AND_RENAME | pending |
+| WL/pair/cluster likelihood | lensing | SPLIT | pending |
+| inference orchestration | core + extension-owned state | SPLIT | pending |
+| Q provenance | LSS | MOVE_AND_RENAME | pending |
+| generic host marks | core catalog/hosts | SPLIT | pending |
+| reusable angular sky models | core population/angular | SPLIT | pending |
+| ordinary results/settings | core IO | MOVE_AND_RENAME | pending |
+| legacy CLIs | all owners or legacy | REIMPLEMENT_INTERFACE | pending |
+| experiments/scripts | selective only | TEST_ONLY/DO_NOT_MIGRATE | ongoing as needed |
 
 Detailed ownership is in `inventories/`.
 
 ## Phase-1 numerical reference assets
 
-`darksirens-core` now owns the neutral reconstruction reference harness:
+`darksirens-core` owns the neutral reconstruction reference harness:
 
 ```text
 tests/reference/legacy/unified_k1_golden.json
 tests/reference/legacy/unified_k1_manifest.json
 tools/validate_reference.py
 tools/compare_reference.py
-tools/replay_legacy_reference.py
+tools/replay_legacy_unified.py
 .github/workflows/reference.yml
 .github/workflows/legacy-reference-replay.yml
 ```
 
-The frozen golden JSON is byte-identical to the legacy Git blob `560e44adb712763893111a3607f6d7ca8b168b7a`. Candidate scientific code is judged against this bank; it may not rewrite it.
+The frozen golden JSON is byte-identical to the legacy Git blob
+`560e44adb712763893111a3607f6d7ca8b168b7a`. Candidate scientific code is judged
+against this bank; it may not rewrite it.
 
-Pinned legacy replay at run `34429433906` succeeded. The known CPU drift of the three legacy Q/LSS cells is described by the `legacy-replay` profile only; the reconstructed LSS target remains the canonical `rtol=1e-12` bank.
+Pinned legacy replay at run `34429433906` succeeded. The known CPU drift of the
+three legacy Q/LSS cells is described by the `legacy-replay` profile only; the
+reconstructed LSS target remains the canonical `rtol=1e-12` bank.
+
+## Phase-2 accepted migration
+
+Merged through `darksirens-core` PR #1 as:
+
+```text
+450b9bdb66d2dc2d6e7f927143f9b4b4b9f9cec6
+```
+
+Accepted owners:
+
+```text
+legacy core/jax_config       -> darksirens/_jax.py
+legacy cosmology constants   -> darksirens/cosmology/parameters.py + distances.py
+legacy utils/interp2d        -> darksirens/cosmology/_interpolation.py
+legacy utils/cosmology       -> darksirens/cosmology/distances.py + volume.py
+legacy redshift/grid         -> darksirens/cosmology/_grid.py
+legacy CosmoParams           -> darksirens/cosmology/parameters.py
+legacy gw/store_contract     -> darksirens/gw/store.py
+legacy GW/Selection records  -> darksirens/gw/types.py
+legacy standard GW loaders   -> darksirens/gw/samples.py
+```
+
+Phase-2 final branch validation run `34431185197` passed 14 unit tests, definite-
+error lint, zero-difference cosmology parity, exact GW store parity (`rtol=0`),
+and the light package-root import contract.
 
 ## Migration invariants
 
