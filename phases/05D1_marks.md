@@ -8,8 +8,9 @@ legacy SHA:        c042527238bd71421b792936bc48c3b815b90d6d
 core repository:  ignaciomagana/darksirens-core
 phase-5 branch:    rebuild/phase5-catalog-dark-bright
 5C accepted head: 57af56158757ddd9272e0a2f2dc9bfbb624c1fec
-5D1 candidate:    491f03fc919e3bfbb8a28a23a155c6286e4197bf
-workflow run:     34473599144
+first candidate:  491f03fc919e3bfbb8a28a23a155c6286e4197bf
+current candidate:b9fe87a93b16fc97f74a126528f36729283c9ffc
+first failed run: 34473599144
 ```
 
 Legacy remains read-only. Candidate and legacy parity probes run in separate
@@ -17,8 +18,25 @@ processes.
 
 ## Status
 
-IN PROGRESS — candidate is under the exact-head Phase-5 gate. Do not treat 5D1
-as accepted until the workflow and the frozen `marks` cell both pass.
+IN PROGRESS. The first 5D1 candidate failed the pre-science lint gate only; no
+scientific test or parity probe ran. The current candidate differs by one line:
+the unused `typing.Any` import was removed from `catalog/hosts.py`. Physics,
+fixtures, and parity tolerances are unchanged.
+
+## Failed-gate record
+
+```text
+candidate: 491f03fc919e3bfbb8a28a23a155c6286e4197bf
+run:       34473599144
+job:       102858986445
+first gate:Definite-error lint
+result:    FAILURE
+error:     F401 unused import `typing.Any`
+```
+
+Every later step was skipped by the workflow. This failure says nothing about
+the marked-host reconstruction numerics. The repair commit is
+`b9fe87a93b16fc97f74a126528f36729283c9ffc` and removes only that import.
 
 ## Ownership
 
@@ -89,7 +107,7 @@ against `tests/reference/legacy/unified_k1_golden.json` at `rtol=1e-12`,
 
 ## Candidate diff
 
-The provisional 5D1 commit adds only:
+The provisional 5D1 work touches only:
 
 ```text
 src/darksirens/catalog/hosts.py
@@ -99,11 +117,13 @@ tools/probe_catalog_marks.py
 .github/workflows/phase5-catalog-dark-bright.yml
 ```
 
-No 5D2 parametric selection-function runtime is included in this candidate.
+No 5D2 parametric selection-function runtime is included.
 
 ## Next action
 
-Read workflow run `34473599144`. If it fails, fix only the first failing layer
-and keep the frozen comparator unchanged. If it passes, record exact test counts
-and parity residuals here and in `STATUS.md`, mark 5D1 accepted, then begin 5D2
-from that exact accepted head with read-only selection-runtime inspection first.
+Run the exact-head Phase-5 workflow for
+`b9fe87a93b16fc97f74a126528f36729283c9ffc`. If it fails, fix only the first
+failing layer and keep the frozen comparator unchanged. If it passes, record
+exact test counts and parity residuals here and in `STATUS.md`, mark 5D1
+accepted, then begin 5D2 from that exact accepted head with read-only
+selection-runtime inspection first.
