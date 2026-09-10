@@ -17,9 +17,20 @@ processes.
 
 ## Status
 
-IN PROGRESS. Exact-head CI for `031f649f139a3bd2429a11053634a34cc3632a91`
-is running. Nothing below is an acceptance claim until that run and the
-separate-process parity gate are green.
+IN PROGRESS — NOT ACCEPTED.
+
+Exact-head CI on `031f649f139a3bd2429a11053634a34cc3632a91` completed all
+focused/regression/dependency gates and every previously accepted Phase-5 parity
+gate, then failed only the new 5D2 legacy/candidate comparator.
+
+```text
+workflow run: 34525306049
+job:          103032622715
+result:       FAILURE at final 5D2 parity step only
+```
+
+The failure is being treated as a numerical-semantics bug until resolved. The
+comparison tolerance is frozen and will not be widened.
 
 ## Frozen ownership decision
 
@@ -112,7 +123,7 @@ z >  z_depth: dN_miss = dN_exp
 ```
 
 Therefore `C_eff=0` above the depth, but the raw diagnostic/state `C` remains
-`C_sel`. This distinction is now pinned explicitly in candidate tests.
+`C_sel`. This distinction is pinned explicitly in candidate tests.
 
 ## Legacy anchors inspected
 
@@ -175,7 +186,7 @@ It contains only the quantities needed to evaluate the standardized runtime
 curve. Survey covariance, optimizer information and background/provenance
 checks stay survey-side.
 
-## Candidate correction before acceptance
+## Candidate correction before parity replay
 
 The first candidate commit
 `b0fe30d889c3bee2284636c43b040f740f6b61ac` zeroed the returned raw `C` field
@@ -188,6 +199,57 @@ The correction commit
 `031f649f139a3bd2429a11053634a34cc3632a91` removes that raw-C mutation and
 changes the focused depth test to pin the frozen distinction. No selection
 curve, expected-count physics, tolerance, or prior behavior changed.
+
+## Exact-head CI result at 031f649f
+
+The following passed before the final 5D2 comparator:
+
+```text
+5A compact tests:                       5 passed
+5A redshift/distance tests:            11 passed
+5B completeness/HLO tests:             11 passed
+5C explicit hierarchy tests:            3 passed
+5D1 marked-host tests:                  7 passed
+5D2 catalog-selection tests:            9 passed
+full reconstructed suite:             251 passed, 1 regen-only skip
+dependency/light-import audit:         PASS
+5A legacy/new parity:                  PASS, max_abs=max_rel=0
+5B legacy/new parity:                  PASS, max_abs=max_rel=0
+5C legacy/new detailed parity:         PASS, max_abs=max_rel=0
+5D1 legacy/new marked parity:          PASS, max_abs=max_rel=0
+```
+
+Only the new 5D2 comparison failed:
+
+```text
+max_abs = 7.276e-11
+max_rel = 1.778e-11
+rtol    = 1e-12
+atol    = 0
+```
+
+Representative failures:
+
+```text
+Gaussian record 0, dN_miss[z index 164]:
+legacy    1.1792142844497329
+candidate 1.1792142844485503
+relative  1.003e-12
+
+Schechter record 2, raw C tail:
+z index 739: legacy 2.9751595509610620e-23
+             cand.  2.9751595509645914e-23   rel 1.186e-12
+z index 939: legacy 7.4613628763121804e-66
+             cand.  7.4613628763975585e-66   rel 1.144e-11
+z index 988: legacy 5.0352644748049506e-84
+             cand.  5.0352644748944529e-84   rel 1.778e-11
+```
+
+The Schechter failures are concentrated in extremely small tail probabilities;
+the Gaussian failure is just over the frozen relative tolerance in the ordinary
+missing density. This is not grounds to relax the comparator. The next
+diagnostic is the shared distance-modulus/table path and exact operation order,
+because the copied Gaussian/Schechter algebra itself matches the frozen source.
 
 ## Acceptance gate
 
