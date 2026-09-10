@@ -12,17 +12,19 @@ control repo:      ignaciomagana/darksirens-rebuild
 
 ```text
 PHASE 5 — CORE CATALOG + DARK/BRIGHT SIRENS
-status:         5A ACCEPTED; 5B ORDINARY COMPLETENESS NEXT
+status:         5A + 5B ACCEPTED; 5C ORDINARY PRIOR/LIKELIHOOD COMPOSITION NEXT
 core repo:      ignaciomagana/darksirens-core
 phase-5 base:   0f97feff7eb283a1f541bef9a776c9347084e70e
 working branch: rebuild/phase5-catalog-dark-bright
 accepted 5A:    f418174a7fc8734bfbcf553d5b5c36f9f4280987
+accepted 5B:    f4bc721496359f09fc58609fa23ccce21366f728
 ```
 
-Phase 4 remains complete on `darksirens-core/main`. Phase 5A has reconstructed
-the standardized ordinary catalog runtime/compaction and observed-galaxy
-redshift kernel on the Phase-5 branch, with strict separate-process parity
-against the pinned legacy implementation. Phase 5 as a whole is not complete.
+Phase 4 remains complete on `darksirens-core/main`. Phase 5A reconstructed the
+standardized ordinary catalog runtime/compaction and observed-galaxy redshift
+kernel. Phase 5B reconstructed the ordinary non-LSS completeness/count budget
+and finite-depth behavior. Both have strict separate-process parity against the
+pinned legacy implementation. Phase 5 as a whole is not complete.
 
 ## Completed
 
@@ -117,7 +119,7 @@ job:             102804866600
 workflow result: SUCCESS
 ```
 
-Scientific acceptance:
+Scientific acceptance at the 5A checkpoint:
 
 ```text
 catalog/compaction tests:                5 passed
@@ -133,14 +135,55 @@ comparison rtol:                         1e-12
 comparison atol:                         0
 ```
 
-The strict probe caught a real cached-evaluator numerical-semantic difference:
-the mature legacy one-pass linear-domain sum underflows sufficiently remote
-Gaussian tails to exact `-inf`, while the first reconstruction's log-space
-reduction kept them finite. The candidate now reproduces the frozen legacy
-one-pass path exactly; a focused regression pins that distinction. No physical
-support threshold was invented.
+The strict probe caught a cached-evaluator numerical-semantic difference: the
+mature legacy one-pass linear-domain sum underflows sufficiently remote Gaussian
+tails to exact `-inf`, while the first reconstruction's log-space reduction kept
+them finite. The candidate now reproduces the frozen legacy one-pass path; no
+physical support threshold was invented.
+
+After the 5B operation-order parity correction, the 5A catalog-kernel probe is
+now exactly equal to frozen legacy (`max_abs=max_rel=0`).
 
 Detailed checkpoint: `phases/05A_catalog_kernel.md`.
+
+### Phase 5B — ordinary completeness + depth
+
+Accepted on the still-open Phase-5 branch:
+
+```text
+accepted head:   f4bc721496359f09fc58609fa23ccce21366f728
+workflow run:    34461981743
+job:             102821696680
+workflow result: SUCCESS
+```
+
+Scientific acceptance:
+
+```text
+Phase 5A compact tests:                  5 passed
+Phase 5A redshift/distance tests:       11 passed
+Phase 5B completeness/HLO tests:        11 passed
+full reconstructed suite:              226 passed, 1 regen-only skip
+dependency/light-import audit:          PASS
+legacy/new 5A catalog-kernel parity:    PASS, max_abs=max_rel=0
+legacy/new 5B completeness parity:      PASS, max_abs=max_rel=0
+comparison rtol:                        1e-12
+comparison atol:                        0
+```
+
+The 5B layer contains only the ordinary matched count-KDE/smoothing estimator,
+expected-count grid, clipped differential completeness, missing-host count
+budget, and finite-depth relaxation. The theta-independent observed KDE is a
+separate `ObservedDensityCache`; proposal-dependent expected grids live in
+`CompletionState`. `GalaxyCatalog` was not enlarged with cache/state.
+
+A strict parity failure in near-zero retained fractions exposed a last-bit
+operation-order difference in the already-owned galaxy measure. Candidate had
+used `log(dV) + delta*log1p(z)`; frozen legacy forms
+`log[dV * (1+z)^delta]`. Core now uses the exact frozen operation order. The
+comparator was not loosened; final 5A and 5B parity are both exact zero.
+
+Detailed checkpoint: `phases/05B_catalog_completeness.md`.
 
 ## Production repository state
 
@@ -153,7 +196,8 @@ Verified `main` remains:
 ```
 
 Phases 2, 3, and 4 are complete. Phase 5 is active on
-`rebuild/phase5-catalog-dark-bright`; 5A is accepted but not merged separately.
+`rebuild/phase5-catalog-dark-bright`; 5A and 5B are accepted subphase
+checkpoints but are not merged separately.
 
 ### `darksirens-surveys`
 
@@ -189,15 +233,41 @@ None opened. No scientific behavior change is authorized for Phase 5. Ordinary
 complete/incomplete dark-siren and bright-siren behavior must be reproduced
 against the pinned legacy implementation before API cleanup.
 
+## 5C frozen facts
+
+Read-only inspection of the pinned legacy source fixes the next composition:
+
+```text
+ordinary dark PE + selection:
+    [N_obs p_cat(z|row) + dN_miss(z|row)] / [N_obs + N_miss]
+
+complete occupied row:
+    p_cat(z|row)
+
+complete empty row:
+    zero policy   -> -inf
+    volume policy -> normalized comoving-volume prior
+
+bright PE numerator:
+    Normal(z; z_counterpart, dz_counterpart) * normalized volume prior
+    with optional resolved-global-pixel gate
+
+bright selection:
+    normalized volume prior only
+```
+
+Ordinary dark and complete selection must use the same redshift/host model as
+the PE numerator. Phase 4 already exposes the required redshift-prior callback
+inside `log_sample_weight`; 5C must compose through that seam rather than copy
+the legacy likelihood factory.
+
 ## Next action
 
-Start 5B from accepted 5A head
-`f418174a7fc8734bfbcf553d5b5c36f9f4280987`. Reinspect frozen legacy
-`darksirens/redshift/completion.py` and the ordinary completeness/depth tests.
-Reconstruct only the non-LSS count-budget path in
-`src/darksirens/catalog/completeness.py`, preserving the shared smoothing
-operator, `sigma_smooth=0.05`, count odds, empty-row behavior, and finite-depth
-semantics. Do not port `delta_g`, Q/ensembles, latent state, field/global
-normalizers, masks, or survey-selection fitting. Add a separate-process
-legacy/candidate completeness probe and require the same strict numerical gate
-before starting 5C.
+Start 5C from exact accepted 5B head
+`f4bc721496359f09fc58609fa23ccce21366f728`. Reconstruct the smallest explicit
+ordinary catalog/counterpart prior states and hierarchical composition needed for
+`plain_full`, `plain_compact`, `complete_zero`, `complete_volume`, and `bright`.
+Use separate-process detailed legacy/candidate probes for event evidences, PE MC
+variances, selection `log_mu`, `N_eff`, selection correction, and final
+likelihood. Require `rtol=1e-12`, `atol=0` against the frozen legacy SHA before
+starting 5D or any survey/LSS/lensing work.
