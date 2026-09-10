@@ -11,16 +11,14 @@ control repo:      ignaciomagana/darksirens-rebuild
 ## Current phase
 
 ```text
-PHASE 3 — POPULATION MODELS
-status: READY FOR GUARDED SQUASH MERGE
-working repo:   ignaciomagana/darksirens-core
-working branch: rebuild/phase3-population
-pull request:   #2
-accepted SHA:   2461954c47df587ed70f711769a42779775be692
+PHASE 4 — SPECTRAL-SIREN LIKELIHOOD + GW SELECTION
+status: NOT STARTED
+base repo: ignaciomagana/darksirens-core
+base SHA:  e0b40fef65261a27b67aa9657a97216df3e8444f
 ```
 
-Do not begin Phase 4 until PR #2 is squash-merged at the exact accepted head and
-the merged core `main` SHA is recorded here.
+Phase 3 is complete and recorded. Phase 4 must begin with inventory/parity
+fixtures before scientific code is ported.
 
 ## Completed
 
@@ -43,18 +41,11 @@ the merged core `main` SHA is recorded here.
 
 PR `ignaciomagana/darksirens-core#1` was squash-merged.
 
-Core `main` after Phase 2:
-
 ```text
-450b9bdb66d2dc2d6e7f927143f9b4b4b9f9cec6
-```
-
-Phase-2 final scientific gate:
-
-```text
-workflow run: 34431185197
-job:          102726848203
-status:       SUCCESS
+core main after Phase 2: 450b9bdb66d2dc2d6e7f927143f9b4b4b9f9cec6
+workflow run:            34431185197
+job:                     102726848203
+status:                  SUCCESS
 ```
 
 The reconstructed package contains modern `src/darksirens` packaging,
@@ -63,16 +54,23 @@ cosmology/shared redshift grids, standardized GW PE/selection store contracts,
 `GWStore`/`SelectionStore`, PE/injection loaders, and current
 `chieff_reference` selection support.
 
-## Phase 3 — ready for merge
+### Phase 3
 
-Population models are reconstructed under `darksirens.population`: parametric
-models, mixtures/components, component-spin, grammar/registry, fixed GWTC sets,
-GP models and normalization machinery. Legacy proposal/PPC
-`population.sampling` and application CLI wiring remain intentionally outside
-this phase.
+PR `ignaciomagana/darksirens-core#2` was squash-merged at the exact accepted
+head after all branch and PR checks passed.
 
-The first clean scientific acceptance passed at
-`b4e476db727036fea9e97cdb8fb111206a5fba5d`, with:
+```text
+accepted branch head: 2461954c47df587ed70f711769a42779775be692
+final phase3 run:     34437645424
+phase3 job:           102745952311
+reference-integrity:  SUCCESS
+phase2-foundation:    SUCCESS
+phase3-population:    SUCCESS
+squash-merge SHA:     e0b40fef65261a27b67aa9657a97216df3e8444f
+core main:            e0b40fef65261a27b67aa9657a97216df3e8444f
+```
+
+Scientific acceptance included:
 
 ```text
 full reconstructed suite: 125 passed, 1 regen-only skip
@@ -82,33 +80,10 @@ comparison rtol = 1e-12
 ordinary population import leaves tinygp unloaded: PASS
 ```
 
-PR #2 then exposed three test-only F401s in the older Phase-2 PR lint workflow.
-Only those unused imports were removed; scientific code and tolerances were
-unchanged. The complete gate was rerun from scratch at the final accepted head:
-
-```text
-2461954c47df587ed70f711769a42779775be692
-```
-
-All PR-triggered checks pass at that exact SHA:
-
-```text
-reference-integrity: SUCCESS
-phase2-foundation:   SUCCESS
-phase3-population:   SUCCESS
-```
-
-Final Phase-3 run:
-
-```text
-workflow run: 34437645424
-job:          102745952311
-status:       SUCCESS
-```
-
-Final diff sanity contains exactly 23 intended Phase-3 files and no temporary
-workflow, marker, stale dependency report, or unrelated file. No scientific or
-numerical tolerance was relaxed.
+The PR-level Phase-2 lint check caught three unused imports in migrated tests;
+only those imports were removed and the complete gate was rerun. No scientific
+source or tolerance changed. Final diff sanity contained exactly 23 intended
+Phase-3 files and no temporary reconstruction artifacts.
 
 Detailed record: `phases/03_population.md`.
 
@@ -116,21 +91,16 @@ Detailed record: `phases/03_population.md`.
 
 ### `darksirens-core`
 
-`main` remains Phase 2 until PR #2 merges:
+Phases 2 and 3 are complete on `main` at:
 
 ```text
-450b9bdb66d2dc2d6e7f927143f9b4b4b9f9cec6
+e0b40fef65261a27b67aa9657a97216df3e8444f
 ```
 
-Phase 3 accepted head:
-
-```text
-rebuild/phase3-population
-2461954c47df587ed70f711769a42779775be692
-```
-
-Catalog/redshift, hierarchical likelihood, GW selection, samplers and the
-high-level `model/infer` API are not yet migrated.
+Current reconstructed areas: foundation/cosmology/GW stores and loaders,
+population models including GP models. Catalog/redshift, hierarchical
+likelihood, GW selection, samplers and the high-level `model/infer` API are not
+yet migrated.
 
 ### `darksirens-surveys`
 
@@ -159,7 +129,9 @@ No tolerance has been relaxed.
 
 ## Next action
 
-Squash-merge `ignaciomagana/darksirens-core#2` with expected head
-`2461954c47df587ed70f711769a42779775be692`. Verify the merged core `main` SHA,
-record it here and in `phases/03_population.md`, mark Phase 3 COMPLETE, and only
-then start Phase 4.
+Start Phase 4 from core `main` SHA
+`e0b40fef65261a27b67aa9657a97216df3e8444f`. First inventory the pinned-legacy
+ordinary spectral-siren likelihood and GW-selection machinery, identify its
+true core-owned tests and dependencies, and define separate-process parity
+fixtures. Do not port catalog, LSS, lensing, sampler, or application-CLI code
+until ownership is frozen.
