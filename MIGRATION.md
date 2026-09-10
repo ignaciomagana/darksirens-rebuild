@@ -1,17 +1,13 @@
 # Migration ledger
 
-This is the durable cross-repository migration ledger. It is updated as files/functions are assigned and ported.
-
-## Reference
+Reference:
 
 ```text
-legacy repo: ignaciomagana/darksirens
-legacy SHA:  c042527238bd71421b792936bc48c3b815b90d6d
+legacy: ignaciomagana/darksirens
+SHA:    c042527238bd71421b792936bc48c3b815b90d6d
 ```
 
-## Dispositions
-
-Allowed file/function dispositions:
+Allowed dispositions:
 
 ```text
 CORE
@@ -22,7 +18,7 @@ LEGACY_ONLY
 FUTURE_REVIEW
 ```
 
-Allowed migration modes:
+Allowed modes:
 
 ```text
 COPY
@@ -42,23 +38,36 @@ DO_NOT_MIGRATE
 | `darksirens-lss` | LSS/completion/latent fields | not started | |
 | `darksirens-lensing` | weak/strong lensing | not started | |
 
-## Legacy migration table
+## Accepted Phase-0 mapping
 
-Phase 0 will populate the detailed inventory under `inventories/` and summarize the accepted mapping here.
+| Legacy domain | Destination | Mode | Status |
+|---|---|---|---|
+| `core` | core physical owners + lensing/LSS state removed | SPLIT | inventoried |
+| `utils` | core physical owners/private helpers | SPLIT | inventoried |
+| GW store/sample code | core `gw` | REIMPLEMENT_INTERFACE | inventoried |
+| `gw/populations` | core `population` | MOVE_AND_RENAME/SPLIT | inventoried |
+| GP population models | core `population` | MOVE_AND_RENAME | inventoried |
+| ordinary catalog runtime | core `catalog` | SPLIT | inventoried |
+| depth/raw survey construction | surveys | SPLIT | inventoried |
+| ordinary redshift/completeness | core cosmology/catalog/selection | SPLIT | inventoried |
+| Q_LSS/lognormal/latent/multitracer | LSS | SPLIT | inventoried |
+| ordinary event/hierarchical likelihood | core likelihood | SPLIT | inventoried |
+| GW MC selection | core selection | MOVE_AND_RENAME | inventoried |
+| WL/pair/cluster likelihood | lensing | SPLIT | inventoried |
+| inference orchestration | core + extension-owned state | SPLIT | inventoried |
+| Q provenance | LSS | MOVE_AND_RENAME | inventoried |
+| generic host marks | core catalog/hosts | SPLIT | inventoried |
+| reusable angular sky models | core population/angular | SPLIT | inventoried |
+| ordinary results/settings | core IO | MOVE_AND_RENAME | inventoried |
+| legacy CLIs | all owners or legacy | REIMPLEMENT_INTERFACE | inventoried |
+| experiments/scripts | selective only | TEST_ONLY/DO_NOT_MIGRATE | inventoried |
 
-| Legacy path/domain | Destination | Mode | Status | Notes |
-|---|---|---|---|---|
-| `core` | split across core scientific owners | `SPLIT` | planned | public `core` namespace will disappear |
-| `utils` | split/private helpers | `SPLIT` | planned | no public `utils` junk drawer |
-| `gw/populations` | core `population` | `MOVE_AND_RENAME` | planned | GP remains core |
-| GW store/sample code | core `gw` | `REIMPLEMENT_INTERFACE` | planned | preserve gwcat contract including `chieff_reference` |
-| ordinary catalog code | core `catalog` | `SPLIT` | planned | raw survey construction goes to surveys |
-| ordinary redshift/completeness | core catalog/cosmology/selection | `SPLIT` | planned | no top-level redshift switchboard |
-| LSS completion/latent code | `darksirens-lss` | `SPLIT` | planned | preserve table/latent distinctions |
-| weak/strong lensing | `darksirens-lensing` | `SPLIT` | planned | remove current core->lensing inversion |
-| survey depth/pixelization/fitting | `darksirens-surveys` | `SPLIT` | planned | core evaluates, surveys builds/fits |
-| experiments/scripts | mixed | review individually | inventory pending | no wholesale migration |
+Detailed ownership is in `inventories/`.
 
-## Rules
+## Migration invariants
 
-A mature scientific implementation is not marked complete until its mapped parity tests pass against the pinned legacy reference. Architectural cleanup after the initial parity port requires rerunning the same parity suite.
+- No production code changes occurred during Phase 0.
+- Legacy remains the source of numerical truth for existing mature behavior.
+- A mature implementation is not marked migrated until its mapped parity tests pass.
+- Architecture cleanup after the first parity port reruns the same parity tests.
+- Core never imports a companion package.

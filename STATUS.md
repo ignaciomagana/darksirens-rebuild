@@ -2,80 +2,59 @@
 
 ## Reference
 
-Legacy repository:
-
 ```text
-ignaciomagana/darksirens
-```
-
-Pinned reference SHA:
-
-```text
-c042527238bd71421b792936bc48c3b815b90d6d
+legacy repository: ignaciomagana/darksirens
+pinned SHA:        c042527238bd71421b792936bc48c3b815b90d6d
+control repo:      ignaciomagana/darksirens-rebuild
 ```
 
 ## Current phase
 
 ```text
 PHASE 0 — INVENTORY AND DEPENDENCY MAP
-status: IN PROGRESS
-```
-
-## Durable control repo
-
-```text
-ignaciomagana/darksirens-rebuild
-```
-
-The control repository has been initialized with the reconstruction architecture and frozen decisions. Production code will live only in the four target repositories.
-
-## Target repositories
-
-```text
-ignaciomagana/darksirens-core
-ignaciomagana/darksirens-surveys
-ignaciomagana/darksirens-lss
-ignaciomagana/darksirens-lensing
+status: COMPLETE
 ```
 
 ## Completed
 
-- Architecture split agreed.
-- Legacy repository designated read-only numerical reference.
-- Legacy numerical target pinned to `c042527238bd71421b792936bc48c3b815b90d6d`.
-- GP population models assigned to core.
-- LSS assigned to first-class companion package.
-- Weak/strong lensing assigned to first-class companion package.
-- Survey construction assigned to first-class companion package.
-- User-facing API chosen as the organizing principle.
-- `darksirens-rebuild` control repository created and initialized.
-
-## Tests
-
-No new-package parity suite has been run yet.
-
-## Numerical parity
-
-Not established yet. Phase 1 will freeze reference fixtures before mathematical code is ported.
+- Four-package ownership model confirmed against the actual legacy code.
+- Full package-domain migration inventory recorded under `inventories/`.
+- Major cross-domain dependency inversions identified and ordered.
+- Experiment/script selective-promotion policy recorded.
+- Legacy test assets mapped by new package ownership.
+- CPU-fast legacy reference gate identified: 69 files / 823 collected tests.
+- Unified K=1 fixed-coordinate golden bank selected as central Phase-1 parity anchor.
+- GP population models confirmed as core.
+- LSS and lensing confirmed as mature first-class companion packages.
 
 ## Production repository changes
 
-None yet.
+None. `darksirens-core`, `darksirens-surveys`, `darksirens-lss`, and `darksirens-lensing` have not been modified by the rebuild work.
 
-## Legacy behavior deliberately not migrated
+## Numerical parity
 
-No final file-level decisions yet. Phase 0 will classify legacy files as `CORE`, `SURVEYS`, `LSS`, `LENSING`, `LEGACY_ONLY`, or `FUTURE_REVIEW`.
+Not yet re-established in the new packages. Phase 1 freezes serialized legacy reference outputs and a separate-process comparator before runtime migration starts.
 
-## Architecture questions
+## Key dependency findings
 
-- Exact minimal extension protocol for LSS auxiliary count/field likelihood will be fixed after inventory of current call graph.
-- Exact analysis interface for strong-lensing cluster likelihood will be fixed after inventory of current likelihood/inference coupling.
-- Flow-surrogate migration is deliberately deferred until the ordinary core sample path is stable.
+- `core/types.py` mixes generic state with LSS and weak-lensing fields.
+- ordinary `likelihood/core.py` imports weak-lensing machinery directly.
+- `redshift/prior.py` combines ordinary priors with Q ensembles/latent fields and imports the latent seam from likelihood.
+- `inference/loaders.py` stages ordinary catalog, counterpart, LSS, multitracer and mark state together.
+- `likelihood/factory.py` is a multi-domain switchboard and will not be recreated as the target API.
+
+## Architecture questions intentionally deferred
+
+- minimal LSS redshift/auxiliary-likelihood protocol;
+- minimal strong-lensing analysis protocol;
+- exact optional flow API.
+
+These are frozen only after ordinary core parity.
 
 ## Scientific questions
 
-None opened. Any apparent legacy scientific bug found during migration will be recorded rather than silently fixed.
+None opened. No scientific behavior was changed in Phase 0.
 
 ## Next action
 
-Complete Phase 0: full legacy module/test/script inventory, cross-boundary dependency map, and concrete migration contracts for all four target repositories.
+Phase 1 — freeze the legacy numerical reference/golden harness. No mathematical kernel should be reorganized before that exists.
