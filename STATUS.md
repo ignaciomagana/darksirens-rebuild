@@ -11,19 +11,17 @@ control repo:      ignaciomagana/darksirens-rebuild
 ## Current phase
 
 ```text
-PHASE 4 — SPECTRAL-SIREN LIKELIHOOD + GW SELECTION
-status: BRANCH ACCEPTED; PR REVIEW/MERGE NEXT
+PHASE 5 — CORE CATALOG + DARK/BRIGHT SIRENS
+status: NOT STARTED; CONTRACT REVIEW NEXT
 base repo:      ignaciomagana/darksirens-core
-base SHA:       e0b40fef65261a27b67aa9657a97216df3e8444f
-working branch: rebuild/phase4-spectral-likelihood
-accepted head:  cfdb138d40d66614bf9b1264c2574d0b497b812d
+base SHA:       0f97feff7eb283a1f541bef9a776c9347084e70e
 ```
 
-The complete catalog-free spectral hierarchical likelihood and GW-selection
-slice is green at the exact accepted branch head. Strict separate-process
-legacy/new fixed-theta parity is exact at every serialized quantity. No Phase-5
-work should begin until the Phase-4 PR is exact-head green, diff-reviewed,
-squash-merged, and the resulting `main` SHA is verified and recorded.
+Phase 4 is complete and verified on `darksirens-core/main`. Phase 5 must begin
+only from the merge SHA above and only after rereading the control-plane
+catalog/dark/bright-siren prompt, data contract, package boundaries, migration
+policy, and validation contract. Do not recreate the legacy monolithic
+`redshift`/`catalogs`/`likelihood.factory` architecture.
 
 ## Completed
 
@@ -69,7 +67,7 @@ squash-merge SHA:     e0b40fef65261a27b67aa9657a97216df3e8444f
 core main:            e0b40fef65261a27b67aa9657a97216df3e8444f
 ```
 
-Scientific acceptance included:
+Scientific acceptance:
 
 ```text
 full reconstructed suite: 125 passed, 1 regen-only skip
@@ -81,89 +79,48 @@ ordinary population import leaves tinygp unloaded: PASS
 
 Detailed record: `phases/03_population.md`.
 
-## Phase 4 progress
+### Phase 4
 
-The legacy likelihood package was not migrated file-for-file. The frozen core
-boundary is:
-
-```text
-darksirens/likelihood/selection.py
-    -> darksirens/selection/gw.py
-
-darksirens/inference/utils.py likelihood math
-    -> darksirens/likelihood/weights.py
-
-darksirens/likelihood/events.py runtime event/padding logic
-    -> darksirens/gw/{types,runtime}.py
-
-catalog-free branch of darksirens/likelihood/core.py
-    -> darksirens/likelihood/{event,hierarchical}.py
-```
-
-The accepted Phase-4 implementation contains canonical coordinate/Jacobian math,
-runtime `GWEvent` construction and padding, per-sample importance weights,
-selection `mu`/`N_eff`, total-likelihood-variance guards, soft-wall behavior,
-gradient-safe reductions, normalized comoving-volume spectral redshift prior,
-per-event evidence/MC variance, and the catalog-free hierarchical assembly.
-
-Clean lower-level acceptance:
-
-```text
-core branch head: 220375e6877d755f34131d9d793ad4db38f0b89a
-workflow run:     34441480533
-job:              102757247600
-result:           SUCCESS
-```
-
-Final branch acceptance:
+PR `ignaciomagana/darksirens-core#3` was squash-merged after the accepted branch
+head remained unchanged through all historical and Phase-4 PR gates.
 
 ```text
 accepted branch head: cfdb138d40d66614bf9b1264c2574d0b497b812d
-workflow run:         34445525661
-job:                  102769369532
-workflow result:      SUCCESS
+branch workflow run: 34445525661
+branch job:          102769369532
+
+PR #3 exact-head workflows:
+reference-integrity   run 34446633557  job 102772728746  SUCCESS
+phase2-foundation     run 34446633595  job 102772729079  SUCCESS
+phase3-population     run 34446633551  job 102772729151  SUCCESS
+phase4-spectral       run 34446633527  job 102772728950  SUCCESS
+
+squash-merge SHA:     0f97feff7eb283a1f541bef9a776c9347084e70e
+verified core main:   0f97feff7eb283a1f541bef9a776c9347084e70e
+post-merge reference: run 34447108888 job 102774202182 SUCCESS
 ```
 
-Acceptance details:
+Scientific acceptance:
 
 ```text
-ruff F/E9 + compileall:                PASS
-coordinate/runtime tests:             9 passed
-GW-selection focused tests:            50 passed
-spectral-likelihood focused tests:     15 passed
-full reconstructed suite:              199 passed, 1 regen-only skip
-dependency-boundary audit:             PASS
-pinned legacy spectral probe:          PASS
-reconstructed spectral probe:          PASS
-legacy/new fixed-theta spectral parity: PASS
-max_abs:                               0.000e+00
-max_rel:                               0.000e+00
-comparison rtol:                       1e-12
-comparison atol:                       0
+coordinate/runtime focused tests:          9 passed
+GW-selection focused tests:                50 passed
+spectral-likelihood focused tests:         15 passed
+full reconstructed suite:                  199 passed, 1 regen-only skip
+dependency-boundary audit:                 PASS
+pinned legacy spectral probe:              PASS
+reconstructed spectral probe:              PASS
+legacy/new fixed-theta spectral parity:    PASS
+max_abs:                                   0.000e+00
+max_rel:                                   0.000e+00
+comparison rtol:                           1e-12
+comparison atol:                           0
 ```
 
-The separate-process parity fixture contains 3 PE events with 8 samples/event,
-257 found injections, `Ndraw=4096`, nonuniform proposal weights, masked samples,
-and a selection batch of 64. Three fixed `(H0, population)` points compare
-per-event log evidence, per-event MC variance, `log_mu`, `N_eff`, selection
-correction, and full spectral log likelihood. Every serialized value is exactly
-identical between pinned legacy and reconstructed core.
-
-One integration run caught only the already documented PE-block XLA
-reassociation class: `1.66533454e-16` absolute / about `1.92e-13` relative in a
-unit-test event-variance comparison. The pinned legacy test already uses
-`rtol=1e-12, atol=0` for this block-shape comparison. Only the reconstructed
-block unit test was aligned to that existing contract; the legacy/new scientific
-parity gate was not relaxed and subsequently achieved exact equality.
-
-Relative to Phase-3 `main`, accepted head `cfdb138d...` is 21 commits ahead and
-0 behind. The branch diff is restricted to Phase-4-owned runtime,
-likelihood/selection code, tests/probes, and the Phase-4 workflow.
-
-Explicitly excluded from Phase 4 remain catalog KDE/completeness, survey
-selection, Q_LSS/latent fields, marks, sky anisotropy, weak/strong lensing,
-cluster/pair likelihoods, flow surrogates/pdet emulators, samplers, inference
-prior transforms, and the old application CLI/`universe_model` dispatcher.
+The Phase-4 source/test/probe diff was reviewed before merge. No concrete catalog,
+survey, LSS, lensing, flow, sampler, or CLI dependency entered the core spectral
+likelihood/selection runtime. Component-spin runtime shape is separately pinned
+by construction, padding, batched-selection, and population-forwarding tests.
 
 Detailed record: `phases/04_spectral_likelihood.md`.
 
@@ -171,19 +128,13 @@ Detailed record: `phases/04_spectral_likelihood.md`.
 
 ### `darksirens-core`
 
-Current verified `main` before Phase-4 merge:
+Verified `main`:
 
 ```text
-e0b40fef65261a27b67aa9657a97216df3e8444f
+0f97feff7eb283a1f541bef9a776c9347084e70e
 ```
 
-Accepted Phase-4 branch:
-
-```text
-rebuild/phase4-spectral-likelihood
-base:          e0b40fef65261a27b67aa9657a97216df3e8444f
-accepted head: cfdb138d40d66614bf9b1264c2574d0b497b812d
-```
+Phases 2, 3, and 4 are complete.
 
 ### `darksirens-surveys`
 
@@ -197,6 +148,23 @@ Not started.
 
 Not started.
 
+## Frozen architecture direction for Phase 5
+
+Core may own the standardized catalog runtime contract, generic catalog IO,
+ordinary catalog redshift kernels/completeness evaluation, counterpart/host
+objects, and complete/incomplete/bright-siren likelihood composition.
+
+Core must not learn survey-native schemas or column names. Survey ingestion,
+masks, depth maps, DESI/KIBO/Legacy/GLADE-specific construction and offline
+selection-function fitting belong in `darksirens-surveys`.
+
+Q_LSS/latent fields/multitracer auxiliary likelihoods remain for
+`darksirens-lss`. Weak/strong lensing remains for `darksirens-lensing`.
+
+The Phase-4 spectral likelihood must remain a first-class catalog-free path; do
+not bury it behind a giant `universe_model` dispatcher when adding catalog
+composition.
+
 ## Architecture questions intentionally deferred
 
 - minimal LSS redshift/auxiliary-likelihood protocol;
@@ -205,15 +173,15 @@ Not started.
 
 ## Scientific questions
 
-None opened. Phase 4 reproduces the pinned legacy catalog-free spectral
-likelihood without a scientific behavior change.
+None opened. No scientific behavior change is authorized for Phase 5; ordinary
+complete/incomplete dark-siren and bright-siren behavior must be reproduced
+against the pinned legacy implementation before broader API cleanup.
 
 ## Next action
 
-Open the Phase-4 PR from `rebuild/phase4-spectral-likelihood` into `main` at exact
-head `cfdb138d40d66614bf9b1264c2574d0b497b812d`. Require all relevant historical
-PR workflows (`reference-integrity`, `phase2-foundation`, `phase3-population`)
-plus the new Phase-4 workflow to pass at that exact head. Review the complete
-diff for ownership or scientific-boundary violations, squash merge with an
-expected-head guard, verify the resulting core `main`, record the merge here,
-and only then begin Phase 5.
+Read `prompts/06_core_catalog_dark_bright.md` plus the current control-plane
+architecture/data-contract/validation documents. Reinspect the pinned legacy
+catalog, redshift-prior/completeness, counterpart, and ordinary likelihood code
+against the now-merged Phase-4 core. Freeze the smallest Phase-5 ownership map
+and parity matrix, record it in a new phase report, then create the Phase-5 core
+branch from exactly `0f97feff7eb283a1f541bef9a776c9347084e70e`.
