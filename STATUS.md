@@ -12,7 +12,7 @@ control repo:      ignaciomagana/darksirens-rebuild
 
 ```text
 PHASE 5 — CORE CATALOG + DARK/BRIGHT SIRENS
-status:         5A + 5B + 5C + 5D1 ACCEPTED; 5D2 IN PROGRESS
+status:         5A + 5B + 5C + 5D1 + 5D2 ACCEPTED; FINAL PR GATES NEXT
 core repo:      ignaciomagana/darksirens-core
 phase-5 base:   0f97feff7eb283a1f541bef9a776c9347084e70e
 working branch: rebuild/phase5-catalog-dark-bright
@@ -20,16 +20,18 @@ accepted 5A:    f418174a7fc8734bfbcf553d5b5c36f9f4280987
 accepted 5B:    f4bc721496359f09fc58609fa23ccce21366f728
 accepted 5C:    57af56158757ddd9272e0a2f2dc9bfbb624c1fec
 accepted 5D1:   bf45e0f5c0afc404d291d00a0ca267f8126b7e7b
+accepted 5D2:   9d5624864ce7467d309c45125cbe5785c671e1a9
 ```
 
-Phase 4 remains complete on `darksirens-core/main`. Phase 5A reconstructed the
-standardized ordinary catalog runtime/compaction and observed-galaxy redshift
-kernel. Phase 5B reconstructed ordinary non-LSS completeness/count budget and
-finite-depth behavior. Phase 5C reconstructed explicit incomplete-dark,
-complete-catalog, and bright/counterpart likelihood composition. Phase 5D1
-reconstructed generic marked-host weighting. Every accepted slice has
-separate-process parity against the pinned legacy implementation. Phase 5 is not
-yet merged; 5D2 and final Phase-5 integration remain.
+Phase 4 remains the current `darksirens-core/main` merge while the complete
+Phase-5 branch awaits its single PR. Phase 5A reconstructed the standardized
+ordinary catalog runtime/compaction and observed-galaxy redshift kernel. Phase
+5B reconstructed ordinary non-LSS completeness/count budget and finite-depth
+behavior. Phase 5C reconstructed explicit incomplete-dark, complete-catalog and
+bright/counterpart likelihood composition. Phase 5D1 reconstructed generic
+marked-host weighting. Phase 5D2 reconstructed generic Gaussian/Schechter
+magnitude-selection runtime. Every accepted slice has separate-process parity
+against the pinned legacy implementation.
 
 ## Completed phase heads
 
@@ -109,11 +111,7 @@ comparison rtol:                        1e-12
 comparison atol:                        0
 ```
 
-A near-zero retained-fraction mismatch exposed the algebraically equivalent but
-not bit-identical spelling `log(dV)+delta*log1p(z)` versus frozen legacy's
-`log[dV*(1+z)^delta]`. Candidate now uses the exact frozen operation order; the
-comparator was not loosened. Detailed checkpoint:
-`phases/05B_catalog_completeness.md`.
+Detailed checkpoint: `phases/05B_catalog_completeness.md`.
 
 ### Phase 5C — explicit ordinary dark/complete/bright composition
 
@@ -140,12 +138,10 @@ comparison rtol:                          1e-12
 comparison atol:                          0
 ```
 
-The 5C detailed separate-process gate covers `plain_full`, `plain_compact`,
-`complete_volume`, `complete_zero`, and `bright`, and compares event evidences,
-PE MC variances, selection `log_mu`, `N_eff`, selection correction, assembled
-likelihood, and final likelihood. Both implementations are additionally checked
-against the immutable Phase-1 CPU K=1 bank. Detailed checkpoint:
-`phases/05C_catalog_dark_bright.md`.
+The detailed separate-process gate covers `plain_full`, `plain_compact`,
+`complete_volume`, `complete_zero` and `bright`, including event evidences, PE
+MC variances, selection `log_mu`, `N_eff`, selection correction and assembled
+likelihood. Detailed checkpoint: `phases/05C_catalog_dark_bright.md`.
 
 ### Phase 5D1 — generic marked-host runtime
 
@@ -159,38 +155,67 @@ workflow result: SUCCESS
 Scientific acceptance:
 
 ```text
-Phase 5D1 focused tests:                  7 passed
-full reconstructed suite:              242 passed, 1 regen-only skip
-dependency/light-import audit:          PASS
-legacy/new 5A catalog-kernel parity:    PASS, max_abs=max_rel=0
-legacy/new 5B completeness parity:      PASS, max_abs=max_rel=0
+Phase 5D1 focused tests:                    7 passed
+full reconstructed suite:                242 passed, 1 regen-only skip
+dependency/light-import audit:            PASS
+legacy/new 5A catalog-kernel parity:      PASS, max_abs=max_rel=0
+legacy/new 5B completeness parity:        PASS, max_abs=max_rel=0
 legacy/new 5C detailed likelihood parity: PASS, max_abs=max_rel=0
-legacy/new 5D1 marked-host parity:      PASS, max_abs=max_rel=0
-comparison rtol:                        1e-12
-comparison atol:                        0
+legacy/new 5D1 marked-host parity:        PASS, max_abs=max_rel=0
+comparison rtol:                          1e-12
+comparison atol:                          0
 ```
 
-Core owns only the standardized centered mark table and generic log-linear host
-runtime. Raw property loading and z-centering remain surveys. The first 5D1
-parity run exposed a probe-fixture mismatch: the mature legacy factory computes
-the marked prior on the compact PE/selection union rows, not all full-sky rows.
-Only the probe was corrected; no scientific source or tolerance changed.
 Detailed checkpoint: `phases/05D1_catalog_marks.md`.
+
+### Phase 5D2 — generic magnitude-selection runtime
+
+```text
+accepted head:   9d5624864ce7467d309c45125cbe5785c671e1a9
+workflow run:    34531001625
+job:             103051412901
+workflow result: SUCCESS
+```
+
+Scientific acceptance:
+
+```text
+Phase 5D2 focused tests:                    9 passed
+full reconstructed suite:                251 passed, 1 regen-only skip
+dependency/light-import audit:            PASS
+legacy/new 5A catalog-kernel parity:      PASS, max_abs=max_rel=0
+legacy/new 5B completeness parity:        PASS, max_abs=max_rel=0
+legacy/new 5C detailed likelihood parity: PASS, max_abs=max_rel=0
+legacy/new 5D1 marked-host parity:        PASS, max_abs=max_rel=0
+legacy/new 5D2 selection parity:          PASS, max_abs=max_rel=0
+comparison rtol:                          1e-12
+comparison atol:                          0
+```
+
+Strict parity first caught the finite-depth raw-`C` state mismatch and then a
+new inner JIT boundary that perturbed Gaussian/Schechter tails. Both were fixed
+without changing equations or widening the comparator. Detailed checkpoint:
+`phases/05D2_catalog_selection.md`.
 
 ## Production repository state
 
 ### `darksirens-core`
 
-`main` remains the accepted Phase-4 merge:
+`main` is still the accepted Phase-4 merge:
 
 ```text
 0f97feff7eb283a1f541bef9a776c9347084e70e
 ```
 
-Phase 5 remains active on `rebuild/phase5-catalog-dark-bright`. 5A, 5B, 5C and
-5D1 are accepted branch checkpoints but are intentionally not merged
-separately. Exact current branch head at 5D2 start is the accepted 5D1 head
-`bf45e0f5c0afc404d291d00a0ca267f8126b7e7b`.
+The complete Phase-5 acceptance candidate is branch
+`rebuild/phase5-catalog-dark-bright` at
+`9d5624864ce7467d309c45125cbe5785c671e1a9`.
+
+The entire Phase-4-main to Phase-5 diff has been audited. It is bounded to the
+new ordinary catalog/dark/bright/marks/selection surface, its tests/probes and
+workflow. The only pre-existing scientific source file modified is
+`src/darksirens/likelihood/hierarchical.py`; the Phase-4 spectral path is
+retained and the new ordinary paths are explicit additions.
 
 ### `darksirens-surveys`
 
@@ -204,7 +229,7 @@ Not started.
 
 Not started.
 
-## Frozen architecture direction for Phase 5
+## Frozen architecture direction
 
 Core owns standardized catalog runtime/IO, ordinary catalog redshift kernels and
 completeness evaluation, counterpart/host objects, generic host-property
@@ -224,43 +249,12 @@ Phase-4 spectral likelihood remains a first-class explicit path.
 
 ## Scientific questions
 
-None opened. No scientific behavior change is authorized during Phase 5.
+None opened. No scientific behavior change is authorized during reconstruction.
 
-## Current action — 5D2
+## Current action — final Phase-5 integration
 
-Start from exact accepted 5D1 head
-`bf45e0f5c0afc404d291d00a0ca267f8126b7e7b` with read-only legacy inspection
-first.
-
-5D2 reconstructs only generic runtime evaluation of serialized non-LSS
-magnitude-selection completeness. The admissible core slice is:
-
-```text
-Gaussian C_sel(z): h-scaled M0hat convention, sigma_M, optional structural K(z)
-Schechter C_sel(z): h-scaled Mstar_hat, alpha, pinned M_faint_offset
-H0 firewall: selection curve must be H0-invariant at fixed h-scaled LF params
-runtime legality/domain guards required by those curves
-ordinary per-row missing-host budget using the serialized runtime curve
-```
-
-The following remain outside core:
-
-```text
-SciPy/MLE/Laplace fitting
-fit JSON construction and survey provenance
-raw apparent-magnitude loading
-survey column names, masks, depth maps and pixelization
-stratum-map construction
-Q_LSS/Q ensembles/latent fields/multitracer field normalization
-```
-
-Stratified or aggregate branches are not automatically part of 5D2. They move
-only if they can be expressed as ordinary companion-free runtime state without
-survey or LSS ownership leakage; otherwise they are explicitly deferred.
-
-Acceptance requires focused runtime tests, exact H0-firewall tests,
-separate-process frozen legacy/candidate probes at fixed coordinates, the full
-historical reconstructed suite, dependency/light-import audits, and unchanged
-`rtol=1e-12`, `atol=0`. After 5D2, run the exact-head full Phase-5 acceptance
-matrix, audit the entire Phase-4-main -> Phase-5 diff, open a single Phase-5 PR,
-require PR-head gates, and only then squash merge.
+Open the single Phase-5 PR from exact accepted head
+`9d5624864ce7467d309c45125cbe5785c671e1a9` to `main`. Require all PR-triggered
+historical and Phase-5 workflows at that exact head. Only after every required
+gate is green may the PR be squash merged. Then verify the resulting `main` head
+and record the Phase-5 merge SHA before starting the next workflow phase.
