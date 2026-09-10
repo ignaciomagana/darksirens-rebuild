@@ -11,27 +11,18 @@ control repo:      ignaciomagana/darksirens-rebuild
 ## Current phase
 
 ```text
-PHASE 5 — CORE CATALOG + DARK/BRIGHT SIRENS
-status:         5A + 5B + 5C + 5D1 + 5D2 ACCEPTED; FINAL PR GATES NEXT
+PHASE 6 — CORE INFERENCE / CHECKPOINTING / IO
+status:         STARTING FROM VERIFIED PHASE-5 MAIN
 core repo:      ignaciomagana/darksirens-core
-phase-5 base:   0f97feff7eb283a1f541bef9a776c9347084e70e
-working branch: rebuild/phase5-catalog-dark-bright
-accepted 5A:    f418174a7fc8734bfbcf553d5b5c36f9f4280987
-accepted 5B:    f4bc721496359f09fc58609fa23ccce21366f728
-accepted 5C:    57af56158757ddd9272e0a2f2dc9bfbb624c1fec
-accepted 5D1:   bf45e0f5c0afc404d291d00a0ca267f8126b7e7b
-accepted 5D2:   9d5624864ce7467d309c45125cbe5785c671e1a9
+phase-6 base:   86e0c88a51482d17fac70f111057d277df9387fd
+working branch: rebuild/phase6-inference-io
 ```
 
-Phase 4 remains the current `darksirens-core/main` merge while the complete
-Phase-5 branch awaits its single PR. Phase 5A reconstructed the standardized
-ordinary catalog runtime/compaction and observed-galaxy redshift kernel. Phase
-5B reconstructed ordinary non-LSS completeness/count budget and finite-depth
-behavior. Phase 5C reconstructed explicit incomplete-dark, complete-catalog and
-bright/counterpart likelihood composition. Phase 5D1 reconstructed generic
-marked-host weighting. Phase 5D2 reconstructed generic Gaussian/Schechter
-magnitude-selection runtime. Every accepted slice has separate-process parity
-against the pinned legacy implementation.
+Phase 5 is closed. The next core slice reconstructs only portable inference
+infrastructure: composable parameter/prior decoding, sampler-facing contracts,
+semantic checkpoint/resume state, run fingerprints, and JAX-free settings/results
+IO. Survey/LSS staging, raw catalog construction, `q_provenance`, campaign/CLI
+assembly, and the legacy mega factory are not Phase-6 migration units.
 
 ## Completed phase heads
 
@@ -97,21 +88,9 @@ job:             102821696680
 workflow result: SUCCESS
 ```
 
-Scientific acceptance:
-
-```text
-Phase 5A compact tests:                  5 passed
-Phase 5A redshift/distance tests:       11 passed
-Phase 5B completeness/HLO tests:        11 passed
-full reconstructed suite:              226 passed, 1 regen-only skip
-dependency/light-import audit:          PASS
-legacy/new 5A catalog-kernel parity:    PASS, max_abs=max_rel=0
-legacy/new 5B completeness parity:      PASS, max_abs=max_rel=0
-comparison rtol:                        1e-12
-comparison atol:                        0
-```
-
-Detailed checkpoint: `phases/05B_catalog_completeness.md`.
+Scientific acceptance: 226 passed, 1 regeneration-only skip; 5A and 5B
+separate-process parity exact at `rtol=1e-12`, `atol=0`. Detailed checkpoint:
+`phases/05B_catalog_completeness.md`.
 
 ### Phase 5C — explicit ordinary dark/complete/bright composition
 
@@ -122,26 +101,8 @@ job:             102833519200
 workflow result: SUCCESS
 ```
 
-Scientific acceptance:
-
-```text
-Phase 5A compact tests:                    5 passed
-Phase 5A redshift/distance tests:         11 passed
-Phase 5B completeness/HLO tests:          11 passed
-Phase 5C explicit hierarchy tests:         3 passed
-full reconstructed suite:                235 passed, 1 regen-only skip
-dependency/light-import audit:            PASS
-legacy/new 5A catalog-kernel parity:      PASS, max_abs=max_rel=0
-legacy/new 5B completeness parity:        PASS, max_abs=max_rel=0
-legacy/new 5C detailed likelihood parity: PASS, max_abs=max_rel=0
-comparison rtol:                          1e-12
-comparison atol:                          0
-```
-
-The detailed separate-process gate covers `plain_full`, `plain_compact`,
-`complete_volume`, `complete_zero` and `bright`, including event evidences, PE
-MC variances, selection `log_mu`, `N_eff`, selection correction and assembled
-likelihood. Detailed checkpoint: `phases/05C_catalog_dark_bright.md`.
+Scientific acceptance: 235 passed, 1 regeneration-only skip; full ordinary
+likelihood parity exact. Detailed checkpoint: `phases/05C_catalog_dark_bright.md`.
 
 ### Phase 5D1 — generic marked-host runtime
 
@@ -152,70 +113,56 @@ job:             102941812699
 workflow result: SUCCESS
 ```
 
-Scientific acceptance:
-
-```text
-Phase 5D1 focused tests:                    7 passed
-full reconstructed suite:                242 passed, 1 regen-only skip
-dependency/light-import audit:            PASS
-legacy/new 5A catalog-kernel parity:      PASS, max_abs=max_rel=0
-legacy/new 5B completeness parity:        PASS, max_abs=max_rel=0
-legacy/new 5C detailed likelihood parity: PASS, max_abs=max_rel=0
-legacy/new 5D1 marked-host parity:        PASS, max_abs=max_rel=0
-comparison rtol:                          1e-12
-comparison atol:                          0
-```
-
-Detailed checkpoint: `phases/05D1_catalog_marks.md`.
+Scientific acceptance: 242 passed, 1 regeneration-only skip; marked-host parity
+exact. Detailed checkpoint: `phases/05D1_catalog_marks.md`.
 
 ### Phase 5D2 — generic magnitude-selection runtime
 
 ```text
-accepted head:   9d5624864ce7467d309c45125cbe5785c671e1a9
-workflow run:    34531001625
-job:             103051412901
-workflow result: SUCCESS
+accepted scientific head: 9d5624864ce7467d309c45125cbe5785c671e1a9
+workflow run:             34531001625
+job:                      103051412901
+workflow result:          SUCCESS
 ```
 
-Scientific acceptance:
-
-```text
-Phase 5D2 focused tests:                    9 passed
-full reconstructed suite:                251 passed, 1 regen-only skip
-dependency/light-import audit:            PASS
-legacy/new 5A catalog-kernel parity:      PASS, max_abs=max_rel=0
-legacy/new 5B completeness parity:        PASS, max_abs=max_rel=0
-legacy/new 5C detailed likelihood parity: PASS, max_abs=max_rel=0
-legacy/new 5D1 marked-host parity:        PASS, max_abs=max_rel=0
-legacy/new 5D2 selection parity:          PASS, max_abs=max_rel=0
-comparison rtol:                          1e-12
-comparison atol:                          0
-```
-
+Scientific acceptance: 251 passed, 1 regeneration-only skip; 5A through 5D2
+separate-process parity all exact (`max_abs=max_rel=0`, `rtol=1e-12`, `atol=0`).
 Strict parity first caught the finite-depth raw-`C` state mismatch and then a
 new inner JIT boundary that perturbed Gaussian/Schechter tails. Both were fixed
 without changing equations or widening the comparator. Detailed checkpoint:
 `phases/05D2_catalog_selection.md`.
 
+### Phase 5 — final integration
+
+```text
+scientific head:        9d5624864ce7467d309c45125cbe5785c671e1a9
+PR integration head:    b66221734e7564922ac1c12534abec77333923f6
+PR:                     #4
+PR exact-head gates:    ALL SUCCESS
+squash-merge SHA:       86e0c88a51482d17fac70f111057d277df9387fd
+verified core main:     86e0c88a51482d17fac70f111057d277df9387fd
+post-merge run/job:     34534097673 / 103061536070 SUCCESS
+```
+
+The only change between the accepted scientific head and PR integration head was
+CI-only: the historical Phase-4 dependency audit originally prohibited any
+`darksirens.catalog` import anywhere below `likelihood/selection`, which became
+obsolete once catalog became a first-class core namespace in Phase 5. The rule
+was narrowed to preserve the actual boundary against legacy-redshift/LSS/lensing/
+CLI imports. No production/scientific source changed, and all historical plus
+Phase-5 PR workflows passed before merge.
+
 ## Production repository state
 
 ### `darksirens-core`
 
-`main` is still the accepted Phase-4 merge:
+`main` is the verified Phase-5 squash merge:
 
 ```text
-0f97feff7eb283a1f541bef9a776c9347084e70e
+86e0c88a51482d17fac70f111057d277df9387fd
 ```
 
-The complete Phase-5 acceptance candidate is branch
-`rebuild/phase5-catalog-dark-bright` at
-`9d5624864ce7467d309c45125cbe5785c671e1a9`.
-
-The entire Phase-4-main to Phase-5 diff has been audited. It is bounded to the
-new ordinary catalog/dark/bright/marks/selection surface, its tests/probes and
-workflow. The only pre-existing scientific source file modified is
-`src/darksirens/likelihood/hierarchical.py`; the Phase-4 spectral path is
-retained and the new ordinary paths are explicit additions.
+Phase 6 starts from this exact SHA.
 
 ### `darksirens-surveys`
 
@@ -234,27 +181,43 @@ Not started.
 Core owns standardized catalog runtime/IO, ordinary catalog redshift kernels and
 completeness evaluation, counterpart/host objects, generic host-property
 weighting, runtime evaluation of ordinary serialized catalog-selection models,
-and explicit spectral/dark/complete/bright hierarchical composition.
+explicit spectral/dark/complete/bright hierarchical composition, and portable
+inference/checkpoint/result infrastructure.
 
 Core must not learn DESI/KIBO/Legacy/GLADE-native schemas, masks, depth-map
-construction, raw magnitude preparation, or selection-function fitting; those
-belong in `darksirens-surveys`.
+construction, raw magnitude preparation, selection-function fitting, staged
+survey loading, LSS/Q provenance, or campaign-specific CLI assembly; those
+remain outside core.
 
 Q_LSS, Q ensembles, latent fields/counts, multitracer machinery, and any
 normalization intrinsically requiring those field quantities belong in
 `darksirens-lss`. Weak/strong lensing belongs in `darksirens-lensing`.
 
 The reconstructed source tree contains no `universe_model` dispatcher. The
-Phase-4 spectral likelihood remains a first-class explicit path.
+Phase-4 spectral and Phase-5 ordinary likelihoods remain first-class explicit
+paths.
+
+## Phase-6 inventory correction
+
+The older migration inventory mentions `darksirens/inference/runtime.py`, but no
+such file exists at pinned legacy SHA
+`c042527238bd71421b792936bc48c3b815b90d6d`. Phase 6 must be derived from the
+actual pinned source tree, not from that stale entry.
+
+Legacy `inference/sampling.py` is also not a migration unit as a whole: it mixes
+sampler adapters, diagnostics, checkpointing and backend/GPU behavior. Likewise,
+results/settings already live in a JAX-free `darksirens.io` namespace in the
+pinned tree; preserve that useful separation rather than collapsing all IO under
+inference.
 
 ## Scientific questions
 
 None opened. No scientific behavior change is authorized during reconstruction.
 
-## Current action — final Phase-5 integration
+## Current action — Phase 6
 
-Open the single Phase-5 PR from exact accepted head
-`9d5624864ce7467d309c45125cbe5785c671e1a9` to `main`. Require all PR-triggered
-historical and Phase-5 workflows at that exact head. Only after every required
-gate is green may the PR be squash merged. Then verify the resulting `main` head
-and record the Phase-5 merge SHA before starting the next workflow phase.
+Create `rebuild/phase6-inference-io` from verified Phase-5 main. Freeze the
+portable inference/IO contracts against pinned legacy, then reconstruct them in
+small subphases with focused tests plus all historical regression/parity gates.
+Do not port survey/LSS staging, mega-factory dispatch, or campaign CLI behavior
+into core.
