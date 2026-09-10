@@ -33,7 +33,7 @@ DO_NOT_MIGRATE
 
 | Repository | Role | Status | Latest migration SHA/PR |
 |---|---|---|---|
-| `darksirens-core` | core HBI/siren package | not started | |
+| `darksirens-core` | core HBI/siren package | Phase 1 reference harness complete; science migration not started | `74559ef33931b3fe0400ada9a0cb11d3f9fbe48b` |
 | `darksirens-surveys` | survey/catalog construction | not started | |
 | `darksirens-lss` | LSS/completion/latent fields | not started | |
 | `darksirens-lensing` | weak/strong lensing | not started | |
@@ -64,10 +64,29 @@ DO_NOT_MIGRATE
 
 Detailed ownership is in `inventories/`.
 
+## Phase-1 numerical reference assets
+
+`darksirens-core` now owns the neutral reconstruction reference harness:
+
+```text
+tests/reference/legacy/unified_k1_golden.json
+tests/reference/legacy/unified_k1_manifest.json
+tools/validate_reference.py
+tools/compare_reference.py
+tools/replay_legacy_reference.py
+.github/workflows/reference.yml
+.github/workflows/legacy-reference-replay.yml
+```
+
+The frozen golden JSON is byte-identical to the legacy Git blob `560e44adb712763893111a3607f6d7ca8b168b7a`. Candidate scientific code is judged against this bank; it may not rewrite it.
+
+Pinned legacy replay at run `34429433906` succeeded. The known CPU drift of the three legacy Q/LSS cells is described by the `legacy-replay` profile only; the reconstructed LSS target remains the canonical `rtol=1e-12` bank.
+
 ## Migration invariants
 
-- No production code changes occurred during Phase 0.
 - Legacy remains the source of numerical truth for existing mature behavior.
+- Frozen reference assets are not regenerated from reconstructed code.
 - A mature implementation is not marked migrated until its mapped parity tests pass.
 - Architecture cleanup after the first parity port reruns the same parity tests.
 - Core never imports a companion package.
+- Scientific behavior and architectural movement are not changed in the same initial migration step.
