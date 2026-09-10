@@ -8,13 +8,16 @@ legacy SHA:        c042527238bd71421b792936bc48c3b815b90d6d
 core repository:  ignaciomagana/darksirens-core
 base core SHA:     e0b40fef65261a27b67aa9657a97216df3e8444f
 working branch:    rebuild/phase4-spectral-likelihood
+accepted head:     cfdb138d40d66614bf9b1264c2574d0b497b812d
 ```
 
 ## Status
 
-LOW-LEVEL CORE GATE IN PROGRESS. The first Phase-4 implementation slice has been
-ported, but no spectral hierarchical likelihood has been added yet. Do not add
-that layer until the coordinate/runtime/selection gate is green.
+BRANCH ACCEPTED. The complete Phase-4 catalog-free spectral-siren likelihood and
+GW-selection slice is green at the exact branch head above, including strict
+separate-process numerical parity against the pinned legacy implementation.
+Next action is PR review and exact-head historical workflow validation before
+squash merge. No Phase-5 work may begin until that merge is verified on `main`.
 
 ## Scientific scope
 
@@ -31,13 +34,12 @@ sirens, including:
 - runtime GW-event construction, structural validity masks, spin-block plumbing,
   and selection padding/batching needed by that likelihood.
 
-The spectral redshift prior is the normalized comoving-volume prior and must use
-only the reconstructed core cosmology layer.
+The spectral redshift prior is the normalized comoving-volume prior and uses only
+the reconstructed core cosmology layer.
 
 ## Explicitly out of scope
 
-The following legacy functionality is not to be pulled into Phase 4 merely
-because it shares a file with the ordinary likelihood:
+The following legacy functionality remains outside Phase 4:
 
 - galaxy catalogs and catalog KDEs;
 - completeness corrections and survey selection functions;
@@ -52,7 +54,7 @@ because it shares a file with the ordinary likelihood:
 
 ## Legacy ownership map
 
-### CORE / migrate now
+### CORE / migrated now
 
 ```text
 darksirens/likelihood/selection.py
@@ -65,12 +67,12 @@ darksirens/likelihood/events.py runtime event construction/padding
     -> darksirens/gw/{types,runtime}.py
 
 catalog-free branch only of darksirens/likelihood/core.py
-    -> small spectral likelihood under darksirens/likelihood/{event,hierarchical}.py
+    -> darksirens/likelihood/{event,hierarchical}.py
 ```
 
-### REUSE, do not duplicate
+### REUSED, not duplicated
 
-The reconstructed core already owns the required flat-CPL cosmology operations:
+The reconstructed core cosmology layer provides the required flat-CPL operations:
 
 ```text
 darksirens.cosmology.distances.z_of_dL
@@ -80,9 +82,8 @@ darksirens.cosmology.distances.ddL_of_z_precomputed
 darksirens.cosmology.distances.dV_of_z
 ```
 
-`darksirens.cosmology.volume` already exposes differential comoving volume.
-Phase 4 should add only the normalized spectral-volume-prior helper if needed;
-it must not recreate the distance implementation.
+`darksirens.cosmology.volume` now also exposes the normalized catalog-free
+comoving-volume density used by the spectral likelihood.
 
 ### LATER OWNER
 
@@ -99,10 +100,10 @@ darksirens/likelihood/block_sizing.py       -> later inference/runtime phase
 darksirens/likelihood/factory.py            -> later high-level model/infer API
 ```
 
-The legacy `likelihood/core.py` and `factory.py` are mixed monoliths and are not
-migration units. Only the catalog-free code path may be reconstructed here.
+The legacy `likelihood/core.py` and `factory.py` remain mixed monoliths and were
+not migrated as units.
 
-## Core equations that must remain unchanged
+## Core equations preserved
 
 ### Canonical coordinate Jacobian
 
@@ -149,7 +150,7 @@ The accepted selection correction is
 -Nobs log(mu) + Nobs(Nobs + 3)/(2 N_eff)
 ```
 
-with the reliability boundary
+with reliability boundary
 
 ```text
 N_eff > max(
@@ -158,102 +159,92 @@ N_eff > max(
 )
 ```
 
-using the existing finite variance-budget floor and the existing validated soft
-wall for gradient samplers. Default `max_likelihood_variance = 1.0` is retained.
-No coefficient or guard threshold may change during reconstruction.
+using the existing finite variance-budget floor and validated soft wall for
+gradient samplers. Default `max_likelihood_variance = 1.0` is retained. No
+coefficient or guard threshold changed.
 
-## Initial focused legacy tests
+## Implementation history
 
-Phase-4-owned tests identified and adapted for the low-level gate:
-
-```text
-tests/test_likelihood_coordinates.py
-tests/test_selection_batching.py
-tests/test_selection_gradient_safety.py
-tests/test_selection_correction_coefficient.py
-tests/test_selection_variance_guard.py
-tests/test_selection_soft_guard.py
-tests/test_spin_block_plumbing.py
-```
-
-The cluster/lensing tail of `test_selection_gradient_safety.py` is intentionally
-left for the lensing owner. `test_selection_prior_model.py` is primarily an old
-`universe_model` dispatcher contract and is not imported into the new architecture.
-
-## First low-level implementation slice
-
-The one-shot bootstrap committed the first core-owned slice at:
-
-```text
-af613ba4832c96238807dd8915e32b8879a7d719
-```
-
-Implemented:
+The first low-level Phase-4 slice introduced:
 
 ```text
 src/darksirens/_numerics.py
-src/darksirens/gw/types.py        # runtime GWEvent added
-src/darksirens/gw/runtime.py      # make/pad event
+src/darksirens/gw/types.py
+src/darksirens/gw/runtime.py
 src/darksirens/likelihood/weights.py
 src/darksirens/selection/gw.py
 src/darksirens/selection/__init__.py
 ```
 
-The migrated code preserves the validated legacy numerical paths while changing
-ownership/imports only. Catalog and survey objects remain opaque to the low-level
-weight/selection kernels and are not imported as concrete runtime dependencies.
-
-## Low-level gate history
-
-Permanent Phase-4 workflow was created at core commit:
+Clean lower-level acceptance was reached at:
 
 ```text
-6c06f9ce486392d248090caf006c97001b3db2e3
+head:         220375e6877d755f34131d9d793ad4db38f0b89a
+workflow run: 34441480533
+job:          102757247600
+result:       SUCCESS
 ```
 
-First run:
+Two non-scientific issues were caught before that checkpoint: intended GW runtime
+exports were missing from `__all__`, and one copied soft-guard test contained a
+future `likelihood.factory` assertion. A temporary bootstrap workflow also raced
+that cleanup and rewrote the test once. The bootstrap was deleted and the clean
+owner-local rerun passed. No numerical behavior or scientific tolerance changed.
+
+The spectral assembly then added:
 
 ```text
-workflow run: 34440933815
-job:          102755636114
-result:       FAILED AT LINT BEFORE TESTS
+src/darksirens/cosmology/volume.py
+src/darksirens/likelihood/event.py
+src/darksirens/likelihood/hierarchical.py
+src/darksirens/likelihood/__init__.py
+
+tests/test_event_mc_variance.py
+tests/test_pe_event_reduction.py
+tests/test_spectral_volume_prior.py
+tests/test_spectral_likelihood.py
+
+tools/probe_spectral_likelihood.py
+tools/compare_spectral_probe.py
 ```
 
-The only reported errors were three F401s in `darksirens.gw.__init__` for the
-new intended public runtime exports:
+The block-reduction tests initially used `rtol=1e-13`. One full-suite run exposed
+a single XLA reassociation difference of `1.66533454e-16` absolute / about
+`1.92e-13` relative in the event-variance vector. The pinned legacy
+`test_pe_event_vectorization.py` already documents this exact class of
+reassociation and uses `rtol=1e-12, atol=0` for PE-block comparisons. Only the
+candidate's block-shape unit test was aligned to that existing legacy contract.
+The strict legacy/new fixed-theta parity tolerance was not changed.
+
+## Final branch acceptance
+
+Permanent workflow:
 
 ```text
-GWEvent
-make_gw_event
-pad_gw_event_to_multiple
+branch head:      cfdb138d40d66614bf9b1264c2574d0b497b812d
+workflow run:     34445525661
+job:              102769369532
+workflow result:  SUCCESS
 ```
 
-No numerical or scientific test ran or failed. The fix was limited to adding
-these symbols to the GW namespace `__all__` and organizing the imports. Fix
-commit:
+Acceptance details:
 
 ```text
-64ebacd297df5f5f616f9b90f7d1e2921a70b289
+ruff F/E9 + compileall:                PASS
+coordinate/runtime tests:             9 passed
+GW-selection focused tests:            50 passed
+spectral-likelihood focused tests:     15 passed
+full reconstructed suite:              199 passed, 1 regen-only skip
+dependency-boundary audit:             PASS
+pinned legacy spectral probe:          PASS
+reconstructed spectral probe:          PASS
+legacy/new fixed-theta spectral parity: PASS
 ```
 
-The same permanent low-level gate is being rerun from that branch state. The
-spectral hierarchical likelihood remains blocked until it passes.
-
-## Spectral fixed-theta parity target
-
-Build a deterministic synthetic fixture containing multiple PE events and a
-found-injection set in the canonical `(m1det, q, dL, chieff)` basis, including:
-
-- non-uniform PE proposal weights;
-- non-uniform injection draw weights;
-- at least one invalid/masked sample;
-- selection length not divisible by the chosen batch size;
-- one chi_eff-only population case;
-- one component-spin population case if the legacy/new runtime shape permits a
-  clean common fixture.
-
-Evaluate in separate processes against pinned legacy and reconstructed core at
-several fixed points in `(H0, population parameters)` and serialize:
+The parity fixture contains 3 PE events, 8 samples/event, 257 found injections,
+`Ndraw=4096`, nonuniform PE/injection proposal weights, masked samples, and a
+selection batch of 64. It evaluates three fixed `(H0, population)` points and
+serializes:
 
 ```text
 per-event log Z_i
@@ -264,38 +255,37 @@ selection correction
 full spectral log likelihood
 ```
 
-Comparison target: `rtol=1e-12`, `atol=0` unless exact equality is achieved.
-Any larger discrepancy must be investigated; tolerance is not to be relaxed.
-
-## Phase-4 acceptance gate
-
-Before a PR may be opened:
+The legacy and reconstructed outputs are exactly identical at all serialized
+values:
 
 ```text
-ruff F/E9 over src/tests/tools: PASS
-Phase-2/3 regression surface: PASS
-full reconstructed pytest suite: PASS
-canonical-coordinate/Jacobian tests: PASS
-GW-event padding and spin plumbing: PASS
-selection batching: PASS
-selection hard/soft guard tests: PASS
-selection gradient NaN-safety: PASS
-per-event MC variance tests: PASS
-pinned legacy spectral probe: PASS
-reconstructed spectral probe: PASS
-legacy/new fixed-theta parity at rtol=1e-12: PASS
-package-root import remains light: PASS
-no catalog/LSS/lensing/flow imports in core Phase-4 modules: PASS
+max_abs = 0.000e+00
+max_rel = 0.000e+00
+comparison rtol = 1e-12
+comparison atol = 0
 ```
 
-After the branch gate is green, open the PR and require all older PR workflows
-(`reference-integrity`, `phase2-foundation`, `phase3-population`) plus the new
-Phase-4 workflow to pass at the exact accepted head. Then diff-review, squash
-merge with an expected-head guard, verify core `main`, and record the merge here
-before the next phase.
+The workflow imports legacy and reconstructed `darksirens` in separate Python
+processes, so package-name collision cannot mask parity errors.
+
+## Branch diff at acceptance
+
+Relative to Phase-3 `main` (`e0b40fef...`), accepted head `cfdb138d...` is 21
+commits ahead and 0 behind. The diff is restricted to Phase-4-owned core runtime,
+likelihood/selection code, tests/probes, and the Phase-4 workflow. No catalog,
+LSS, lensing, flow, sampler, or high-level CLI implementation was imported.
+
+## PR acceptance gate
+
+Before merge, the PR must be at the exact accepted head and require all relevant
+historical workflows plus the Phase-4 workflow to pass. Then review the complete
+PR diff, squash merge with expected-head protection, verify `main`, and record
+the merge here and in `STATUS.md`.
 
 ## Next action
 
-Require the corrected low-level gate to pass. Only then remove the temporary
-bootstrap workflow and implement the smallest catalog-free spectral-prior and
-hierarchical-likelihood layer plus separate-process parity probes.
+Open the Phase-4 PR from `rebuild/phase4-spectral-likelihood` into `main`, require
+all exact-head PR workflows to pass, inspect every changed file for ownership and
+scientific-boundary violations, squash merge only if the head remains
+`cfdb138d40d66614bf9b1264c2574d0b497b812d`, verify the resulting `main`, then
+start Phase 5 from that verified merge SHA.
