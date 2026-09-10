@@ -3,13 +3,15 @@
 ## Reference
 
 ```text
-legacy repository:  ignaciomagana/darksirens
-legacy SHA:         c042527238bd71421b792936bc48c3b815b90d6d
-core repository:   ignaciomagana/darksirens-core
-phase-5 branch:     rebuild/phase5-catalog-dark-bright
-5D1 accepted head:  bf45e0f5c0afc404d291d00a0ca267f8126b7e7b
+legacy repository:   ignaciomagana/darksirens
+legacy SHA:          c042527238bd71421b792936bc48c3b815b90d6d
+core repository:    ignaciomagana/darksirens-core
+phase-5 branch:      rebuild/phase5-catalog-dark-bright
+5D1 accepted head:   bf45e0f5c0afc404d291d00a0ca267f8126b7e7b
 first 5D2 candidate: b0fe30d889c3bee2284636c43b040f740f6b61ac
-current 5D2 head:   031f649f139a3bd2429a11053634a34cc3632a91
+depth correction:   031f649f139a3bd2429a11053634a34cc3632a91
+JIT-boundary fix:    df3ea207716928a8644060d83e1d8cd6f453d291
+accepted 5D2 head:   9d5624864ce7467d309c45125cbe5785c671e1a9
 ```
 
 Legacy remains read-only. Candidate and legacy parity probes run in separate
@@ -17,20 +19,19 @@ processes.
 
 ## Status
 
-IN PROGRESS — NOT ACCEPTED.
+ACCEPTED AS A PHASE-5 SUBPHASE CHECKPOINT.
 
-Exact-head CI on `031f649f139a3bd2429a11053634a34cc3632a91` completed all
-focused/regression/dependency gates and every previously accepted Phase-5 parity
-gate, then failed only the new 5D2 legacy/candidate comparator.
+Exact-head CI at `9d5624864ce7467d309c45125cbe5785c671e1a9` passed the
+complete Phase-5 branch workflow, including every historical reconstructed test,
+the dependency/light-import audit, and all separate-process parity probes.
 
 ```text
-workflow run: 34525306049
-job:          103032622715
-result:       FAILURE at final 5D2 parity step only
+workflow run: 34531001625
+job:          103051412901
+result:       SUCCESS
 ```
 
-The failure is being treated as a numerical-semantics bug until resolved. The
-comparison tolerance is frozen and will not be widened.
+The comparison tolerance was not changed.
 
 ## Frozen ownership decision
 
@@ -74,7 +75,7 @@ K(z) = sum_j c_j z^j       # no c0
 C_sel = Phi[(m_lim - M0 - DM(z) - K(z)) / sigma_M]
 ```
 
-`None`/empty K coefficients must be bit-identical to K=0. `sigma_M` must be
+`None`/empty K coefficients are bit-identical to K=0. `sigma_M` must be
 strictly positive at standardized construction/load time.
 
 ### Schechter family
@@ -96,65 +97,33 @@ dropping K. Schechter stratification is outside this slice.
 
 ### H0 firewall
 
-At fixed h-scaled luminosity-function parameters the **selection curve** must be
-H0-invariant to the frozen numerical tolerance because the `+5 log10 h` in the
-absolute-magnitude zero point cancels the `-5 log10 h` luminosity-distance
-modulus scaling.
+At fixed h-scaled luminosity-function parameters the selection curve is
+H0-invariant because the `+5 log10 h` absolute-magnitude shift cancels the
+`-5 log10 h` luminosity-distance-modulus scaling.
 
 This does not make the full missing-host budget H0-invariant. The ordinary
-selection-mode missing density is
+selection-mode missing density remains
 
 ```text
 dN_miss = (1 - C_sel) * n0 * apix * dV_c/dz * (1 + z)^delta,
 ```
 
-so its amplitude still scales as `n0 * H0^-3`. The legacy code explicitly
-flags that this mode has no count-derived amplitude anchor. 5D2 preserves this
-behavior; it does not reinterpret or repair the model.
+so its amplitude still scales as `n0 * H0^-3` at fixed background shape.
 
 ### Finite-depth state semantics
 
 The frozen legacy state keeps the raw radial `C_sel(z)` curve available even
-above `z_depth`. Depth affects the **consumed** missing-host budget instead:
+above `z_depth`. Depth affects the consumed missing-host budget instead:
 
 ```text
 z <= z_depth: dN_miss = (1 - C_sel) dN_exp
 z >  z_depth: dN_miss = dN_exp
 ```
 
-Therefore `C_eff=0` above the depth, but the raw diagnostic/state `C` remains
-`C_sel`. This distinction is pinned explicitly in candidate tests.
+Therefore `C_eff=0` above depth, while the raw diagnostic/state `C` remains
+`C_sel`.
 
-## Legacy anchors inspected
-
-```text
-darksirens/redshift/selection.py
-    m0_absolute
-    k_of_z
-    c_sel_gaussian
-    _a_off_zero
-    _upper_gamma_scaled
-    c_sel_schechter
-
-darksirens/redshift/completion.py
-    _decode_selection_family
-    _precompute_grids selection branch
-    _row_C C_bar_raw path
-    _assemble_curves depth relaxation
-tests/test_completion_selection_mode.py
-tests/test_selection_kcorr.py
-tests/test_selection_schechter.py
-```
-
-The legacy `_precompute_grids` forms `dN_exp` exactly as the already-rebuilt
-ordinary core path does, then places `C_sel` into the same global curve slot
-consumed by every row. Observed KDE/count-derived completeness is bypassed in
-this mode.
-
-## Implemented candidate shape
-
-The implementation is intentionally explicit and leaves
-`catalog/completeness.py` unchanged:
+## Implemented core surface
 
 ```text
 src/darksirens/selection/catalog.py
@@ -175,51 +144,29 @@ tools/probe_catalog_selection.py
 `build_completion_state` expected-count state. There is no reconstructed
 `SurveyParams.c_mode` switchboard.
 
-The core runtime serialization format is deliberately smaller than the legacy
-survey-fit JSON:
+The runtime serialization format is intentionally survey-independent and small:
 
 ```text
 darksirens-catalog-selection-1.0
 ```
 
-It contains only the quantities needed to evaluate the standardized runtime
-curve. Survey covariance, optimizer information and background/provenance
+Survey covariance, optimizer information, raw columns and background/provenance
 checks stay survey-side.
 
-## Candidate correction before parity replay
+## Corrections found by strict parity
 
-The first candidate commit
-`b0fe30d889c3bee2284636c43b040f740f6b61ac` zeroed the returned raw `C` field
-above a finite `z_depth`. Read-only inspection of frozen `_row_C` and
-`_assemble_curves` showed that this was a state/diagnostic mismatch: legacy
-leaves raw `C_sel` untouched and applies the depth relaxation only to
-`dN_miss/C_eff`.
+### Finite-depth raw-state correction
 
-The correction commit
-`031f649f139a3bd2429a11053634a34cc3632a91` removes that raw-C mutation and
-changes the focused depth test to pin the frozen distinction. No selection
-curve, expected-count physics, tolerance, or prior behavior changed.
+The first candidate zeroed the returned raw `C` above a finite `z_depth`.
+Read-only inspection of frozen `_row_C` / `_assemble_curves` showed that legacy
+leaves raw `C_sel` untouched and applies depth relaxation only to
+`dN_miss/C_eff`. Commit
+`031f649f139a3bd2429a11053634a34cc3632a91` restored that distinction.
 
-## Exact-head CI result at 031f649f
+### Compilation-boundary correction
 
-The following passed before the final 5D2 comparator:
-
-```text
-5A compact tests:                       5 passed
-5A redshift/distance tests:            11 passed
-5B completeness/HLO tests:             11 passed
-5C explicit hierarchy tests:            3 passed
-5D1 marked-host tests:                  7 passed
-5D2 catalog-selection tests:            9 passed
-full reconstructed suite:             251 passed, 1 regen-only skip
-dependency/light-import audit:         PASS
-5A legacy/new parity:                  PASS, max_abs=max_rel=0
-5B legacy/new parity:                  PASS, max_abs=max_rel=0
-5C legacy/new detailed parity:         PASS, max_abs=max_rel=0
-5D1 legacy/new marked parity:          PASS, max_abs=max_rel=0
-```
-
-Only the new 5D2 comparison failed:
+The corrected depth candidate then passed all focused and historical tests but
+missed the new strict comparator at at most
 
 ```text
 max_abs = 7.276e-11
@@ -228,46 +175,62 @@ rtol    = 1e-12
 atol    = 0
 ```
 
-Representative failures:
+The copied Gaussian/Schechter equations were not the problem. Frozen legacy
+`c_sel_*`, `_precompute_grids` and `completion_curves` are plain JIT-compatible
+functions whose compilation boundary is supplied by the enclosing likelihood.
+The candidate had added a new inner `@threads_distance_table()` JIT boundary to
+`selection_curve` / `selection_completion_curves`, changing XLA lowering of the
+normal-CDF/incomplete-gamma tail arithmetic by a few ulps.
+
+Commit `df3ea207716928a8644060d83e1d8cd6f453d291` removes that extra compilation
+boundary while retaining explicit distance-table threading. Commit
+`9d5624864ce7467d309c45125cbe5785c671e1a9` pins the intended contract in tests:
+the public eager dispatcher is bit-identical to its family evaluator, and both
+families remain valid when an enclosing JIT compiles the expression.
+
+No scientific equation, prior, expected-count normalization or comparator
+threshold was changed.
+
+## Exact-head acceptance result
+
+At accepted head `9d5624864ce7467d309c45125cbe5785c671e1a9`:
 
 ```text
-Gaussian record 0, dN_miss[z index 164]:
-legacy    1.1792142844497329
-candidate 1.1792142844485503
-relative  1.003e-12
-
-Schechter record 2, raw C tail:
-z index 739: legacy 2.9751595509610620e-23
-             cand.  2.9751595509645914e-23   rel 1.186e-12
-z index 939: legacy 7.4613628763121804e-66
-             cand.  7.4613628763975585e-66   rel 1.144e-11
-z index 988: legacy 5.0352644748049506e-84
-             cand.  5.0352644748944529e-84   rel 1.778e-11
+lint / compile:                           PASS
+5A compact tests:                         5 passed
+5A redshift/distance tests:              11 passed
+5B completeness/HLO tests:               11 passed
+5C explicit hierarchy tests:              3 passed
+5D1 marked-host tests:                    7 passed
+5D2 catalog-selection tests:              9 passed
+full reconstructed suite:               251 passed, 1 regen-only skip
+dependency/light-import audit:           PASS
+5A legacy/new catalog-kernel parity:     PASS, max_abs=max_rel=0
+5B legacy/new completeness parity:       PASS, max_abs=max_rel=0
+5C legacy/new likelihood parity:         PASS, max_abs=max_rel=0
+5D1 legacy/new marked-host parity:       PASS, max_abs=max_rel=0
+5D2 legacy/new selection parity:         PASS, max_abs=max_rel=0
+comparison rtol:                         1e-12
+comparison atol:                         0
 ```
 
-The Schechter failures are concentrated in extremely small tail probabilities;
-the Gaussian failure is just over the frozen relative tolerance in the ordinary
-missing density. This is not grounds to relax the comparator. The next
-diagnostic is the shared distance-modulus/table path and exact operation order,
-because the copied Gaussian/Schechter algebra itself matches the frozen source.
+## Phase-5 integration audit
 
-## Acceptance gate
+The full Phase-4-main to accepted-5D2 diff is bounded to the Phase-5 surface:
+ordinary catalog types/compaction/redshift/completeness/models/counterparts,
+generic marks, generic catalog selection, explicit catalog/bright likelihood
+composition, tests/probes and the permanent Phase-5 workflow. The only
+pre-existing scientific source file modified is
+`src/darksirens/likelihood/hierarchical.py`; its Phase-4 spectral likelihood is
+retained, with the new ordinary paths added explicitly around it.
 
-Required before marking 5D2 accepted:
+No survey/LSS/lensing/CLI/HEALPix dependency enters the core catalog/selection
+runtime, and no raw survey schema or campaign state is present in the new core
+surface.
 
-```text
-focused Gaussian runtime tests
-focused Schechter runtime/domain tests
-K(z) None/empty bit identity
-Gaussian and Schechter H0-firewall tests
-JIT dispatch for both runtime families
-selection theta changes the ordinary missing budget
-finite-depth raw-C versus consumed-budget behavior
-explicit n0*H0^-3 amplitude check
-full reconstructed regression suite
-catalog/selection dependency + light-import audit
-separate-process legacy/candidate runtime probe
-unchanged comparator: rtol=1e-12, atol=0
-```
+## Next action
 
-No tolerance widening and no scientific cleanup during parity reconstruction.
+Open the single Phase-5 PR from exact accepted head
+`9d5624864ce7467d309c45125cbe5785c671e1a9` to `main`, require the PR-triggered
+historical and Phase-5 gates at that same head, then squash merge only if all are
+green.
