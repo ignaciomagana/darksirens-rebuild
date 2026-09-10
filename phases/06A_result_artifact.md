@@ -8,10 +8,24 @@ legacy SHA:        c042527238bd71421b792936bc48c3b815b90d6d
 core repository:   ignaciomagana/darksirens-core
 phase-6 base:      86e0c88a51482d17fac70f111057d277df9387fd
 working branch:    rebuild/phase6-inference-io
+accepted 6A head:  194e246666e6901624347d09ec570696f3c62e4d
+workflow run:      34534605913
+job:               103063178085
+result:            SUCCESS
 ```
 
 Legacy remains read-only. Candidate and legacy behavioral probes run in separate
 processes.
+
+## Status
+
+ACCEPTED AS A PHASE-6 SUBPHASE CHECKPOINT.
+
+The exact candidate head `194e246666e6901624347d09ec570696f3c62e4d`
+passed the focused 6A contract, the full reconstructed suite, the portable
+import/dependency audit, exact separate-process legacy/new artifact behavior,
+and the complete preserved Phase-5 parity tail. No comparator or scientific
+behavior was changed.
 
 ## Scope
 
@@ -66,29 +80,39 @@ survey/LSS/lensing output schemas
 ```
 
 Those are later explicit consumers or destination-specific layers. The generic
-`darksirens.io` package must remain JAX-free at import time.
+`darksirens.io` package remains JAX-free at import time.
 
-## Acceptance gate
-
-At an exact candidate head:
+## Implemented surface
 
 ```text
-focused 6A tests                              PASS
-BaseException rollback                        PASS
-previous-complete-result preservation          PASS
-legacy unmarked top-level/grouped layouts      PASS
-truncated/non-HDF5/missing rejection           PASS
-`import darksirens.io.results` imports no JAX  PASS
-full historical reconstructed suite            PASS
-all Phase-2..5 permanent parity gates           PASS
-separate-process legacy/new 6A behavior probe   exact
+src/darksirens/io/__init__.py
+src/darksirens/io/results.py
+tests/test_result_artifact.py
+tools/probe_result_artifact.py
+.github/workflows/phase6-inference-io.yml
 ```
 
-No tolerance relaxation is applicable: the 6A probe is discrete/structural and
-must match exactly.
+## Acceptance result
+
+```text
+focused Phase 6A tests:                    PASS
+full reconstructed regression suite:      PASS
+portable dependency/light-import audit:   PASS
+legacy/new 6A artifact behavior:          EXACT
+preserved 5A catalog-kernel parity:       PASS
+preserved 5B completeness parity:         PASS
+preserved 5C likelihood parity:           PASS
+preserved 5D1 marked-host parity:         PASS
+preserved 5D2 selection parity:           PASS
+historical numerical comparator rtol:     1e-12
+historical numerical comparator atol:     0
+```
+
+The 6A probe itself is discrete/structural and compares exact JSON behavior;
+there is no floating-point tolerance to relax.
 
 ## Next
 
-Only after 6A acceptance proceed to the semantic checkpoint/resume and run-
-fingerprint layer. Do not migrate `inference/sampling.py`, `loaders.py`,
-`q_provenance.py`, or the old mega-factory wholesale.
+Proceed to Phase 6B, the backend-independent checkpoint/resume planning layer.
+Do not migrate `inference/sampling.py`, backend checkpoint serialization,
+`loaders.py`, `q_provenance.py`, or the old mega-factory wholesale.
