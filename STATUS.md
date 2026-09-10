@@ -12,14 +12,17 @@ control repo:      ignaciomagana/darksirens-rebuild
 
 ```text
 PHASE 4 — SPECTRAL-SIREN LIKELIHOOD + GW SELECTION
-status: INVENTORY / PARITY DESIGN IN PROGRESS
+status: LOW-LEVEL CORE GATE COMPLETE; SPECTRAL ASSEMBLY NEXT
 base repo:      ignaciomagana/darksirens-core
 base SHA:       e0b40fef65261a27b67aa9657a97216df3e8444f
 working branch: rebuild/phase4-spectral-likelihood
+accepted lower-level head: 220375e6877d755f34131d9d793ad4db38f0b89a
 ```
 
-No Phase-4 scientific implementation is accepted yet. Ownership and parity
-fixtures are being frozen before code is moved.
+The Phase-4 coordinate/runtime/GW-selection slice is now green on a clean branch.
+No catalog, LSS, lensing, sampler, flow, or application-factory code has been
+pulled into the phase. The next slice is the catalog-free spectral hierarchical
+likelihood plus strict separate-process parity against the pinned legacy SHA.
 
 ## Completed
 
@@ -78,10 +81,10 @@ ordinary population import leaves tinygp unloaded: PASS
 No scientific source or tolerance changed during final PR cleanup.
 Detailed record: `phases/03_population.md`.
 
-## Phase 4 inventory decisions so far
+## Phase 4 progress
 
-The legacy likelihood package is not being migrated file-for-file. The Phase-4
-core boundary is:
+The legacy likelihood package is not being migrated file-for-file. The frozen
+Phase-4 core boundary is:
 
 ```text
 darksirens/likelihood/selection.py
@@ -91,28 +94,61 @@ darksirens/inference/utils.py likelihood math
     -> darksirens/likelihood/weights.py
 
 darksirens/likelihood/events.py runtime event/padding logic
-    -> reconstructed GW/likelihood runtime owner
+    -> darksirens/gw/{types,runtime}.py
 
 catalog-free branch of darksirens/likelihood/core.py
-    -> small spectral likelihood implementation
+    -> small spectral likelihood implementation under darksirens/likelihood/
 ```
 
+The first implementation slice now contains the canonical coordinate/Jacobian
+math, runtime `GWEvent` construction and padding, per-sample importance weights,
+selection `mu`/`N_eff`, total-likelihood-variance guards, soft-wall behavior, and
+gradient-safe reductions.
+
+Clean lower-level acceptance:
+
+```text
+core branch head: 220375e6877d755f34131d9d793ad4db38f0b89a
+workflow run:     34441480533
+job:              102757247600
+lint:             PASS
+coordinate/runtime tests: PASS
+GW-selection tests:       PASS
+full reconstructed suite: PASS
+dependency-boundary audit: PASS
+workflow result:          SUCCESS
+```
+
+Two non-scientific issues were caught before this checkpoint: intended GW runtime
+exports were missing from `__all__`, and one copied soft-guard test contained a
+future `likelihood.factory` assertion. A temporary bootstrap workflow then raced
+that cleanup and rewrote the test once; the bootstrap was deleted, the owner-local
+test was restored, and the clean branch rerun above passed. No numerical behavior
+or tolerance was changed.
+
+Explicitly excluded from Phase 4 remain catalog KDE/completeness, survey
+selection, Q_LSS/latent fields, marks, sky anisotropy, weak/strong lensing,
+cluster/pair likelihoods, flow surrogates/pdet emulators, samplers, inference
+prior transforms, and the old application CLI/`universe_model` dispatcher.
+
 The reconstructed cosmology layer already provides `z_of_dL`, `dV_of_z`,
-`ddL_of_z`, and precomputed variants, so Phase 4 will reuse those rather than
-recreating legacy redshift/distance machinery.
+`ddL_of_z`, and precomputed variants. The spectral redshift prior will reuse
+those primitives and add only the normalized comoving-volume density required by
+the catalog-free likelihood.
 
-Explicitly excluded from Phase 4: catalog KDE/completeness, survey selection,
-Q_LSS/latent fields, marks, sky anisotropy, weak/strong lensing, cluster/pair
-likelihoods, flow surrogates/pdet emulators, samplers, inference prior transforms,
-and the old application CLI/`universe_model` dispatcher.
+Separate-process fixed-theta parity will compare:
 
-Focused legacy tests identified so far include likelihood-coordinate/Jacobian,
-selection batching, selection gradient safety, N(N+3) correction coefficient,
-total-likelihood variance guard, soft guard, selection consolidation, and spin
-block plumbing. Separate-process fixed-theta spectral parity will compare
-per-event evidence/variance, `log_mu`, `N_eff`, selection correction, and total
-spectral log likelihood at `rtol=1e-12`, `atol=0` unless exact equality is
-achieved.
+```text
+per-event log Z_i
+per-event MC variance_i
+log_mu
+N_eff
+selection correction
+full spectral log likelihood
+```
+
+at `rtol=1e-12`, `atol=0` unless exact equality is achieved. Tolerances are not
+to be relaxed to make the phase pass.
 
 Detailed record: `phases/04_spectral_likelihood.md`.
 
@@ -131,6 +167,7 @@ Phase 4 branch:
 ```text
 rebuild/phase4-spectral-likelihood
 base e0b40fef65261a27b67aa9657a97216df3e8444f
+current accepted lower-level head 220375e6877d755f34131d9d793ad4db38f0b89a
 ```
 
 ### `darksirens-surveys`
@@ -159,7 +196,8 @@ before any later architecture is layered on top.
 
 ## Next action
 
-Finish the exact Phase-4 unit-test/function inventory, freeze the deterministic
-spectral parity fixture, then port the smallest catalog-free likelihood + GW
-selection slice. Require the full reconstructed regression suite and strict
-legacy/new parity before opening the Phase-4 PR.
+Implement the smallest catalog-free spectral-redshift prior and hierarchical
+likelihood assembly around the already-accepted weight/selection primitives.
+Add deterministic separate-process legacy/new probes at several fixed `(H0,
+population)` points, require `rtol=1e-12`, `atol=0`, then rerun the full Phase-4
+gate before opening a PR.
