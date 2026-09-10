@@ -7,14 +7,17 @@ legacy repository: ignaciomagana/darksirens
 legacy SHA:        c042527238bd71421b792936bc48c3b815b90d6d
 core repository:  ignaciomagana/darksirens-core
 working branch:    rebuild/phase3-population
-accepted branch SHA: b4e476db727036fea9e97cdb8fb111206a5fba5d
+pull request:      ignaciomagana/darksirens-core#2
+current branch SHA: 2461954c47df587ed70f711769a42779775be692
 ```
 
 ## Status
 
-VALIDATION COMPLETE. The cleaned Phase-3 branch passed the permanent acceptance
-gate. Phase 3 should be marked COMPLETE after PR review and merge to core `main`.
-Do not begin Phase 4 before that merge is recorded here.
+PR VALIDATION IN PROGRESS. The population science/parity gate passed on the
+previous clean head, but PR #2 exposed three test-only F401 lint errors in the
+older Phase-2 workflow. Those imports were removed without touching scientific
+source or tolerance. The complete Phase-3 and PR gate must pass again on current
+head `2461954c47df587ed70f711769a42779775be692` before merge. Do not begin Phase 4.
 
 ## Scope
 
@@ -29,19 +32,19 @@ CLI wiring.
 
 ## Implemented
 
-- migrated the parametric population models, mixtures/components, component-spin,
+- migrated parametric models, mixtures/components, component-spin,
   grammar/registry, fixed fiducials, GP models, and population numerical helpers;
 - exposed the stable registry API from `darksirens.population`;
 - rewired population internals to reconstructed cosmology/grid owners;
-- retained GP models in the population namespace while keeping `tinygp` optional
-  and lazy for ordinary population imports;
+- kept `tinygp` optional and lazy for ordinary population imports;
 - added pinned-legacy population goldens and physics tests;
 - added a separate-process pinned-legacy/new population probe;
 - added a population-owned simplex-prior test independent of the future
-  `darksirens.inference.prior` implementation;
-- separated genuine population-support tests from legacy flow/PPC sampling tests.
+  inference prior-transform implementation;
+- separated genuine population-support validation from legacy flow/PPC sampling
+  and old application/lensing CLI wiring.
 
-## Ownership corrections made during validation
+## Validation history
 
 The first broad copied-test run gave:
 
@@ -50,38 +53,19 @@ Phase-2 regressions: 14 passed
 population block:    86 passed, 14 failed, 1 skipped
 ```
 
-All 14 failures were cross-phase ownership leaks:
+All 14 failures were cross-phase ownership leaks: four depended on the future
+`darksirens.inference.prior.make_prior_transform` and ten depended on the old
+main/lensing CLI grid wiring. No population numerical failure was present.
+The inference-dependent stick-prior checks were replaced with a direct
+population-owned prior contract; CLI-only assertions were removed from this
+phase for later validation by their actual owner.
 
-```text
-4  depended on darksirens.inference.prior.make_prior_transform
-10 depended on the old main/lensing CLI grid wiring
-```
+A later probe-only failure came from assuming the reconstructed object layout
+(`model.spin_component`) on the pinned legacy model, where spin components can
+live on the mixture. The probe now feature-detects both layouts. Scientific
+source and tolerances were unchanged.
 
-No population numerical failure was present. These tests were not hidden with
-permanent deselection. The inference-dependent stick-prior checks were replaced
-by a direct population-owned prior contract, and the CLI-only assertions were
-removed from the Phase-3 test file for later validation in their actual owner
-phase.
-
-A later parity run exposed a probe-only compatibility bug: the new probe assumed
-a direct `model.spin_component`, while the pinned legacy generic population model
-can keep spin components on its mixture. The probe was changed to feature-detect
-both layouts. No scientific source or tolerance was changed.
-
-## Cleanup
-
-Before final acceptance, all temporary reconstruction scaffolding and stale
-artifacts were removed, including bootstrap workflows/marker files, the temporary
-cleanup workflow, and `phase3_population_dependency_report.txt`.
-
-The permanent Phase-3 workflow was then tightened so it contains no `-k`
-deselection and explicitly runs a plain full-suite:
-
-```text
-python -m pytest -q
-```
-
-## Final clean acceptance gate
+## First fully clean scientific acceptance
 
 ```text
 workflow run: 34437051423
@@ -112,13 +96,9 @@ comparison tolerance:                       rtol=1.0e-12
 ordinary population import tinygp-lazy:     PASS
 ```
 
-The only full-suite skip is the explicit golden-regeneration guard:
+The only full-suite skip is the explicit golden-regeneration guard.
 
-```text
-tests/test_population_registry_golden.py: set DARKSIRENS_REGEN_GOLDEN=1 to regenerate
-```
-
-Representative normalization diagnostics retained from the legacy tests:
+Representative normalization diagnostics:
 
 ```text
 pairing grid 2048: max |Delta log p_pop| = 2.937e-05, median = 4.077e-08
@@ -127,24 +107,61 @@ pairing grid 8192: max |Delta log p_pop| = 1.717e-06, median = 2.540e-09
 support-edge zero-pattern mismatches: 0
 ```
 
-The archived curated fixed-population sets that lie outside the current sampled
-prior still emit the same warning in both legacy and reconstructed probes. This
-is preserved legacy behavior and does not contribute to the parity difference.
+## PR #2 review finding
+
+PR #2 was opened at the accepted scientific head. `reference-integrity` passed,
+but the older `phase2-foundation` PR workflow failed at its broader Ruff command
+because three migrated legacy test imports were unused:
+
+```text
+tests/test_component_spin_model.py: ComponentSpinModel
+tests/test_pairing_norm_grid.py: get_q_grid
+tests/test_population_grammar.py: ModelNameError
+```
+
+This was test hygiene, not a physics or numerical failure. A one-shot workflow
+ran `ruff check tests --select F401 --fix` and changed only those three migrated
+test files. Its fix commit was:
+
+```text
+29606d1e67a421da0ebddfde8c2c60246def2ade
+```
+
+The one-shot workflow was then deleted. Current candidate head is:
+
+```text
+2461954c47df587ed70f711769a42779775be692
+```
+
+Because the branch head changed, all prior acceptance evidence is treated as
+historical. Both the full Phase-3 gate and all PR-triggered workflows must be
+green at this exact head before merge.
+
+## Cleanup
+
+Temporary bootstrap, patch, cleanup, and lint-fix workflows/marker files and the
+stale dependency report have been removed. The permanent
+`phase3-population.yml` remains and contains no `-k` deselection. It explicitly
+runs a plain:
+
+```text
+python -m pytest -q
+```
 
 ## Accepted ownership decisions
 
-1. Legacy `population.sampling` is not part of the population-density core. Its
+1. Legacy `population.sampling` is not part of the population-density core; its
    proposal/PPC/flow functionality moves with the later inference/surrogate layer.
 2. Application CLI wiring is not a population-model contract.
 3. Mixture-weight priors are population contracts and are tested directly at the
    population layer without importing the future inference transform.
-4. Cross-version parity probes feature-detect scientific capabilities rather than
-   requiring identical internal object layouts.
-5. No numerical tolerance was relaxed during Phase 3.
+4. Cross-version parity probes feature-detect capabilities rather than requiring
+   identical internal object layouts.
+5. No scientific or numerical tolerance is relaxed to obtain acceptance.
 
 ## Next action
 
-Open and review the Phase-3 PR from `rebuild/phase3-population` to core `main`.
-Merge only if the PR head remains
-`b4e476db727036fea9e97cdb8fb111206a5fba5d` and its checks pass. Then record the
-PR number and merged core `main` SHA here and mark Phase 3 COMPLETE before Phase 4.
+Require all branch and PR checks to pass at
+`2461954c47df587ed70f711769a42779775be692`. Review the final PR diff and merge
+only at that head. Then record the squash-merge/core `main` SHA here and mark
+Phase 3 COMPLETE before Phase 4 begins.
