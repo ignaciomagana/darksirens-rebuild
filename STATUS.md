@@ -11,31 +11,66 @@ control repo:      ignaciomagana/darksirens-rebuild
 ## Current phase
 
 ```text
-PHASE 0 — INVENTORY AND DEPENDENCY MAP
+PHASE 1 — FROZEN NUMERICAL REFERENCE
 status: COMPLETE
 ```
 
 ## Completed
 
-- Four-package ownership model confirmed against the actual legacy code.
-- Full package-domain migration inventory recorded under `inventories/`.
-- Major cross-domain dependency inversions identified and ordered.
-- Experiment/script selective-promotion policy recorded.
-- Legacy test assets mapped by new package ownership.
-- CPU-fast legacy reference gate identified: 69 files / 823 collected tests.
-- Unified K=1 fixed-coordinate golden bank selected as central Phase-1 parity anchor.
-- GP population models confirmed as core.
-- LSS and lensing confirmed as mature first-class companion packages.
+- Phase 0 scientific ownership/dependency inventory completed.
+- `darksirens-core` initialized with validation infrastructure only.
+- Legacy unified K=1 golden bank frozen byte-identically in the core repository.
+- Source golden blob SHA pinned: `560e44adb712763893111a3607f6d7ca8b168b7a`.
+- Source fixture/test blob SHA pinned: `0f4e3301db2b4a73c574791a871d53fd56f0cad2`.
+- Manifest records validated CPU stack, backend banks, cell ownership, coordinate fractions and comparison rules.
+- Neutral per-owner candidate comparator added.
+- Separate-import-root pinned-legacy replay runner added.
+- Immutable-reference CI passes.
+- Pinned legacy replay of all 15 cells passes.
+- Core-owned cells pass the canonical `rtol=1e-12`, `atol=0` comparison in replay.
+- Weak-lensing cell passes the canonical `rtol=1e-12`, `atol=0` comparison in replay.
+- Legacy's documented ~`2.3e-12` CPU drift in the three Q/LSS cells is recorded explicitly and isolated to a `legacy-replay` profile; it does not weaken the canonical reconstruction target.
 
-## Production repository changes
+## Production repository state
 
-None. `darksirens-core`, `darksirens-surveys`, `darksirens-lss`, and `darksirens-lensing` have not been modified by the rebuild work.
+### `darksirens-core`
 
-## Numerical parity
+Reference/validation infrastructure exists at HEAD:
 
-Not yet re-established in the new packages. Phase 1 freezes serialized legacy reference outputs and a separate-process comparator before runtime migration starts.
+```text
+74559ef33931b3fe0400ada9a0cb11d3f9fbe48b
+```
 
-## Key dependency findings
+There is intentionally no reconstructed scientific `darksirens` package yet.
+
+### `darksirens-surveys`
+
+Not started.
+
+### `darksirens-lss`
+
+Not started.
+
+### `darksirens-lensing`
+
+Not started.
+
+## Validation results
+
+```text
+reference-integrity workflow
+run 34429433913
+SUCCESS
+
+legacy-reference-replay workflow
+run 34429433906
+job 102721583697
+SUCCESS
+```
+
+The replay checkout uses the pinned legacy SHA in a separate directory/process root and calls the legacy unified-golden fixture's own evaluator. No reconstructed scientific code participates.
+
+## Key dependency findings carried forward
 
 - `core/types.py` mixes generic state with LSS and weak-lensing fields.
 - ordinary `likelihood/core.py` imports weak-lensing machinery directly.
@@ -49,12 +84,12 @@ Not yet re-established in the new packages. Phase 1 freezes serialized legacy re
 - minimal strong-lensing analysis protocol;
 - exact optional flow API.
 
-These are frozen only after ordinary core parity.
+These remain deferred until ordinary core parity is established.
 
 ## Scientific questions
 
-None opened. No scientific behavior was changed in Phase 0.
+None opened. No scientific behavior changed in Phases 0-1.
 
 ## Next action
 
-Phase 1 — freeze the legacy numerical reference/golden harness. No mathematical kernel should be reorganized before that exists.
+Phase 2 — build the minimal installable `darksirens-core` foundation, then migrate low-level scientific contracts in parity-gated slices. Start with package/import/JAX runtime, cosmology, and GW data contracts before moving hierarchical likelihood code.
