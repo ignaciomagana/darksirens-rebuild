@@ -7,7 +7,7 @@ legacy repository: ignaciomagana/darksirens
 legacy SHA:        c042527238bd71421b792936bc48c3b815b90d6d
 core repository:  ignaciomagana/darksirens-core
 working branch:    rebuild/phase3-population
-current branch SHA: df4f17ccca5e6777286838f5340c10af1f845254
+current branch SHA: a934f5c3700d53ebd11c84ef3e20d6fd40e86fe7
 ```
 
 ## Status
@@ -70,8 +70,46 @@ median at 8192:                     2.540e-09
 zero-pattern mismatches in support-edge sweeps: 0
 ```
 
-These mixed-owner tests are now separated from the Phase-3 gate rather than
+These mixed-owner tests were separated from the Phase-3 gate rather than
 pulling inference/CLI code into the population package.
+
+### Permanent gate run 34436206907
+
+After the ownership split, every reconstructed scientific test stage passed:
+
+```text
+ruff F/E9:                                  PASS
+Phase-2 regressions:                        14 passed
+population registry golden:                 13 passed, 1 regen-only skip
+population grammar:                         34 passed, 4 cross-phase deselected
+population simplex-prior contract:          4 passed
+component-spin:                             9 passed
+pairing normalization/support:              19 passed, 10 CLI tests deselected
+population model support:                   3 passed
+gradient NaN safety:                        8 passed
+GP population tests:                        21 passed
+```
+
+The run then failed in the newly added *legacy probe harness*, before any
+legacy/new numerical comparison. The pinned legacy generic `PopulationModel`
+does not expose `model.spin_component` directly; component-spin capability is
+owned by its mixture's `spin_components`. The probe had assumed the reconstructed
+object layout and raised:
+
+```text
+AttributeError: 'PopulationModel' object has no attribute 'spin_component'
+```
+
+This was a probe bug, not a population-model failure. The probe now feature-
+detects component-spin consumption across both supported layouts: a direct
+`spin_component`, a mixture `spin_component`, or mixture `spin_components`.
+Scientific source code and parity tolerances were not changed.
+
+Probe fix commit:
+
+```text
+a934f5c3700d53ebd11c84ef3e20d6fd40e86fe7
+```
 
 ## Acceptance gate
 
@@ -106,9 +144,13 @@ No tolerance is to be relaxed to obtain acceptance.
    correctness can be tested directly from the declared Beta stick priors and
    `_stick_breaking_weights`; it does not require importing the future inference
    prior-transform implementation.
+4. Cross-version parity probes must feature-detect scientific capabilities and
+   must not assume identical internal object layouts between the legacy and
+   reconstructed packages.
 
 ## Next action
 
-Run the revised permanent Phase-3 gate from commit
-`df4f17ccca5e6777286838f5340c10af1f845254`, fix any genuine population or
-parity failures, and remain in Phase 3 until the entire workflow is green.
+Run the permanent Phase-3 gate from commit
+`a934f5c3700d53ebd11c84ef3e20d6fd40e86fe7`. If it passes through legacy/new
+parity, remove the temporary Phase-3 bootstrap workflows and rerun the permanent
+gate once more on the clean branch before opening/merging the Phase-3 PR.
