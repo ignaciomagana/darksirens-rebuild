@@ -9,13 +9,13 @@ core repository:  ignaciomagana/darksirens-core
 working branch:    rebuild/phase3-population
 pull request:      ignaciomagana/darksirens-core#2
 accepted head SHA: 2461954c47df587ed70f711769a42779775be692
+merged main SHA:   e0b40fef65261a27b67aa9657a97216df3e8444f
 ```
 
 ## Status
 
-PR VALIDATION COMPLETE. All required branch and PR checks pass at the exact
-accepted head. The branch is ready for guarded squash merge. Do not begin Phase 4
-until the merge SHA is recorded here.
+COMPLETE. PR #2 was squash-merged only after every required check passed at the
+exact accepted head. Core `main` was verified at the returned squash-merge SHA.
 
 ## Scope
 
@@ -117,7 +117,7 @@ tests/test_population_grammar.py: ModelNameError
 
 Only those unused imports were removed. Scientific source and numerical
 tolerances were unchanged. The one-shot lint-fix workflow was then deleted.
-The final accepted candidate head is:
+The final accepted candidate head was:
 
 ```text
 2461954c47df587ed70f711769a42779775be692
@@ -125,7 +125,7 @@ The final accepted candidate head is:
 
 ## Final PR acceptance at exact head
 
-All PR-triggered checks pass at the accepted head:
+All PR-triggered checks passed at the accepted head:
 
 ```text
 reference-integrity: SUCCESS
@@ -149,7 +149,20 @@ comparison at `rtol=1e-12`, and the lazy-`tinygp` import boundary check.
 Final diff sanity against Phase-2 `main` found exactly 23 intended files:
 `pyproject.toml`, the permanent Phase-3 workflow, the reconstructed population
 package, population tests/golden, and the parity probe. No temporary workflow,
-marker, stale dependency dump, or unrelated file remains.
+marker, stale dependency dump, or unrelated file remained.
+
+## Merge
+
+PR #2 was squash-merged with the expected-head guard set to
+`2461954c47df587ed70f711769a42779775be692`.
+
+```text
+squash-merge SHA: e0b40fef65261a27b67aa9657a97216df3e8444f
+core main:        e0b40fef65261a27b67aa9657a97216df3e8444f
+```
+
+The `main` branch was fetched after merge and independently verified to point to
+that SHA.
 
 ## Accepted ownership decisions
 
@@ -164,6 +177,7 @@ marker, stale dependency dump, or unrelated file remains.
 
 ## Next action
 
-Squash-merge PR #2 only with expected head
-`2461954c47df587ed70f711769a42779775be692`. Verify core `main`, record the merge
-SHA here and in `STATUS.md`, and only then mark Phase 3 COMPLETE and begin Phase 4.
+Begin Phase 4 from core `main` at
+`e0b40fef65261a27b67aa9657a97216df3e8444f`. Inventory and freeze the ordinary
+spectral-siren likelihood and GW-selection surface before porting it. Do not mix
+catalog/LSS/lensing functionality into that phase.
