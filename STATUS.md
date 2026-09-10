@@ -11,9 +11,14 @@ control repo:      ignaciomagana/darksirens-rebuild
 ## Current phase
 
 ```text
-PHASE 2 — CORE FOUNDATION AND GW DATA CONTRACTS
-status: COMPLETE
+PHASE 3 — POPULATION MODELS
+status: IN PROGRESS
+working repo:   ignaciomagana/darksirens-core
+working branch: rebuild/phase3-population
 ```
+
+Do not advance to Phase 4 until the permanent `phase3-population` workflow is
+fully green, including the separate-process pinned-legacy/new numerical probe.
 
 ## Completed
 
@@ -42,7 +47,7 @@ Core `main` is now:
 450b9bdb66d2dc2d6e7f927143f9b4b4b9f9cec6
 ```
 
-The reconstructed package now contains:
+The reconstructed package contains:
 
 - modern `src/darksirens` packaging;
 - side-effect-free root import;
@@ -53,9 +58,7 @@ The reconstructed package now contains:
 - PE/injection loaders with density-aware spin-basis negotiation;
 - current `chieff_reference` selection support.
 
-## Phase-2 validation
-
-Final scientific branch gate:
+Phase-2 final scientific gate:
 
 ```text
 workflow run: 34431185197
@@ -76,21 +79,42 @@ GW-store comparison rtol = 0 (exact)
 light package-root import: PASS
 ```
 
-The allocator-order issue found during review was corrected before merge and the
-entire gate rerun successfully.
+## Phase 3 progress
+
+Population code is being reconstructed under `darksirens.population` on
+`rebuild/phase3-population`. The migrated slice currently includes parametric
+models, mixtures/components, component-spin, grammar/registry, fixed GWTC sets,
+GP models and normalization machinery.
+
+The first full population run reached the scientific tests and produced:
+
+```text
+Phase-2 regressions: 14 passed
+population block:    86 passed, 14 failed, 1 skipped
+```
+
+All 14 failures were cross-phase test ownership leaks: four required the future
+`darksirens.inference.prior` transform and ten required the old main/lensing
+CLIs. No population numerical failure was reported in that run. The validation
+has been split so Phase 3 tests only the core-owned scientific contracts while
+preserving the omitted inference/CLI contracts for their later owner phases.
+
+The corresponding detailed record is `phases/03_population.md`.
 
 ## Production repository state
 
 ### `darksirens-core`
 
-Phase 2 complete on `main` at:
+Phase 2 is complete on `main` at:
 
 ```text
 450b9bdb66d2dc2d6e7f927143f9b4b4b9f9cec6
 ```
 
-Population, catalog/redshift, hierarchical likelihood, GW selection, samplers
-and high-level `model/infer` API are not yet migrated.
+Phase 3 is in progress on `rebuild/phase3-population`.
+
+Catalog/redshift, hierarchical likelihood, GW selection, samplers and the
+high-level `model/infer` API are not yet migrated.
 
 ### `darksirens-surveys`
 
@@ -115,10 +139,10 @@ These remain deferred until ordinary core likelihood parity.
 ## Scientific questions
 
 None opened. No scientific behavior change has been accepted in Phases 0-2.
+Phase 3 remains unaccepted until its parity gate passes.
 
 ## Next action
 
-Phase 3 — migrate the population system into `darksirens.population`, including
-parametric and GP models, grammar/registry, fixed GWTC parameter sets, component
-spin handling and normalization machinery. Require pointwise and normalization
-parity before the new likelihood can depend on it.
+Complete Phase 3 population validation. Require registry/grammar, component-spin,
+normalization/support, GP tests, optional-dependency boundary and separate-process
+legacy/new population parity at `rtol=1e-12` before opening the next phase.
