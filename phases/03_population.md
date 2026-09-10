@@ -8,16 +8,14 @@ legacy SHA:        c042527238bd71421b792936bc48c3b815b90d6d
 core repository:  ignaciomagana/darksirens-core
 working branch:    rebuild/phase3-population
 pull request:      ignaciomagana/darksirens-core#2
-current branch SHA: 2461954c47df587ed70f711769a42779775be692
+accepted head SHA: 2461954c47df587ed70f711769a42779775be692
 ```
 
 ## Status
 
-PR VALIDATION IN PROGRESS. The population science/parity gate passed on the
-previous clean head, but PR #2 exposed three test-only F401 lint errors in the
-older Phase-2 workflow. Those imports were removed without touching scientific
-source or tolerance. The complete Phase-3 and PR gate must pass again on current
-head `2461954c47df587ed70f711769a42779775be692` before merge. Do not begin Phase 4.
+PR VALIDATION COMPLETE. All required branch and PR checks pass at the exact
+accepted head. The branch is ready for guarded squash merge. Do not begin Phase 4
+until the merge SHA is recorded here.
 
 ## Scope
 
@@ -107,11 +105,9 @@ pairing grid 8192: max |Delta log p_pop| = 1.717e-06, median = 2.540e-09
 support-edge zero-pattern mismatches: 0
 ```
 
-## PR #2 review finding
+## PR #2 review finding and correction
 
-PR #2 was opened at the accepted scientific head. `reference-integrity` passed,
-but the older `phase2-foundation` PR workflow failed at its broader Ruff command
-because three migrated legacy test imports were unused:
+PR #2 exposed three test-only F401s in the older Phase-2 PR lint workflow:
 
 ```text
 tests/test_component_spin_model.py: ComponentSpinModel
@@ -119,34 +115,41 @@ tests/test_pairing_norm_grid.py: get_q_grid
 tests/test_population_grammar.py: ModelNameError
 ```
 
-This was test hygiene, not a physics or numerical failure. A one-shot workflow
-ran `ruff check tests --select F401 --fix` and changed only those three migrated
-test files. Its fix commit was:
-
-```text
-29606d1e67a421da0ebddfde8c2c60246def2ade
-```
-
-The one-shot workflow was then deleted. Current candidate head is:
+Only those unused imports were removed. Scientific source and numerical
+tolerances were unchanged. The one-shot lint-fix workflow was then deleted.
+The final accepted candidate head is:
 
 ```text
 2461954c47df587ed70f711769a42779775be692
 ```
 
-Because the branch head changed, all prior acceptance evidence is treated as
-historical. Both the full Phase-3 gate and all PR-triggered workflows must be
-green at this exact head before merge.
+## Final PR acceptance at exact head
 
-## Cleanup
-
-Temporary bootstrap, patch, cleanup, and lint-fix workflows/marker files and the
-stale dependency report have been removed. The permanent
-`phase3-population.yml` remains and contains no `-k` deselection. It explicitly
-runs a plain:
+All PR-triggered checks pass at the accepted head:
 
 ```text
-python -m pytest -q
+reference-integrity: SUCCESS
+phase2-foundation:   SUCCESS
+phase3-population:   SUCCESS
 ```
+
+Final Phase-3 workflow:
+
+```text
+workflow run: 34437645424
+job:          102745952311
+head SHA:     2461954c47df587ed70f711769a42779775be692
+status:       SUCCESS
+```
+
+The permanent Phase-3 workflow includes focused population tests, a plain full
+`python -m pytest -q`, separate-process legacy/new probes, the numerical parity
+comparison at `rtol=1e-12`, and the lazy-`tinygp` import boundary check.
+
+Final diff sanity against Phase-2 `main` found exactly 23 intended files:
+`pyproject.toml`, the permanent Phase-3 workflow, the reconstructed population
+package, population tests/golden, and the parity probe. No temporary workflow,
+marker, stale dependency dump, or unrelated file remains.
 
 ## Accepted ownership decisions
 
@@ -157,11 +160,10 @@ python -m pytest -q
    population layer without importing the future inference transform.
 4. Cross-version parity probes feature-detect capabilities rather than requiring
    identical internal object layouts.
-5. No scientific or numerical tolerance is relaxed to obtain acceptance.
+5. No scientific or numerical tolerance was relaxed to obtain acceptance.
 
 ## Next action
 
-Require all branch and PR checks to pass at
-`2461954c47df587ed70f711769a42779775be692`. Review the final PR diff and merge
-only at that head. Then record the squash-merge/core `main` SHA here and mark
-Phase 3 COMPLETE before Phase 4 begins.
+Squash-merge PR #2 only with expected head
+`2461954c47df587ed70f711769a42779775be692`. Verify core `main`, record the merge
+SHA here and in `STATUS.md`, and only then mark Phase 3 COMPLETE and begin Phase 4.
