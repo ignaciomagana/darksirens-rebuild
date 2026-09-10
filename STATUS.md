@@ -12,22 +12,24 @@ control repo:      ignaciomagana/darksirens-rebuild
 
 ```text
 PHASE 5 — CORE CATALOG + DARK/BRIGHT SIRENS
-status:         5A + 5B + 5C ACCEPTED; 5D OWNERSHIP/IMPLEMENTATION NEXT
+status:         5A + 5B + 5C + 5D1 ACCEPTED; 5D2 IN PROGRESS
 core repo:      ignaciomagana/darksirens-core
 phase-5 base:   0f97feff7eb283a1f541bef9a776c9347084e70e
 working branch: rebuild/phase5-catalog-dark-bright
 accepted 5A:    f418174a7fc8734bfbcf553d5b5c36f9f4280987
 accepted 5B:    f4bc721496359f09fc58609fa23ccce21366f728
 accepted 5C:    57af56158757ddd9272e0a2f2dc9bfbb624c1fec
+accepted 5D1:   bf45e0f5c0afc404d291d00a0ca267f8126b7e7b
 ```
 
 Phase 4 remains complete on `darksirens-core/main`. Phase 5A reconstructed the
 standardized ordinary catalog runtime/compaction and observed-galaxy redshift
 kernel. Phase 5B reconstructed ordinary non-LSS completeness/count budget and
 finite-depth behavior. Phase 5C reconstructed explicit incomplete-dark,
-complete-catalog, and bright/counterpart likelihood composition. All three
-subphases have separate-process parity against the pinned legacy implementation.
-Phase 5 is not yet merged or complete; 5D and final Phase-5 integration remain.
+complete-catalog, and bright/counterpart likelihood composition. Phase 5D1
+reconstructed generic marked-host weighting. Every accepted slice has
+separate-process parity against the pinned legacy implementation. Phase 5 is not
+yet merged; 5D2 and final Phase-5 integration remain.
 
 ## Completed phase heads
 
@@ -142,13 +144,38 @@ The 5C detailed separate-process gate covers `plain_full`, `plain_compact`,
 `complete_volume`, `complete_zero`, and `bright`, and compares event evidences,
 PE MC variances, selection `log_mu`, `N_eff`, selection correction, assembled
 likelihood, and final likelihood. Both implementations are additionally checked
-against the immutable Phase-1 CPU K=1 bank.
-
-The first composition commit passed historical tests but had no test directly
-executing the new hierarchy entry points. It was not accepted. The real gate
-added focused execution tests and detailed replay; no physics change was needed
-after that instrumentation. Detailed checkpoint:
+against the immutable Phase-1 CPU K=1 bank. Detailed checkpoint:
 `phases/05C_catalog_dark_bright.md`.
+
+### Phase 5D1 — generic marked-host runtime
+
+```text
+accepted head:   bf45e0f5c0afc404d291d00a0ca267f8126b7e7b
+workflow run:    34498152895
+job:             102941812699
+workflow result: SUCCESS
+```
+
+Scientific acceptance:
+
+```text
+Phase 5D1 focused tests:                  7 passed
+full reconstructed suite:              242 passed, 1 regen-only skip
+dependency/light-import audit:          PASS
+legacy/new 5A catalog-kernel parity:    PASS, max_abs=max_rel=0
+legacy/new 5B completeness parity:      PASS, max_abs=max_rel=0
+legacy/new 5C detailed likelihood parity: PASS, max_abs=max_rel=0
+legacy/new 5D1 marked-host parity:      PASS, max_abs=max_rel=0
+comparison rtol:                        1e-12
+comparison atol:                        0
+```
+
+Core owns only the standardized centered mark table and generic log-linear host
+runtime. Raw property loading and z-centering remain surveys. The first 5D1
+parity run exposed a probe-fixture mismatch: the mature legacy factory computes
+the marked prior on the compact PE/selection union rows, not all full-sky rows.
+Only the probe was corrected; no scientific source or tolerance changed.
+Detailed checkpoint: `phases/05D1_catalog_marks.md`.
 
 ## Production repository state
 
@@ -160,8 +187,10 @@ after that instrumentation. Detailed checkpoint:
 0f97feff7eb283a1f541bef9a776c9347084e70e
 ```
 
-Phase 5 remains active on `rebuild/phase5-catalog-dark-bright`. 5A, 5B, and 5C
-are accepted branch checkpoints but are intentionally not merged separately.
+Phase 5 remains active on `rebuild/phase5-catalog-dark-bright`. 5A, 5B, 5C and
+5D1 are accepted branch checkpoints but are intentionally not merged
+separately. Exact current branch head at 5D2 start is the accepted 5D1 head
+`bf45e0f5c0afc404d291d00a0ca267f8126b7e7b`.
 
 ### `darksirens-surveys`
 
@@ -183,8 +212,8 @@ weighting, runtime evaluation of ordinary serialized catalog-selection models,
 and explicit spectral/dark/complete/bright hierarchical composition.
 
 Core must not learn DESI/KIBO/Legacy/GLADE-native schemas, masks, depth-map
-construction, or selection-function fitting; those belong in
-`darksirens-surveys`.
+construction, raw magnitude preparation, or selection-function fitting; those
+belong in `darksirens-surveys`.
 
 Q_LSS, Q ensembles, latent fields/counts, multitracer machinery, and any
 normalization intrinsically requiring those field quantities belong in
@@ -197,24 +226,41 @@ Phase-4 spectral likelihood remains a first-class explicit path.
 
 None opened. No scientific behavior change is authorized during Phase 5.
 
-## Next action — 5D
+## Current action — 5D2
 
-Start from exact accepted 5C head
-`57af56158757ddd9272e0a2f2dc9bfbb624c1fec` with read-only legacy inspection
+Start from exact accepted 5D1 head
+`bf45e0f5c0afc404d291d00a0ca267f8126b7e7b` with read-only legacy inspection
 first.
 
-5D may reconstruct only two ordinary core concepts:
+5D2 reconstructs only generic runtime evaluation of serialized non-LSS
+magnitude-selection completeness. The admissible core slice is:
 
 ```text
-1. generic host-property weighting / mark runtime;
-2. runtime evaluation of serialized non-LSS catalog-selection/completeness models.
+Gaussian C_sel(z): h-scaled M0hat convention, sigma_M, optional structural K(z)
+Schechter C_sel(z): h-scaled Mstar_hat, alpha, pinned M_faint_offset
+H0 firewall: selection curve must be H0-invariant at fixed h-scaled LF params
+runtime legality/domain guards required by those curves
+ordinary per-row missing-host budget using the serialized runtime curve
 ```
 
-Raw-property construction and z-centering remain surveys. Selection-function
-fitting remains surveys. Q/LSS/latent/field-normalizer branches remain out. If
-aggregate, stratified, or parametric-selection behavior cannot be made ordinary
-and companion-free, defer that branch instead of importing LSS state into core.
+The following remain outside core:
 
-After 5D, run the exact-head full Phase-5 acceptance matrix, audit the entire
-Phase-4-main -> Phase-5 diff, open a single Phase-5 PR, require PR-head gates,
-and only then squash merge.
+```text
+SciPy/MLE/Laplace fitting
+fit JSON construction and survey provenance
+raw apparent-magnitude loading
+survey column names, masks, depth maps and pixelization
+stratum-map construction
+Q_LSS/Q ensembles/latent fields/multitracer field normalization
+```
+
+Stratified or aggregate branches are not automatically part of 5D2. They move
+only if they can be expressed as ordinary companion-free runtime state without
+survey or LSS ownership leakage; otherwise they are explicitly deferred.
+
+Acceptance requires focused runtime tests, exact H0-firewall tests,
+separate-process frozen legacy/candidate probes at fixed coordinates, the full
+historical reconstructed suite, dependency/light-import audits, and unchanged
+`rtol=1e-12`, `atol=0`. After 5D2, run the exact-head full Phase-5 acceptance
+matrix, audit the entire Phase-4-main -> Phase-5 diff, open a single Phase-5 PR,
+require PR-head gates, and only then squash merge.
