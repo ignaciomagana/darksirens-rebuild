@@ -12,17 +12,18 @@ control repo:      ignaciomagana/darksirens-rebuild
 
 ```text
 PHASE 4 — SPECTRAL-SIREN LIKELIHOOD + GW SELECTION
-status: LOW-LEVEL CORE GATE COMPLETE; SPECTRAL ASSEMBLY NEXT
+status: BRANCH ACCEPTED; PR REVIEW/MERGE NEXT
 base repo:      ignaciomagana/darksirens-core
 base SHA:       e0b40fef65261a27b67aa9657a97216df3e8444f
 working branch: rebuild/phase4-spectral-likelihood
-accepted lower-level head: 220375e6877d755f34131d9d793ad4db38f0b89a
+accepted head:  cfdb138d40d66614bf9b1264c2574d0b497b812d
 ```
 
-The Phase-4 coordinate/runtime/GW-selection slice is now green on a clean branch.
-No catalog, LSS, lensing, sampler, flow, or application-factory code has been
-pulled into the phase. The next slice is the catalog-free spectral hierarchical
-likelihood plus strict separate-process parity against the pinned legacy SHA.
+The complete catalog-free spectral hierarchical likelihood and GW-selection
+slice is green at the exact accepted branch head. Strict separate-process
+legacy/new fixed-theta parity is exact at every serialized quantity. No Phase-5
+work should begin until the Phase-4 PR is exact-head green, diff-reviewed,
+squash-merged, and the resulting `main` SHA is verified and recorded.
 
 ## Completed
 
@@ -78,13 +79,12 @@ comparison rtol = 1e-12
 ordinary population import leaves tinygp unloaded: PASS
 ```
 
-No scientific source or tolerance changed during final PR cleanup.
 Detailed record: `phases/03_population.md`.
 
 ## Phase 4 progress
 
-The legacy likelihood package is not being migrated file-for-file. The frozen
-Phase-4 core boundary is:
+The legacy likelihood package was not migrated file-for-file. The frozen core
+boundary is:
 
 ```text
 darksirens/likelihood/selection.py
@@ -97,13 +97,14 @@ darksirens/likelihood/events.py runtime event/padding logic
     -> darksirens/gw/{types,runtime}.py
 
 catalog-free branch of darksirens/likelihood/core.py
-    -> small spectral likelihood implementation under darksirens/likelihood/
+    -> darksirens/likelihood/{event,hierarchical}.py
 ```
 
-The first implementation slice now contains the canonical coordinate/Jacobian
-math, runtime `GWEvent` construction and padding, per-sample importance weights,
-selection `mu`/`N_eff`, total-likelihood-variance guards, soft-wall behavior, and
-gradient-safe reductions.
+The accepted Phase-4 implementation contains canonical coordinate/Jacobian math,
+runtime `GWEvent` construction and padding, per-sample importance weights,
+selection `mu`/`N_eff`, total-likelihood-variance guards, soft-wall behavior,
+gradient-safe reductions, normalized comoving-volume spectral redshift prior,
+per-event evidence/MC variance, and the catalog-free hierarchical assembly.
 
 Clean lower-level acceptance:
 
@@ -111,44 +112,58 @@ Clean lower-level acceptance:
 core branch head: 220375e6877d755f34131d9d793ad4db38f0b89a
 workflow run:     34441480533
 job:              102757247600
-lint:             PASS
-coordinate/runtime tests: PASS
-GW-selection tests:       PASS
-full reconstructed suite: PASS
-dependency-boundary audit: PASS
-workflow result:          SUCCESS
+result:           SUCCESS
 ```
 
-Two non-scientific issues were caught before this checkpoint: intended GW runtime
-exports were missing from `__all__`, and one copied soft-guard test contained a
-future `likelihood.factory` assertion. A temporary bootstrap workflow then raced
-that cleanup and rewrote the test once; the bootstrap was deleted, the owner-local
-test was restored, and the clean branch rerun above passed. No numerical behavior
-or tolerance was changed.
+Final branch acceptance:
+
+```text
+accepted branch head: cfdb138d40d66614bf9b1264c2574d0b497b812d
+workflow run:         34445525661
+job:                  102769369532
+workflow result:      SUCCESS
+```
+
+Acceptance details:
+
+```text
+ruff F/E9 + compileall:                PASS
+coordinate/runtime tests:             9 passed
+GW-selection focused tests:            50 passed
+spectral-likelihood focused tests:     15 passed
+full reconstructed suite:              199 passed, 1 regen-only skip
+dependency-boundary audit:             PASS
+pinned legacy spectral probe:          PASS
+reconstructed spectral probe:          PASS
+legacy/new fixed-theta spectral parity: PASS
+max_abs:                               0.000e+00
+max_rel:                               0.000e+00
+comparison rtol:                       1e-12
+comparison atol:                       0
+```
+
+The separate-process parity fixture contains 3 PE events with 8 samples/event,
+257 found injections, `Ndraw=4096`, nonuniform proposal weights, masked samples,
+and a selection batch of 64. Three fixed `(H0, population)` points compare
+per-event log evidence, per-event MC variance, `log_mu`, `N_eff`, selection
+correction, and full spectral log likelihood. Every serialized value is exactly
+identical between pinned legacy and reconstructed core.
+
+One integration run caught only the already documented PE-block XLA
+reassociation class: `1.66533454e-16` absolute / about `1.92e-13` relative in a
+unit-test event-variance comparison. The pinned legacy test already uses
+`rtol=1e-12, atol=0` for this block-shape comparison. Only the reconstructed
+block unit test was aligned to that existing contract; the legacy/new scientific
+parity gate was not relaxed and subsequently achieved exact equality.
+
+Relative to Phase-3 `main`, accepted head `cfdb138d...` is 21 commits ahead and
+0 behind. The branch diff is restricted to Phase-4-owned runtime,
+likelihood/selection code, tests/probes, and the Phase-4 workflow.
 
 Explicitly excluded from Phase 4 remain catalog KDE/completeness, survey
 selection, Q_LSS/latent fields, marks, sky anisotropy, weak/strong lensing,
 cluster/pair likelihoods, flow surrogates/pdet emulators, samplers, inference
 prior transforms, and the old application CLI/`universe_model` dispatcher.
-
-The reconstructed cosmology layer already provides `z_of_dL`, `dV_of_z`,
-`ddL_of_z`, and precomputed variants. The spectral redshift prior will reuse
-those primitives and add only the normalized comoving-volume density required by
-the catalog-free likelihood.
-
-Separate-process fixed-theta parity will compare:
-
-```text
-per-event log Z_i
-per-event MC variance_i
-log_mu
-N_eff
-selection correction
-full spectral log likelihood
-```
-
-at `rtol=1e-12`, `atol=0` unless exact equality is achieved. Tolerances are not
-to be relaxed to make the phase pass.
 
 Detailed record: `phases/04_spectral_likelihood.md`.
 
@@ -156,18 +171,18 @@ Detailed record: `phases/04_spectral_likelihood.md`.
 
 ### `darksirens-core`
 
-Phases 2 and 3 are complete on `main` at:
+Current verified `main` before Phase-4 merge:
 
 ```text
 e0b40fef65261a27b67aa9657a97216df3e8444f
 ```
 
-Phase 4 branch:
+Accepted Phase-4 branch:
 
 ```text
 rebuild/phase4-spectral-likelihood
-base e0b40fef65261a27b67aa9657a97216df3e8444f
-current accepted lower-level head 220375e6877d755f34131d9d793ad4db38f0b89a
+base:          e0b40fef65261a27b67aa9657a97216df3e8444f
+accepted head: cfdb138d40d66614bf9b1264c2574d0b497b812d
 ```
 
 ### `darksirens-surveys`
@@ -190,14 +205,15 @@ Not started.
 
 ## Scientific questions
 
-None opened. No scientific behavior change is authorized in Phase 4. The
-reconstruction must reproduce the pinned legacy catalog-free spectral likelihood
-before any later architecture is layered on top.
+None opened. Phase 4 reproduces the pinned legacy catalog-free spectral
+likelihood without a scientific behavior change.
 
 ## Next action
 
-Implement the smallest catalog-free spectral-redshift prior and hierarchical
-likelihood assembly around the already-accepted weight/selection primitives.
-Add deterministic separate-process legacy/new probes at several fixed `(H0,
-population)` points, require `rtol=1e-12`, `atol=0`, then rerun the full Phase-4
-gate before opening a PR.
+Open the Phase-4 PR from `rebuild/phase4-spectral-likelihood` into `main` at exact
+head `cfdb138d40d66614bf9b1264c2574d0b497b812d`. Require all relevant historical
+PR workflows (`reference-integrity`, `phase2-foundation`, `phase3-population`)
+plus the new Phase-4 workflow to pass at that exact head. Review the complete
+diff for ownership or scientific-boundary violations, squash merge with an
+expected-head guard, verify the resulting core `main`, record the merge here,
+and only then begin Phase 5.
