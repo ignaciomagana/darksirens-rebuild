@@ -14,7 +14,7 @@ Legacy is read-only throughout reconstruction.
 
 ```text
 PHASE 6 — CORE INFERENCE / CHECKPOINTING / IO
-status:         6A–6P ACCEPTED; 6Q NUMPYRO STATIC CONTRACT NEXT
+status:         6A–6Q ACCEPTED; 6R NUMPYRO INITIALIZATION/PREFLIGHT NEXT
 core repo:      ignaciomagana/darksirens-core
 phase-6 base:   86e0c88a51482d17fac70f111057d277df9387fd
 working branch: rebuild/phase6-inference-io
@@ -34,6 +34,7 @@ accepted 6M:    cb74900cff9be07049243548d72eef5e5e77bfaf
 accepted 6N:    39d4e36a8d5d3aa347761a9134e0c7c835cdb565
 accepted 6O:    28c5f06ad0cc40d8fdbb587bcaa3e98dd89089b4
 accepted 6P:    73115e1d403e1c6eefa646c7e68867d6831dc7df
+accepted 6Q:    cfbde4a2d202398a531dab5646314ac1a485fcd5
 ```
 
 Phase 6 reconstructs only portable inference infrastructure. The legacy
@@ -208,10 +209,21 @@ stdout preserve frozen behavior, and daemon shutdown is guaranteed in `finally`
 without changing 6O sampling semantics. Record:
 `phases/06P_dynesty_periodic_diagnostics.md`.
 
-The accepted 6P historical gate re-ran the full reconstructed suite, exact
-6A–6F parity, Phase-5 legacy and reconstructed fixtures, and preserved Phase-5
-scientific parity. Runtime guards and the dedicated 6O gate also reran green on
-the exact accepted 6P head.
+### 6Q — NumPyro static contract
+
+```text
+accepted head:    cfbde4a2d202398a531dab5646314ac1a485fcd5
+dedicated gate:  34579421386 / 103199274439 SUCCESS
+historical gate: 34579421315 / 103199274166 SUCCESS
+runtime guards:  34579421323 / 103199274044 SUCCESS
+```
+
+Finite ordered bounds, NumPyro-compatible Beta bounds, joint-constraint
+classification and exact warnings, midpoint initialization seed, and NUTS option
+resolution/validation are reconstructed without importing NumPyro. The dedicated
+gate has exact frozen stdout/error/result parity; the broad gate preserves the
+full reconstructed suite and Phase-5 scientific fixtures. Record:
+`phases/06Q_numpyro_static_contract.md`.
 
 ## Frozen architecture direction
 
@@ -235,10 +247,9 @@ The reconstructed source tree contains no `universe_model` dispatcher.
 
 None opened. No scientific behavior change is authorized during reconstruction.
 
-## Current action — Phase 6Q
+## Current action — Phase 6R
 
-Reconstruct only the static NumPyro/NUTS contract: finite ordered bounds,
-NumPyro-compatible Beta bounds, joint-constraint classification and exact
-warnings, midpoint initial-value seed, and NUTS option resolution/validation.
-Keep initialization search/gradient preflight and actual NumPyro model/NUTS
-execution for later slices.
+Reconstruct only NumPyro initial-point selection, seeded finite restart search,
+`conditional_upper` initial-support repair, and the frozen JAX likelihood-gradient
+preflight with exact per-parameter failure diagnostics. Keep NumPyro model/NUTS/
+MCMC execution and result diagnostics for the following slice.
