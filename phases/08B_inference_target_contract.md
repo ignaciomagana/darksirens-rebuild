@@ -1,21 +1,23 @@
-# Phase 8B — frozen InferenceTarget contract
+# Phase 8B — InferenceTarget sampler seam
 
-Status: **CONTRACT FROZEN; PRODUCTION NOT YET ACCEPTED**
+Status: **ACCEPTED**
 
 ```text
 parent:            5256141e00a2d96a72b9cbf2182a77174c8c269e
 parent tree:       6252d1725ee07562840f0ce48b0dc6fe90a4aee4
+accepted head:     2e98ca1f1a67cf688f8da8444c3747d446a4e91d
+accepted tree:     a893564f982aaa1174b41367927c2708148fd2b6
 branch:            rebuild/phase8-core-freeze
 legacy reference:  c042527238bd71421b792936bc48c3b815b90d6d
 ```
 
 ## Purpose
 
-Freeze the smallest one-way sampler-facing core contract required by a future
-specialized companion analysis. This slice does not add lensing physics and does
-not create a second inference stack.
+Phase 8B freezes the smallest one-way sampler-facing core contract required by a
+future specialized companion analysis. It adds no lensing physics and no second
+inference stack.
 
-The already accepted Phase-6 dispatcher needs only:
+The accepted Phase-6 dispatcher already needs only:
 
 ```text
 likelihood callable
@@ -26,9 +28,9 @@ joint constraints
 sampler options
 ```
 
-Phase 8B exposes exactly that existing capability.
+Phase 8B exposes exactly that capability.
 
-## Public contract
+## Accepted public contract
 
 `ParameterPlan` remains the coordinate container. Its five sampler-facing fields
 remain explicit and required:
@@ -43,13 +45,13 @@ ParameterPlan(
 )
 ```
 
-The existing ordinary-analysis metadata fields (`n_cosmology`, `n_population`,
-`n_catalog`, `n_angular`, fixed blocks and label blocks) receive neutral defaults
-so a companion does not have to fabricate ordinary dark-siren internals merely
-to describe a sampler coordinate space. Existing ordinary `ds.model()` plans are
-unchanged.
+The ordinary-analysis metadata fields (`n_cosmology`, `n_population`,
+`n_catalog`, `n_angular`, fixed blocks and label blocks) now have neutral
+defaults. A companion therefore does not fabricate ordinary dark-siren internals
+merely to describe a sampler coordinate space. Existing plans produced by
+`ds.model()` retain their full metadata and coordinate ordering.
 
-Add one dependency-light target:
+The dependency-light specialized target is:
 
 ```python
 InferenceTarget(
@@ -59,13 +61,12 @@ InferenceTarget(
 ```
 
 Construction validates only the stable sampler contract: callable likelihood,
-consistent coordinate lengths, unique labels, finite ordered bounds, and valid
-joint-constraint indices. It does not understand specialized physics.
+consistent coordinate lengths, unique non-empty labels, finite ordered bounds,
+and valid joint-constraint indices. It does not understand specialized physics.
 
 ## Execution seam
 
-Use the existing public `ds.infer()` rather than adding `run_target`, a plugin
-registry, or another sampler API.
+The existing `ds.infer()` is the single public execution surface:
 
 ```python
 result = ds.infer(target, sampler="tinyns", ...)
@@ -75,6 +76,7 @@ For an `InferenceTarget`:
 
 - `events` and `injections` are omitted;
 - supplying either store is an error rather than being silently ignored;
+- `bind_analysis()` is not called;
 - core constructs the accepted prior transform from the target plan;
 - core delegates directly to the accepted Phase-6 `run_sampler`;
 - zero-free exact evidence remains before sampler-name validation/backend import.
@@ -90,43 +92,68 @@ result = ds.infer(
 )
 ```
 
-Ordinary analyses still require both stores and still bind through
-`bind_analysis()` before execution.
+Ordinary analyses still require both stores and bind through `bind_analysis()`.
 
-## Public exposure
-
-Expose `ParameterPlan` and `InferenceTarget` lazily at package root. Merely
-`import darksirens` must still leave JAX, HDF5, sampler backends and optional GP
+`ParameterPlan` and `InferenceTarget` are exposed lazily at package root. Merely
+`import darksirens` still leaves JAX, HDF5, sampler backends and optional GP
 packages unloaded.
 
-## Non-goals
+## Deliberate non-goals
 
-Phase 8B must not add:
+No lensing classes, cluster state, partitions, LSS state, callback discovery,
+entry points, plugin registry, result format, checkpoint format, prior-transform
+implementation, or sampler dispatcher was added.
 
-- lensing classes, cluster state, partitions or marks;
-- LSS/redshift extension state;
-- callbacks discovered by name;
-- entry points or generic plugin registration;
-- a new result/checkpoint format;
-- a new prior-transform implementation;
-- a new sampler dispatcher.
+## Exact-head validation
 
-## Acceptance
+Dedicated Phase 8B gate:
 
-Dedicated exact-head tests must prove:
+```text
+workflow: 34635288617
+job:      103381567625
+result:   SUCCESS
+```
 
-1. an external-style five-field `ParameterPlan` can construct an
-   `InferenceTarget` without ordinary-analysis metadata;
-2. target inference delegates the exact target likelihood and parameter plan to
-   the accepted prior/sampler stack;
-3. target inference never imports/calls `bind_analysis`;
-4. passing GW stores with a target is rejected;
-5. ordinary `ds.infer(Analysis, events=..., injections=...)` behavior and
-   delegation are unchanged;
-6. a zero-parameter target with an intentionally unknown sampler returns exact
-   evidence before sampler validation or backend import;
-7. package-root import remains dependency-light;
-8. the Phase-8 broad regression and companion-import firewall pass on the same
-   exact head.
+It passed:
 
-No Phase 8C production change starts until this contract is accepted.
+- definite-error lint/compile;
+- dependency-light package-root exposure of `ParameterPlan` and
+  `InferenceTarget`;
+- focused target and ordinary-infer contract tests;
+- an external-style target smoke test;
+- zero-free exact evidence with an intentionally invalid sampler name before
+  backend validation/import.
+
+Phase 8A replay on the same exact head:
+
+```text
+workflow: 34635288475
+job:      103381567028
+result:   SUCCESS
+```
+
+The frozen bright-siren public path and Phase-5 legacy/candidate bright parity
+remain intact.
+
+Phase-8 broad regression on the same exact head:
+
+```text
+workflow: 34635288518
+job:      103381567351
+result:   SUCCESS
+suite:    528 passed, 1 skipped
+```
+
+The single skip is the existing opt-in population-registry golden regeneration
+test. The same broad job passed the core -> companion import firewall.
+
+## Verdict
+
+Phase 8B is accepted at
+`2e98ca1f1a67cf688f8da8444c3747d446a4e91d` / tree
+`a893564f982aaa1174b41367927c2708148fd2b6`.
+
+The next allowed production slice is **8C: the minimal RedshiftModel /
+host-density likelihood seam**, using this accepted head as its parent. No
+companion repository or Phase 8D production change starts before 8C is
+independently accepted.
