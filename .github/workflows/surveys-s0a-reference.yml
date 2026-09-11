@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - 'tools/probe_surveys_build.py'
+      - 'references/surveys_s0a_legacy_reference.json'
       - '.github/workflows/surveys-s0a-reference.yml'
 
 jobs:
@@ -44,14 +45,14 @@ jobs:
           MPLBACKEND: Agg
         run: |
           python rebuild/tools/probe_surveys_build.py \
-            --output rebuild/surveys_s0a_legacy_reference.json
+            --output rebuild/surveys_s0a_legacy_reference.generated.json
 
       - name: Basic reference assertions
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
-          p = Path('rebuild/surveys_s0a_legacy_reference.json')
+          p = Path('rebuild/surveys_s0a_legacy_reference.generated.json')
           d = json.loads(p.read_text())
           assert d['schema'] == 'darksirens-surveys-s0a-reference-1'
           assert d['legacy_sha'] == 'c042527238bd71421b792936bc48c3b815b90d6d'
@@ -66,9 +67,27 @@ jobs:
           print('S0a legacy reference structure PASS')
           PY
 
-      - name: Upload frozen reference candidate
+      - name: Compare exactly with committed golden
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          got = json.loads(Path('rebuild/surveys_s0a_legacy_reference.generated.json').read_text())
+          golden = json.loads(Path('rebuild/references/surveys_s0a_legacy_reference.json').read_text())
+          if got != golden:
+              import pprint
+              print('generated legacy reference differs from committed golden')
+              print('generated:')
+              pprint.pp(got)
+              print('golden:')
+              pprint.pp(golden)
+              raise SystemExit(1)
+          print('S0a exact golden comparison PASS')
+          PY
+
+      - name: Upload regenerated reference
         uses: actions/upload-artifact@v4
         with:
           name: surveys-s0a-legacy-reference
-          path: rebuild/surveys_s0a_legacy_reference.json
+          path: rebuild/surveys_s0a_legacy_reference.generated.json
           if-no-files-found: error
