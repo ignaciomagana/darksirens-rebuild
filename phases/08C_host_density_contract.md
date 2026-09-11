@@ -1,46 +1,43 @@
-# Phase 8C — frozen host-density extension contract
+# Phase 8C — host-density extension seam
 
-Status: **CONTRACT FROZEN; PRODUCTION NOT YET ACCEPTED**
+Status: **ACCEPTED**
 
 ```text
 parent:            2e98ca1f1a67cf688f8da8444c3747d446a4e91d
 parent tree:       a893564f982aaa1174b41367927c2708148fd2b6
+accepted head:     875a949d5a9f5ffb89f3a64cad030dcfc6daf6a2
+accepted tree:     1219bba07d3327c83da0164602e60abe8083ba0b
 branch:            rebuild/phase8-core-freeze
 legacy reference:  c042527238bd71421b792936bc48c3b815b90d6d
 ```
 
 ## Purpose
 
-Freeze the smallest explicit one-way redshift/host-density interface required by
-a future `darksirens-lss` package. Phase 8C does not implement LSS physics and
-does not add a new hierarchical likelihood engine.
+Phase 8C freezes the smallest explicit one-way redshift/host-density interface
+required by a future `darksirens-lss` package. It implements no LSS physics and
+adds no second hierarchical likelihood engine.
 
-The accepted core already contains the needed science arithmetic in the ordinary
-hierarchical reducer: population weighting, the detector/source-frame Jacobian,
-angular weighting, PE reduction, selection integration, effective-sample-size
-and likelihood-variance guards. That arithmetic remains unchanged.
+The accepted core arithmetic remains in the ordinary hierarchical reducer:
+population weighting, detector/source-frame Jacobian, angular weighting, PE
+reduction, selection integration, effective-sample-size and likelihood-variance
+guards. Phase 8C leaves that reducer unchanged and adds only an adapter around
+it.
 
-## Extension-side data ownership
+## Accepted extension-side ownership
 
-A companion owns:
-
-- construction of its redshift/host-density state;
-- any latent fields, count data, tables or tracer-specific objects;
-- the pixel frame in which that state is defined;
-- the extension parameter block;
-- all specialized provenance/diagnostics beyond the generic likelihood terms.
-
-Core treats extension state as opaque. It never learns `Q_LSS`, tracer names,
-latent fields, multitracer semantics, survey schemas or companion classes.
+A companion owns construction of its redshift/host-density state, latent fields,
+count data, tables or tracer objects, pixel frame, extension parameter block,
+and specialized provenance/diagnostics. Core treats all extension state as
+opaque and contains no `Q_LSS`, tracer, latent-field, multitracer, survey-schema,
+or companion-package knowledge.
 
 Advanced extension authors may construct pixelized `GWEvent` objects through the
 already public `darksirens.gw.make_gw_event` surface. Ordinary users continue to
-use `ds.load_events` / `ds.load_injections` and do not need `GWEvent`.
+use `ds.load_events` / `ds.load_injections`.
 
 ## `RedshiftModel` protocol
 
-Add one explicit protocol in a specific likelihood namespace, not a plugin
-registry:
+The explicit protocol is:
 
 ```python
 class RedshiftModel(Protocol):
@@ -62,138 +59,98 @@ class RedshiftModel(Protocol):
     ): ...
 ```
 
-Requirements:
-
-- `parameter_spec()` returns only the extension's sampled coordinates;
-- `log_density` is array-capable and returns the log redshift/host density used
-  by the existing PE/selection sample weighting;
-- PE and selection may receive different opaque state objects;
-- `log_auxiliary_likelihood` is evaluated exactly once per full hierarchical
-  likelihood, never once per event/sample/selection draw;
-- a model with no auxiliary term returns scalar zero.
-
-No registration by model name is added. Core receives the model object directly.
+`parameter_spec()` returns only the extension block. `log_density` is used for
+PE and selection with their respective opaque states. The auxiliary term is
+scalar and is evaluated exactly once per full hierarchical likelihood. No model
+name registry or plugin discovery was introduced.
 
 ## Parameter-plan composition
 
-Add a small deterministic `combine_parameter_plans(*plans)` helper to the
-sampler-facing target module.
-
-It concatenates:
-
-```text
-labels
-lower / upper
-prior kinds
-```
-
-and offsets each plan's joint-constraint indices by the preceding block sizes.
-Duplicate labels are rejected. The returned plan is sampler-facing and uses
-neutral ordinary-analysis metadata, because only its first five fields are
-relevant to an `InferenceTarget`.
-
-This is parameter/prior assembly, which is already core-owned. It is not an
-extension registry.
+`combine_parameter_plans(*plans)` now concatenates sampler-facing labels, bounds
+and prior kinds, offsets joint-constraint indices, rejects duplicate labels, and
+returns a neutral sampler-facing `ParameterPlan`. This is reusable core
+parameter/prior assembly, not an extension registry.
 
 ## Generic host-density likelihood wrapper
 
-Expose a public wrapper in the likelihood namespace that delegates to the
-unchanged ordinary reducer:
-
-```python
-host_density_log_likelihood(
-    cosmology,
-    pop_params,
-    redshift_params,
-    gw_pe,
-    pe_state,
-    gw_selection,
-    selection_state,
-    n_events,
-    nsamp,
-    n_draw,
-    *,
-    redshift_model,
-    pop_model,
-    auxiliary_state=None,
-    ... existing population/angular/reduction controls ...,
-)
-```
-
-The wrapper creates only the two redshift-density callables expected by the
-existing ordinary reducer:
+`host_density_log_likelihood(...)` creates only the two redshift-density
+callables expected by the accepted ordinary reducer:
 
 ```text
 PE        -> redshift_model.log_density(..., pe_state)
 selection -> redshift_model.log_density(..., selection_state)
 ```
 
-After the ordinary reducer returns, evaluate
-`redshift_model.log_auxiliary_likelihood(redshift_params, auxiliary_state)` once
-and add it once to the total.
-
-If diagnostics are requested, return the same ordinary diagnostic fields plus
-one explicit `log_auxiliary_likelihood` field so the total remains auditable.
+It then delegates to the unchanged ordinary reducer, evaluates
+`log_auxiliary_likelihood` once, and adds it once. Diagnostic mode preserves the
+ordinary fixed-theta pieces and adds one explicit
+`log_auxiliary_likelihood` field.
 
 ## Target builder
 
-Add one explicit builder:
+`make_host_density_target(...) -> InferenceTarget` requires a catalog-free
+`SpectralRedshift` base analysis. The base contributes the already-frozen
+cosmology, population and angular coordinates; the extension contributes its
+own parameter block afterward. The builder decodes only the base block, treats
+extension state as opaque, and returns the accepted Phase-8B `InferenceTarget`
+for execution through `ds.infer()`.
 
-```python
-make_host_density_target(
-    base_analysis,
-    *,
-    redshift_model,
-    gw_pe,
-    gw_selection,
-    pe_state,
-    selection_state,
-    auxiliary_state=None,
-    n_events,
-    nsamp,
-    n_draw,
-    ... reduction controls ...,
-) -> InferenceTarget
+No catalog/completeness marker, GW store loader, staged survey loader, LSS class,
+or sampler backend is reconstructed here.
+
+## Validation
+
+Dedicated Phase 8C gate on the exact accepted head:
+
+```text
+workflow: 34636321077
+job:      103384995159
+result:   SUCCESS
 ```
 
-Rules:
+The focused fixture uses a fake external model whose redshift density is exactly
+the core normalized comoving-volume prior. It verifies that the generic
+host-density wrapper reproduces the accepted spectral-siren likelihood at fixed
+coordinates, routes PE/selection states independently, adds one sampled
+auxiliary scalar exactly once, reports that term separately, offsets joint
+constraints correctly, rejects duplicate labels/catalog-bearing bases, and
+preserves non-isotropic angular composition.
 
-- `base_analysis` must be a catalog-free `SpectralRedshift` analysis from
-  `ds.model()`; it supplies only the already-frozen cosmology, population and
-  angular blocks;
-- the extension block comes from `redshift_model.parameter_spec()`;
-- target coordinate order is `base_analysis.parameters` followed by the
-  extension block;
-- the builder uses the existing core decoder for the base block and slices the
-  extension parameters separately;
-- no catalog/completeness marker is fabricated;
-- no GW store loader/binder is reconstructed in this slice;
-- returned execution object is the accepted Phase-8B `InferenceTarget`, so
-  `ds.infer(target, sampler=...)` uses the same sampler stack.
+Phase 8B replay on the same exact head:
 
-## Acceptance probe
+```text
+workflow: 34636321027
+job:      103384994787
+result:   SUCCESS
+```
 
-A fake model living only in tests must use the core normalized comoving-volume
-redshift density for both PE and selection. With zero auxiliary term, the generic
-host-density path must reproduce the accepted spectral-siren likelihood at fixed
-coordinates exactly (or at the already frozen numerical tolerance if exact array
-equality is not possible due solely to wrapper return structure).
+Phase 8A/frozen bright parity replay on the same exact head:
 
-A second fixed point gives the fake model one sampled extension parameter used
-only as an auxiliary scalar. The returned total must equal the same ordinary
-likelihood plus that scalar exactly once. Diagnostics must report the auxiliary
-term separately.
+```text
+workflow: 34636321033
+job:      103384994066
+result:   SUCCESS
+```
 
-Dedicated exact-head tests must also prove:
+Phase-8 broad regression on the same exact head:
 
-- PE and selection states are passed to the correct density evaluations;
-- plan combination offsets joint-constraint indices correctly and rejects
-  duplicate labels;
-- the target builder rejects non-spectral/catalog-bearing base analyses;
-- non-isotropic angular composition from the base analysis is preserved rather
-  than dropped;
-- no companion imports or LSS/lensing names enter production core;
-- 8A, 8B and Phase-8 broad workflows replay green on the same exact head.
+```text
+workflow: 34636321017
+job:      103384994129
+result:   SUCCESS
+suite:    534 passed, 1 skipped
+```
 
-No companion repository or Phase 8D production change starts until 8C is
-independently accepted.
+The single skip is the existing opt-in population-registry golden regeneration
+test. The same broad job passed the core -> companion import firewall.
+
+## Verdict
+
+Phase 8C is accepted at
+`875a949d5a9f5ffb89f3a64cad030dcfc6daf6a2` / tree
+`1219bba07d3327c83da0164602e60abe8083ba0b`.
+
+The only remaining core production slice is **8D: final install, public API,
+documentation, examples, dependency and freeze audit**, using this exact head as
+its parent. No companion repository starts before 8D is accepted and Phase 8 is
+integrated into `main`.
