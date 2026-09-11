@@ -1,0 +1,82 @@
+{
+  "conventions": {
+    "H0_ref": 100.0,
+    "gaussian_sample_truth_M0hat": -20.2254902,
+    "k_corr_coeffs": [0.39, 0.11],
+    "schechter_M_faint_offset": 5.0,
+    "schechter_sample_truth_Mstar_hat": -19.7254902,
+    "schechter_sample_truth_alpha": -1.1
+  },
+  "diagnostics": {
+    "gaussian_cov_fields": ["M0hat", "sigma_M"],
+    "kcorr_M0hat_shift_if_ignored": 0.12757647848,
+    "schechter_cov_fields": ["Mstar_hat", "alpha"]
+  },
+  "firewall": {
+    "curve_anchor_H0ref": [1.0, 0.99999999999, 0.99999594949, 0.99672552222],
+    "curve_anchor_H0ref_kcorr": [1.0, 0.99999999998, 0.99999342338, 0.99372782803],
+    "curve_anchor_indices": [0, 40, 100, 199],
+    "h0_values": [50.0, 67.74, 100.0, 140.0],
+    "max_abs_delta_gaussian": 2.2204460493e-16,
+    "max_abs_delta_gaussian_kcorr": 3.3306690739e-16
+  },
+  "gaussian": {
+    "M0hat": -20.19237712,
+    "cov": [[0.00045105440086, 6.1532532173e-05], [6.1532532173e-05, 0.00025186823029]],
+    "family": "gaussian",
+    "json_key_order": ["family", "m_lim", "M0hat", "sigma_M", "cov", "n_gal", "stratum", "k_corr_coeffs", "meta"],
+    "k_corr_coeffs": [],
+    "m_lim": 22.5,
+    "meta": {"H0_ref": 100.0, "Om0": 0.3075, "nll": 3346.4622872, "w0": -1.0, "wa": 0.0},
+    "n_gal": 2500,
+    "sigma_M": 0.99178277551,
+    "stratum": "all"
+  },
+  "gaussian_kcorr": {
+    "M0hat": -20.210929012,
+    "cov": [[0.00047704373284, 7.6509731746e-05], [7.6509731746e-05, 0.00026351146397]],
+    "family": "gaussian",
+    "json_key_order": ["family", "m_lim", "M0hat", "sigma_M", "cov", "n_gal", "stratum", "k_corr_coeffs", "meta"],
+    "k_corr_coeffs": [0.39, 0.11],
+    "m_lim": 22.5,
+    "meta": {"H0_ref": 100.0, "Om0": 0.3075, "nll": 3320.1951416, "w0": -1.0, "wa": 0.0},
+    "n_gal": 2500,
+    "sigma_M": 1.0006223873,
+    "stratum": "kcorr"
+  },
+  "gaussian_kcorr_ignored": {
+    "M0hat": -20.083352533,
+    "cov": [[0.00046268614758, 7.0404697928e-05], [7.0404697928e-05, 0.00025758405196]],
+    "family": "gaussian",
+    "json_key_order": ["family", "m_lim", "M0hat", "sigma_M", "cov", "n_gal", "stratum", "k_corr_coeffs", "meta"],
+    "k_corr_coeffs": [],
+    "m_lim": 22.5,
+    "meta": {"H0_ref": 100.0, "Om0": 0.3075, "nll": 3320.8303933, "w0": -1.0, "wa": 0.0},
+    "n_gal": 2500,
+    "sigma_M": 0.9928562871,
+    "stratum": "kcorr_noK"
+  },
+  "legacy_sha": "c042527238bd71421b792936bc48c3b815b90d6d",
+  "numerics": {"astropy": "6.1.4", "jax": "0.4.34", "numpy": "1.26.4", "round_significant_digits": 11, "scipy": "1.12.0"},
+  "reference_absolute_mags": {
+    "K_subtracted": [0.019775, 0.0824, 0.1736],
+    "Mhat": [-16.959434505, -19.179360359, -19.905330525],
+    "Mhat_kcorr": [-16.979209505, -19.261760359, -20.078930525],
+    "m": [19.0, 20.0, 21.0],
+    "z": [0.05, 0.2, 0.4]
+  },
+  "schechter": {
+    "M_faint_offset": 5.0,
+    "Mstar_hat": -19.782769362,
+    "alpha": -1.1449313822,
+    "cov": [[0.0043970027074, 0.002173720735], [0.002173720735, 0.0017356675166]],
+    "family": "schechter",
+    "json_key_order": ["family", "m_lim", "Mstar_hat", "alpha", "M_faint_offset", "cov", "n_gal", "stratum", "k_corr_coeffs", "meta"],
+    "k_corr_coeffs": [],
+    "m_lim": 21.5,
+    "meta": {"H0_ref": 100.0, "Om0": 0.3075, "frac_complete_at_m_faint": 0.0, "m_faint_cut": null, "m_faint_implied": -14.782769362, "n_gal_faintward_of_m_faint": 0, "nll": 2452.6984896, "w0": -1.0, "wa": 0.0},
+    "n_gal": 2500,
+    "stratum": "all"
+  },
+  "schema": "darksirens-surveys-s0b-selection-fit-reference-1"
+}
