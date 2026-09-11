@@ -14,11 +14,11 @@ Legacy is read-only throughout reconstruction.
 
 ```text
 PHASE 7 — SMALL CORE EXTRAS + TARGET PUBLIC API
-status:       7A–7C2 ACCEPTED; PORTABLE SKY GEOMETRY NEXT
+status:       7A–7C3 ACCEPTED; RUNTIME BINDING NEXT
 core repo:    ignaciomagana/darksirens-core
 core main:    d82becaf76bf62c0f72a71b32ebbf9b238ba4f13
 active branch:rebuild/phase7-public-api
-active head:  102c233f132cd3b68faaebf4f2adbe71defa731e
+active head:  7821c5d4cc6e0d7c21759b66db9fc406b9166939
 legacy ref:   c042527238bd71421b792936bc48c3b815b90d6d
 ```
 
@@ -84,6 +84,7 @@ branch: rebuild/phase7-public-api
 7B:     b97d949f32c0eff3bb48c574b5a2258f92fe82d5  ACCEPTED
 7C1:    02b54e25740ff7cce1a030f372b3190121ad2b0f  ACCEPTED
 7C2:    102c233f132cd3b68faaebf4f2adbe71defa731e  ACCEPTED
+7C3:    7821c5d4cc6e0d7c21759b66db9fc406b9166939  ACCEPTED
 ```
 
 ### Companion repositories
@@ -245,6 +246,25 @@ ordinary analyses, preserving frozen sampled-coordinate order and catalog
 nuisance blocks. It does not build runtime likelihood state or expose
 `ds.infer()` yet.
 
+#### 7C3 — portable HEALPix RING geometry
+
+```text
+accepted head:       7821c5d4cc6e0d7c21759b66db9fc406b9166939
+production commit:   a729189c819b6ff238d5efc297483f775d83773c
+dedicated geometry: 34599757756 / 103263901736 SUCCESS
+broad regression:   34599757799 / 103263901914 SUCCESS
+7C2 replay:          34599757836 / 103263902059 SUCCESS
+7C1 replay:          34599757883 / 103263902125 SUCCESS
+7B replay:           34599757739 / 103263901425 SUCCESS
+7A replay:           34599757746 / 103263901609 SUCCESS
+record:              phases/07C3_healpix_geometry.md
+```
+
+Adds dependency-free host-side `ang2pix_ring` with exact element-for-element
+parity to the frozen validated `healpy==1.17.3` RING mapper. The accepted-head
+second commit is workflow-only (`h5py` added to the focused test environment);
+production geometry did not change after its first commit.
+
 ## Frozen architecture direction
 
 Core owns standardized catalog runtime/IO, ordinary catalog redshift kernels and
@@ -268,26 +288,27 @@ The reconstructed source tree contains no `universe_model` dispatcher and Phase
 
 None opened. No scientific behavior change is authorized during reconstruction.
 
-## Current action — portable sky geometry before runtime binding
+## Current action — ordinary runtime binding before `ds.infer()`
 
-`GWStore` and `SelectionStore` carry sky position as RA/Dec. Ordinary catalog
-likelihoods consume catalog HEALPix row indices. Frozen staged loading used
-`healpy.ang2pix(nside, pi/2-dec, ra)` for this conversion, but the reconstructed
-core deliberately has no runtime `healpy` dependency.
+Bind only the already accepted public declarations/data stores to the already
+accepted fixed-theta likelihood kernels:
 
-The next slice should reconstruct only the portable RING HEALPix geometry needed
-by ordinary core binding:
+- consume `Analysis`, `GWStore`, and `SelectionStore`;
+- resolve the selected population's fitted spin coordinates and refuse
+  incompatible store density contracts loudly;
+- convert store RA/Dec to global RING pixels using accepted `ang2pix_ring`;
+- for catalog analyses, compact one PE-union-selection catalog and replace each
+  sample's global pixel with its compact row index;
+- construct barriered `GWEvent` PE/selection containers;
+- build the observed-density cache only for the incomplete-catalog path;
+- decode theta in the 7C2 frozen order into `CosmologyParameters`, the existing
+  population vector, and ordinary `CatalogParameters`, preserving the frozen
+  `n0 = 10**log10n0` mapping and catalog `z_depth` metadata;
+- expose a fixed-theta callable that delegates to the accepted spectral,
+  incomplete-catalog, or complete-catalog hierarchical likelihood explicitly.
 
-- host-side `ang2pix_ring(nside, ra, dec)` with radians-in / zero-based RING
-  pixel IDs out;
-- strict finite/declination/NSIDE validation appropriate for standardized
-  inputs;
-- vectorized NumPy implementation with allocation proportional to sample count;
-- exact parity against `healpy.ang2pix(..., nest=False)` over randomized sky
-  positions, all relevant NSIDEs, poles, equatorial/polar transition, and
-  longitude wrapping;
-- no `healpy` import or dependency in the installed core package.
-
-Do not mix GW runtime-event construction, catalog compaction, parameter decoding,
-or likelihood closure building into this geometry slice. Those belong to the
-next binding slice after the geometry is accepted.
+Acceptance should compare this binder at fixed theta with direct calls into the
+already legacy-parity-accepted Phase-4/5 kernels, plus the broad Phase-7 gate.
+Do not expose `ds.infer()` or invoke a sampler in this slice. After binding is
+accepted, `ds.infer()` can remain a thin layer over `make_prior_transform` and
+the Phase-6 `run_sampler` dispatcher.
