@@ -14,7 +14,7 @@ Legacy is read-only throughout reconstruction.
 
 ```text
 PHASE 6 — CORE INFERENCE / CHECKPOINTING / IO
-status:         6A–6I ACCEPTED; 6J DEAD-POINT HDF5 PERSISTENCE NEXT
+status:         6A–6O ACCEPTED; 6P DYNESTY PERIODIC DIAGNOSTICS NEXT
 core repo:      ignaciomagana/darksirens-core
 phase-6 base:   86e0c88a51482d17fac70f111057d277df9387fd
 working branch: rebuild/phase6-inference-io
@@ -27,6 +27,12 @@ accepted 6F:    05e7c339f190a04e0b92d40c16119e5bda56ef08
 accepted 6G:    251590e82eb373bace7f1e277805b75423bf4f10
 accepted 6H:    d1d39019ad2ca3750ef8171d0d451cdc0896adb0
 accepted 6I:    0084e3b7c5cba14d8ac85528ce18185941e46c05
+accepted 6J:    0373cc9055552dc003dd569b0dc10c515c04c4fe
+accepted 6K:    ffe82c8e7948bb0f7b8d0ad3d224037cd702d75d
+accepted 6L:    39d9ab8aef7b0b4e0847ce4e9894a6a2a8985087
+accepted 6M:    cb74900cff9be07049243548d72eef5e5e77bfaf
+accepted 6N:    39d4e36a8d5d3aa347761a9134e0c7c835cdb565
+accepted 6O:    28c5f06ad0cc40d8fdbb587bcaa3e98dd89089b4
 ```
 
 Phase 6 reconstructs only portable inference infrastructure. The legacy
@@ -45,21 +51,23 @@ Phase 7 — small core extras + target public API (`model`, `infer`, loaders, an
 Phase 8 — extension seam + final dependency/API/install/example audit and core freeze
 ```
 
-Flows remain deferred/optional unless the ordinary core path demonstrates that
-they are required for the frozen core contract. Companion packages start only
-after Phase 8 freezes the core surface.
+Phase count is broader than commit count: Phase 6 intentionally contains several
+small parity slices before its final PR/merge. Flows remain deferred/optional
+unless the ordinary core path demonstrates that they are required for the
+frozen core contract. Companion packages start only after Phase 8 freezes the
+core surface.
 
 ## Production repository state
 
 ### `darksirens-core`
 
-Verified `main` remains the Phase-5 squash merge:
+`main` remains the Phase-5 squash merge:
 
 ```text
 86e0c88a51482d17fac70f111057d277df9387fd
 ```
 
-Accepted Phase-6 work is intentionally still on
+Accepted Phase-6 work remains intentionally on
 `rebuild/phase6-inference-io`; Phase 6 is not ready to merge yet.
 
 ### Companion repositories
@@ -104,23 +112,15 @@ exact.
 
 ### Phase 5 — catalog + dark/bright sirens
 
-Accepted scientific checkpoints:
-
 ```text
 5A catalog kernel:             f418174a7fc8734bfbcf553d5b5c36f9f4280987
 5B ordinary completeness:     f4bc721496359f09fc58609fa23ccce21366f728
 5C dark/complete/bright:      57af56158757ddd9272e0a2f2dc9bfbb624c1fec
 5D1 generic marked hosts:     bf45e0f5c0afc404d291d00a0ca267f8126b7e7b
 5D2 magnitude-selection eval: 9d5624864ce7467d309c45125cbe5785c671e1a9
-```
-
-Final integration:
-
-```text
-PR:                 #4
-PR integration head: b66221734e7564922ac1c12534abec77333923f6
-squash-merge SHA:    86e0c88a51482d17fac70f111057d277df9387fd
-post-merge gate:     34534097673 / 103061536070 SUCCESS
+PR integration head:          b66221734e7564922ac1c12534abec77333923f6
+squash-merge SHA:             86e0c88a51482d17fac70f111057d277df9387fd
+post-merge gate:              34534097673 / 103061536070 SUCCESS
 ```
 
 Phase-5 scientific parity is exact (`max_abs=max_rel=0`, `rtol=1e-12`,
@@ -128,99 +128,74 @@ Phase-5 scientific parity is exact (`max_abs=max_rel=0`, `rtol=1e-12`,
 
 ## Phase 6 accepted slices
 
-### 6A — atomic result artifact / completion protocol
+### 6A–6J
+
+6A atomic result publication/completion; 6B checkpoint planning; 6C1 semantic
+resume fingerprint gate; 6D generic unit-cube prior transform; 6E Dynesty
+state-only checkpointing; 6F Dynesty prior-transform dispatch; 6G nested
+finite-logL preflight; 6H zero-free exact evidence; 6I dead-point packaging;
+6J dead-point HDF5 persistence. Each slice has exact frozen-behavior parity and
+its own checkpoint record under `phases/` where applicable.
+
+### 6K — TinyNS diagnostic normalization
 
 ```text
-accepted head: 194e246666e6901624347d09ec570696f3c62e4d
+accepted head: ffe82c8e7948bb0f7b8d0ad3d224037cd702d75d
 ```
 
-JAX-free atomic result/completion behavior only. Exact legacy parity.
+Backend-independent, defensive JSON-safe diagnostic normalization. Record:
+`phases/06K_tinyns_diagnostic_normalization.md`.
 
-### 6B — checkpoint/resume planning
+### 6L — TinyNS diagnostic rendering
 
 ```text
-accepted head: 6a8a2c2c4a9e772f74a913b68c13264e55bef38f
-run/job:       34535140962 / 103064891308 SUCCESS
+accepted head: 39d9ab8aef7b0b4e0847ce4e9894a6a2a8985087
 ```
 
-Backend-independent checkpoint-plan and resume-target resolution. Exact parity.
+Frozen stdout renderer and formatting only. Record:
+`phases/06L_tinyns_diagnostic_rendering.md`.
 
-### 6C1 — semantic fingerprint resume gate
+### 6M — TinyNS configuration resolution
 
 ```text
-accepted head: 807687ccb5754af14f888df3089497f26706e234
-run/job:       34536066003 / 103067845905 SUCCESS
+accepted head: cb74900cff9be07049243548d72eef5e5e77bfaf
 ```
 
-Semantic identity remains explicit rather than rediscovered from CLI/survey/LSS
-state. Acceptance: 312 passed, 1 regeneration-only skip; exact parity.
+Presets/defaults/overrides/validation/mirroring plus sampler/run kwargs; no CLI
+or backend import. Record: `phases/06M_tinyns_config_resolution.md`.
 
-### 6D — generic unit-cube prior transform
+### 6N — TinyNS execution adapter
 
 ```text
-accepted head: 5edc76c6c055e47a7e041d7f7477e347837f7554
+accepted head:    39d4e36a8d5d3aa347761a9134e0c7c835cdb565
+dedicated gate:  34570968708 / 103172778145 SUCCESS
+historical gate: 34570968720 / 103172778202 SUCCESS
+runtime guards:  34570968671 / 103172778199 SUCCESS
 ```
 
-Uniform, truncated-normal, truncated-lognormal, Beta(1,b), and explicit joint
-cube-map behavior reconstructed without `build_parameter_space` or CLI assembly.
-Separate-process parity is bit-exact.
+Lazy JAX/TinyNS execution, deterministic split run/resampling streams,
+fresh/resume checkpoint routing, dead-point/diagnostic handoff, and lazy HDF5
+checkpoint I/O. Record: `phases/06N_tinyns_execution_adapter.md`.
 
-### 6E — dynesty checkpoint state
+### 6O — Dynesty execution adapter
 
 ```text
-accepted head: fe845dcc87787d19c69bf30a89f211d9de68be03
+accepted head:    28c5f06ad0cc40d8fdbb587bcaa3e98dd89089b4
+dedicated gate:  34571461016 / 103174270237 SUCCESS
+historical gate: 34571460958 / 103174269936 SUCCESS
+runtime guards:  34571460969 / 103174269973 SUCCESS
 ```
 
-Dynesty checkpoint/restore state kept behind lazy backend imports. Exact parity.
+Lazy Dynesty execution, accepted 6F transform dispatch, accepted 6B/6E
+checkpoint/resume state, deterministic RNG contract, robust weighted resampling,
+accepted 6I dead points, and sampler provenance. Periodic plotting diagnostics
+were deliberately left out of 6O rather than silently changed. Record:
+`phases/06O_dynesty_execution_adapter.md`.
 
-### 6F — dynesty prior-transform dispatch
-
-```text
-accepted head: 05e7c339f190a04e0b92d40c16119e5bda56ef08
-run/job:       34551503882 / 103115199277 SUCCESS
-```
-
-Acceptance: 343 passed, 1 regeneration-only skip. Host/eager/JIT dispatch and
-row-wise fallback parity exact; dynesty remains lazy.
-
-### 6G — nested-sampler finite-logL preflight
-
-```text
-accepted head: 251590e82eb373bace7f1e277805b75423bf4f10
-dedicated gate: 34555353379 / 103126770107 SUCCESS
-historical gate: 34555353322 / 103126770206 SUCCESS
-```
-
-Acceptance: 8 focused tests; 351 passed, 1 regeneration-only skip overall;
-preflight stdout/errors/RNG/call-count behavior exact. The probe owns
-`seed ^ 0xC0FFEE`; import remains light.
-
-### 6H — zero-free-parameter exact evidence
-
-```text
-accepted head: d1d39019ad2ca3750ef8171d0d451cdc0896adb0
-dedicated gate: 34555964680 / 103128606105 SUCCESS
-historical gate: 34555964712 / 103128605845 SUCCESS
-```
-
-Acceptance: 6 focused tests; 357 passed, 1 regeneration-only skip overall;
-exact legacy behavior for the `dynesty`, `numpyro`, and `tinyns` method
-spellings; no sampler backend imported on the zero-dimensional path. 6A–6G and
-all Phase-5 parity remain exact.
-
-### 6I — dead-point packaging
-
-```text
-accepted head: 0084e3b7c5cba14d8ac85528ce18185941e46c05
-dedicated gate: 34560606167 / 103142368277 SUCCESS
-historical gate: 34560606182 / 103142368473 SUCCESS
-runtime guards:  34560606263 / 103142368451 SUCCESS
-```
-
-Acceptance: 5 focused tests; 362 passed, 1 regeneration-only skip overall.
-Frozen `_dead_point_block` behavior is exact, candidate implementation is
-NumPy-only, and all 6A–6H plus Phase-5 scientific parity remain green. Detailed
-record: `phases/06I_dead_point_packaging.md`.
+The accepted 6O historical gate re-ran the full reconstructed suite, exact
+6A–6F parity, Phase-5 legacy and reconstructed fixtures, and preserved Phase-5
+scientific parity. Runtime guards and all dedicated 6I–6N gates also reran green
+at the exact 6O head.
 
 ## Frozen architecture direction
 
@@ -244,10 +219,10 @@ The reconstructed source tree contains no `universe_model` dispatcher.
 
 None opened. No scientific behavior change is authorized during reconstruction.
 
-## Current action — Phase 6J
+## Current action — Phase 6P
 
-Reconstruct additive HDF5 persistence of the already standardized nested
-sampler dead-point block: `logl_dead`, `logwt_dead`, `n_dead`, optional
-`n_live`, and the explicit non-row-alignment semantics. Preserve the generic
-6A atomic result protocol unchanged. Do not port `save_results_hdf5` or the
-legacy sampling/result monolith wholesale.
+Isolate the frozen Dynesty periodic diagnostics machinery as an optional helper:
+consistent concurrent `sampler.results` reads, runplot/traceplot writing,
+10-minute daemon scheduling, exception containment, and clean shutdown. Wire it
+into accepted 6O without changing sampler initialization, RNG, checkpoint,
+`run_nested`, resampling, evidence, or result semantics.
