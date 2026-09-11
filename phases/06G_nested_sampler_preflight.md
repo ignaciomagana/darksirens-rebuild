@@ -1,4 +1,4 @@
-# Phase 6G plan — nested-sampler preflight
+# Phase 6G checkpoint — nested-sampler preflight
 
 ## Reference
 
@@ -11,8 +11,7 @@ phase-6 base:      86e0c88a51482d17fac70f111057d277df9387fd
 working branch:    rebuild/phase6-inference-io
 ```
 
-Legacy remains read-only. Production code starts only from the exact accepted
-6F head above.
+Legacy remains read-only.
 
 ## Scope
 
@@ -23,36 +22,21 @@ runs in pinned `darksirens/inference/sampling.py`:
 _nested_sampler_preflight(likelihood, prior_transform, ndims, opts, n_probe=32)
 ```
 
-The candidate owns this as a small explicit-data helper in
-`darksirens.inference.preflight`, rather than recreating the legacy sampler
-monolith. The helper receives the resolved runtime values it actually needs:
-
-```text
-likelihood
-prior_transform
-ndims
-seed
-nlive
-enabled
-n_probe
-```
-
-The parity probe adapts the frozen legacy `opts` namespace to this explicit
-interface. Resume policy is deliberately not hidden inside the helper; a future
-sampler runner decides whether a preflight call is appropriate.
+Candidate ownership is `darksirens.inference.preflight`. The helper consumes
+only the resolved values it needs: likelihood, prior transform, dimension,
+seed, nlive, enabled flag and probe count. Resume policy stays outside the
+helper for later sampler-runner composition.
 
 ## Frozen semantics
 
-When disabled, return immediately without drawing from the prior or evaluating
-the likelihood.
-
-For an enabled probe:
+When disabled, the helper returns without drawing or evaluating the likelihood.
+When enabled it owns
 
 ```python
 rng = np.random.default_rng(int(seed) ^ 0xC0FFEE)
 ```
 
-For each of at most `n_probe` draws:
+and for each probe evaluates the exact frozen sequence
 
 ```python
 u = rng.random(ndims)
@@ -60,75 +44,73 @@ theta = prior_transform(jnp.asarray(u))
 logl = float(np.asarray(likelihood(jnp.asarray(theta))))
 ```
 
-Collect finite `logl` values. Stop immediately after the fourth finite value,
-because both frozen verdicts are then settled. Thus `n_probed` can be smaller
-than `n_probe`.
+It stops immediately on the fourth finite likelihood. Zero finite draws raise
+the frozen fail-fast `RuntimeError`; one to three finite draws print the frozen
+slow-initialization warning; four finite draws need no warning. The finite range,
+elapsed-time summary, `ceil(nlive/fraction)` estimate, `nlive==0 -> many`
+spelling and selection-guard remedy text are unchanged.
 
-The summary line is frozen:
+The parity probe fixes `time.perf_counter` identically for legacy and candidate,
+so stdout/error text can be compared exactly without changing production timing.
 
-```text
-[*] preflight: k/N prior draws have finite logL ... [T.TT s]
-```
+## Ownership / dependency boundary
 
-When finite values exist, include the frozen `:.4g` range. With zero finite
-values, raise the frozen `RuntimeError` explaining that dynesty/TinyNS would
-reject-sample forever, naming the selection-variance/Vitale criteria and the
-existing remedies. With one to three finite values, print the frozen non-fatal
-slow-initialization warning. Its estimated draw count is
-`ceil(nlive / finite_fraction)` when `nlive > 0`, otherwise `many`.
+The module imports NumPy and Python `time` eagerly and JAX only when the probe
+is actually called. Importing `darksirens.inference.preflight` therefore remains
+light and does not load JAX, dynesty, TinyNS, NumPyro or any companion package.
 
-The probe owns its RNG. It must not mutate NumPy's global RNG state and does not
-receive or consume a sampler RNG object.
+6G does not port sampler construction, resume/checkpoint orchestration,
+dynesty/TinyNS configuration, NumPyro, posterior resampling, dead-point/result
+normalization, diagnostics, plotting or CLI assembly.
 
-## Timing and parity
+## Acceptance
 
-Wall time is diagnostic only, but the text is part of frozen behavior. The
-separate-process parity probe must patch `time.perf_counter` identically on both
-legacy and candidate sides so the emitted stdout can be compared exactly.
-Production code continues to use real `time.perf_counter`.
-
-## Explicit non-scope
-
-Do not port in 6G:
+Accepted exact core head:
 
 ```text
-run_sampler
-resume/checkpoint orchestration
-NestedSampler construction or dynesty rstate
-TinyNS configuration, construction, run/resume, or PRNG splitting
-NumPyro/NUTS preflight or runtime
-nlive/dlogz/maxcall policy beyond the warning's resolved nlive integer
-posterior resampling
-dead-point/result normalization
-diagnostics/plotting
-selection diagnostic formatter
-CLI
+251590e82eb373bace7f1e277805b75423bf4f10
 ```
 
-## Dependency boundary
-
-The helper may import NumPy/JAX and Python `time`. It must not import dynesty,
-TinyNS, NumPyro, CLI, surveys, LSS, lensing, legacy redshift/sky namespaces, or
-HEALPix.
-
-## Acceptance matrix
-
-Focused tests and separate-process legacy/candidate probes must pin:
+6G workflow:
 
 ```text
-disabled probe -> no calls and no output
-all -inf -> exact stdout + exact RuntimeError
-one finite -> full probe + warning
-three finite -> full probe + warning
-fourth finite -> early stop at the exact draw where it appears
-all finite -> stop after four draws
-finite logL range formatting
-nlive > 0 estimated initialization draw count
-nlive == 0 warning uses "many"
-seed XOR 0xC0FFEE draw sequence
-NumPy global RNG independence
-JAX array conversion on prior-transform and likelihood seams
+run:    34555353379
+job:    103126770107
+result: SUCCESS
 ```
 
-No tolerance is used for structural behavior, messages, RNG draws, or call
-counts. Accepted 6A–6F gates and all preserved Phase-5 parity must remain green.
+Historical Phase-6 replay at the same head:
+
+```text
+run:    34555353322
+job:    103126770206
+result: SUCCESS
+```
+
+Results:
+
+```text
+6G focused tests:                         8 passed
+full reconstructed suite:               351 passed, 1 regeneration-only skip
+6G dependency/light-import audit:        PASS
+6G legacy/new separate-process parity:   exact
+6A result-artifact parity:               exact
+6B checkpoint-plan parity:               exact
+6C1 fingerprint-gate parity:             exact
+6D prior-transform parity:               bit-exact
+6E dynesty checkpoint-state parity:      exact
+6F dynesty transform-dispatch parity:    exact
+preserved Phase-5 parity:                exact, max_abs=max_rel=0
+Phase-5 comparison:                      rtol=1e-12, atol=0
+```
+
+The 6F -> 6G production diff is one commit and exactly four files: the new
+runtime helper, focused tests, parity probe and dedicated workflow gate. No
+previously accepted scientific module changed.
+
+## Next
+
+Proceed to the zero-free-parameter exact-evidence short-circuit as a separate
+slice. It is backend-independent and must return before any sampler package,
+preflight, checkpoint or backend option is touched. Full dynesty/TinyNS/NumPyro
+runner assembly remains later work.
