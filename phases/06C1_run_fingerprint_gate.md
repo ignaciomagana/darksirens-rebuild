@@ -42,7 +42,7 @@ _semantic_diff                 # private implementation detail
 _warn_code_identity_drift      # private advisory behavior
 ```
 
-Core may additionally expose a tiny canonical constructor for a caller-supplied
+Core additionally exposes a tiny canonical constructor for a caller-supplied
 `semantic` mapping:
 
 ```text
@@ -102,28 +102,50 @@ CLI/settings machinery in this slice.
 
 ## Acceptance
 
-Separate-process legacy/candidate fixtures construct equivalent explicit
-fingerprints and compare the following exactly:
+Accepted at exact core head:
 
 ```text
-fresh atomic save/load
-missing / corrupt fail-closed behavior
-missing / corrupt force behavior
-schema mismatch
-digest match
-semantic mismatch and human-readable diff
-forced mismatch preservation + sibling stamp
-gate provenance attrs
-code-identity drift warning remains advisory
-BaseException atomic-write rollback
+807687ccb5754af14f888df3089497f26706e234
 ```
 
-The canonical digest helper is verified byte-for-byte against the frozen JSON
-serialization rule. No target-specific semantic builder is accepted in 6C1.
+Workflow:
 
-## Later seam
+```text
+run:    34536066003
+job:    103067845905
+result: SUCCESS
+```
 
-A later Phase-6 subphase may build semantic fingerprints for reconstructed core
-likelihoods, but every nonlocal input must be explicit. Survey/LSS/lensing
-plugins provide their own semantic identity blocks; core does not inspect those
-packages or resurrect the legacy mega factory.
+Acceptance results:
+
+```text
+6A result-artifact tests:       10 passed
+6B checkpoint-plan tests:       36 passed
+6C1 fingerprint-gate tests:     15 passed
+full reconstructed suite:       312 passed, 1 regeneration-only skip
+portable dependency audit:      PASS
+6A separate-process parity:     exact
+6B separate-process parity:     exact
+6C1 separate-process parity:    exact
+preserved Phase-5 parity:       exact, max_abs=max_rel=0 at rtol=1e-12, atol=0
+```
+
+The first 6C1 workflow attempt stopped before testing on one unused import in the
+new parity probe. That lint-only defect was removed; no production or behavioral
+code changed. The corrected exact head above then passed the complete gate.
+
+The separate-process fingerprint fixture verified fresh atomic save/load,
+BaseException rollback, missing/corrupt fail-closed behavior, force behavior,
+schema mismatch, digest match, semantic mismatch and human-readable diff,
+forced mismatch preservation plus sibling stamping, provenance attrs, and
+advisory code-identity drift.
+
+No target-specific semantic builder is accepted in 6C1.
+
+## Next
+
+Proceed to the generic unit-cube prior transform as the next small Phase-6 slice.
+Port only the backend-independent transform and explicit joint cube maps from the
+pinned legacy prior implementation. Do not port `build_parameter_space`, survey
+registries, sky/LSS discovery, CLI configuration, or model lookup into this
+slice. Nested-sampler dispatch and backend runners remain later subphases.
