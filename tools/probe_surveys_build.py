@@ -10,6 +10,15 @@ production slice:
 It deliberately does not probe selection-function fitting yet. That is S0b/S3
 and carries a larger numerical dependency surface.
 
+One legacy detail is deliberately *canonicalized* before comparison. The pinned
+pixelizer groups rows with ``np.argsort(pixel)`` using NumPy's default unstable
+sort, so the order of galaxies sharing one HEALPix pixel is not a deterministic
+legacy contract. Galaxy membership and all coindexed values are deterministic.
+The frozen core loader already stably sorts each real-galaxy row by redshift, so
+this probe applies that same scientific normalization before serializing/hash
+comparison. The raw equal-pixel ordering is explicitly recorded as unstable and
+is not treated as a parity requirement.
+
 Run in a process whose PYTHONPATH resolves the pinned legacy ``darksirens``.
 The output is plain JSON so a future darksirens-surveys candidate can be run in
 another process and compared without importing both implementations together.
@@ -26,11 +35,23 @@ import h5py
 import numpy as np
 
 
-def _json_array(a):
-    a = np.asarray(a)
-    if np.issubdtype(a.dtype, np.floating):
-        return [[float(x) for x in row] for row in a.tolist()] if a.ndim == 2 else [float(x) for x in a.tolist()]
-    return a.tolist()
+PIXEL_DATASETS = (
+    "zgals",
+    "dzgals",
+    "wgals",
+    "ngals",
+    "mark_logmstar",
+    "gal_app_mag",
+    "gal_stratum",
+)
+COINDEXED_DATASETS = (
+    "zgals",
+    "dzgals",
+    "wgals",
+    "mark_logmstar",
+    "gal_app_mag",
+    "gal_stratum",
+)
 
 
 def _hash_array(a: np.ndarray) -> str:
@@ -43,16 +64,28 @@ def _hash_array(a: np.ndarray) -> str:
 
 
 def _write_raw_catalog(path: Path) -> dict:
-    # Chosen to exercise multiple RING pixels, repeated occupancy, sorting,
-    # z-depth propagation, weights, a mark and two offline survey properties.
+    # Chosen to exercise multiple RING pixels, repeated occupancy, z-depth
+    # propagation, weights, a mark and two offline survey properties.
     ra_deg = np.array([5.0, 35.0, 91.0, 181.0, 270.0, 359.0, 45.0, 46.0])
     dec_deg = np.array([-70.0, -25.0, 5.0, 31.0, 62.0, 80.0, -25.0, -25.0])
-    z = np.array([0.011, 0.043, 0.081, 0.127, 0.173, 0.219, 0.052, 0.036], dtype=np.float64)
-    dz = np.array([0.0010, 0.0012, 0.0014, 0.0016, 0.0018, 0.0020, 0.0011, 0.0013], dtype=np.float64)
-    weight = np.array([1.0, 1.2, 0.8, 1.5, 0.9, 1.1, 2.0, 0.7], dtype=np.float64)
-    app_mag = np.array([17.2, 18.1, 18.9, 19.4, 20.0, 20.5, 18.4, 17.9], dtype=np.float64)
+    z = np.array(
+        [0.011, 0.043, 0.081, 0.127, 0.173, 0.219, 0.052, 0.036],
+        dtype=np.float64,
+    )
+    dz = np.array(
+        [0.0010, 0.0012, 0.0014, 0.0016, 0.0018, 0.0020, 0.0011, 0.0013],
+        dtype=np.float64,
+    )
+    weight = np.array(
+        [1.0, 1.2, 0.8, 1.5, 0.9, 1.1, 2.0, 0.7], dtype=np.float64
+    )
+    app_mag = np.array(
+        [17.2, 18.1, 18.9, 19.4, 20.0, 20.5, 18.4, 17.9], dtype=np.float64
+    )
     stratum = np.array([0, 0, 1, 1, 2, 2, 0, 0], dtype=np.int32)
-    logmstar = np.array([10.1, 10.3, 10.6, 10.9, 11.0, 11.2, 10.4, 10.2], dtype=np.float64)
+    logmstar = np.array(
+        [10.1, 10.3, 10.6, 10.9, 11.0, 11.2, 10.4, 10.2], dtype=np.float64
+    )
 
     with h5py.File(path, "w") as f:
         f["TARGET_RA"] = ra_deg
@@ -73,32 +106,51 @@ def _write_raw_catalog(path: Path) -> dict:
     }
 
 
+def _canonicalize_pixel_rows(arrays: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
+    """Sort every real pixel prefix by z while carrying all columns together.
+
+    This is the same row normalization performed by frozen core's catalog
+    loader. Padding remains untouched and therefore still tests the writer's
+    exact sentinel convention.
+    """
+    out = {name: np.array(value, copy=True) for name, value in arrays.items()}
+    ngals = np.asarray(out["ngals"])
+    for p in np.flatnonzero(ngals > 1):
+        n = int(ngals[p])
+        order = np.argsort(out["zgals"][p, :n], kind="stable")
+        for name in COINDEXED_DATASETS:
+            real = np.array(out[name][p, :n], copy=True)
+            out[name][p, :n] = real[order]
+    return out
+
+
 def _pixelate_probe(tmp: Path) -> dict:
     from darksirens.cli.pixelate import main as pixelate_main
 
     raw = tmp / "raw.h5"
     input_rows = _write_raw_catalog(raw)
     outdir = tmp / "pixelated"
-    pixelate_main([
-        "--survey_path", str(raw),
-        "--save_path", str(outdir),
-        "--nside", "2",
-        "--z_depth", "0.25",
-    ])
+    pixelate_main(
+        [
+            "--survey_path",
+            str(raw),
+            "--save_path",
+            str(outdir),
+            "--nside",
+            "2",
+            "--z_depth",
+            "0.25",
+        ]
+    )
     out = outdir / "catalog_pixelated_nside_2.h5"
     with h5py.File(out, "r") as f:
-        arrays = {
-            key: np.asarray(f[key])
-            for key in (
-                "zgals", "dzgals", "wgals", "ngals",
-                "mark_logmstar", "gal_app_mag", "gal_stratum",
-            )
-        }
+        arrays_raw = {key: np.asarray(f[key]) for key in PIXEL_DATASETS}
         attrs = {
             "nside": int(f.attrs["nside"]),
             "z_depth": float(f.attrs["z_depth"]),
         }
 
+    arrays = _canonicalize_pixel_rows(arrays_raw)
     occupied = np.flatnonzero(arrays["ngals"] > 0)
     rows = {}
     for p in occupied:
@@ -119,21 +171,40 @@ def _pixelate_probe(tmp: Path) -> dict:
         "shape": list(arrays["zgals"].shape),
         "occupied_pixels": occupied.tolist(),
         "ngals": arrays["ngals"].tolist(),
-        "occupied_rows": rows,
-        "hashes": {k: _hash_array(v) for k, v in arrays.items()},
+        "occupied_rows_canonical_z_order": rows,
+        "canonical_hashes": {k: _hash_array(v) for k, v in arrays.items()},
+        "comparison_convention": {
+            "real_pixel_rows": "stable sort by zgals over the ngals prefix",
+            "coindexed_columns": list(COINDEXED_DATASETS),
+            "legacy_raw_equal_pixel_order_is_unstable": True,
+            "reason": "legacy pixelizer uses np.argsort(pixel) without a stable sort kind",
+            "core_alignment": "frozen darksirens.load_catalog stably sorts each real row by z",
+        },
         "padding": {
-            "z_all_100_after_ngals": bool(all(
-                np.all(arrays["zgals"][p, int(arrays["ngals"][p]):] == 100.0)
-                for p in range(arrays["zgals"].shape[0])
-            )),
-            "dz_all_1_after_ngals": bool(all(
-                np.all(arrays["dzgals"][p, int(arrays["ngals"][p]):] == 1.0)
-                for p in range(arrays["dzgals"].shape[0])
-            )),
-            "w_all_0_after_ngals": bool(all(
-                np.all(arrays["wgals"][p, int(arrays["ngals"][p]):] == 0.0)
-                for p in range(arrays["wgals"].shape[0])
-            )),
+            "z_all_100_after_ngals": bool(
+                all(
+                    np.all(
+                        arrays["zgals"][p, int(arrays["ngals"][p]) :] == 100.0
+                    )
+                    for p in range(arrays["zgals"].shape[0])
+                )
+            ),
+            "dz_all_1_after_ngals": bool(
+                all(
+                    np.all(
+                        arrays["dzgals"][p, int(arrays["ngals"][p]) :] == 1.0
+                    )
+                    for p in range(arrays["dzgals"].shape[0])
+                )
+            ),
+            "w_all_0_after_ngals": bool(
+                all(
+                    np.all(
+                        arrays["wgals"][p, int(arrays["ngals"][p]) :] == 0.0
+                    )
+                    for p in range(arrays["wgals"].shape[0])
+                )
+            ),
         },
     }
 
@@ -169,7 +240,9 @@ def _depth_probe(tmp: Path) -> dict:
         "input": {
             "nside": nside_in,
             "counts": counts.tolist(),
-            "masked_frac": [None if not np.isfinite(x) else float(x) for x in masked_frac],
+            "masked_frac": [
+                None if not np.isfinite(x) else float(x) for x in masked_frac
+            ],
         },
         "native": {
             "f_p": native.f_p.tolist(),
@@ -192,13 +265,16 @@ def _depth_probe(tmp: Path) -> dict:
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--output", type=Path, required=True)
-    p.add_argument("--expected-legacy-sha", default="c042527238bd71421b792936bc48c3b815b90d6d")
+    p.add_argument(
+        "--expected-legacy-sha",
+        default="c042527238bd71421b792936bc48c3b815b90d6d",
+    )
     args = p.parse_args(argv)
 
     with tempfile.TemporaryDirectory(prefix="darksirens-surveys-probe-") as td:
         tmp = Path(td)
         result = {
-            "schema": "darksirens-surveys-s0a-reference-1",
+            "schema": "darksirens-surveys-s0a-reference-2",
             "legacy_sha": args.expected_legacy_sha,
             "pixelate": _pixelate_probe(tmp),
             "depth": _depth_probe(tmp),
