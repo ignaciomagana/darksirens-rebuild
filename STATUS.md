@@ -14,11 +14,11 @@ Legacy is read-only throughout reconstruction.
 
 ```text
 PHASE 7 — SMALL CORE EXTRAS + TARGET PUBLIC API
-status:       7A–7C3 ACCEPTED; RUNTIME BINDING NEXT
+status:       7A–7D ACCEPTED; PUBLIC infer() NEXT
 core repo:    ignaciomagana/darksirens-core
 core main:    d82becaf76bf62c0f72a71b32ebbf9b238ba4f13
 active branch:rebuild/phase7-public-api
-active head:  7821c5d4cc6e0d7c21759b66db9fc406b9166939
+active head:  1df8f78bb70371b9dae07c6a59a3c9fea2cc8e77
 legacy ref:   c042527238bd71421b792936bc48c3b815b90d6d
 ```
 
@@ -85,6 +85,7 @@ branch: rebuild/phase7-public-api
 7C1:    02b54e25740ff7cce1a030f372b3190121ad2b0f  ACCEPTED
 7C2:    102c233f132cd3b68faaebf4f2adbe71defa731e  ACCEPTED
 7C3:    7821c5d4cc6e0d7c21759b66db9fc406b9166939  ACCEPTED
+7D:     1df8f78bb70371b9dae07c6a59a3c9fea2cc8e77  ACCEPTED
 ```
 
 ### Companion repositories
@@ -180,9 +181,7 @@ historical/scientific: 34590483006 / 103234396701 SUCCESS
 runtime guards:        34590482964 / 103234396617 SUCCESS
 ```
 
-PR-triggered integration matrix on the exact accepted tree also passed Phase 3,
-Phase 4, Phase 5, Phase 6 integration, runtime, backend-specific, and reference
-checks. Representative runs:
+Representative PR integration runs on the accepted Phase-6 tree:
 
 ```text
 Phase 3 population:     34591719751 SUCCESS
@@ -196,9 +195,9 @@ The final frozen/core inference-surface audit found no legitimate 6U slice.
 Record: `phases/06T_sampler_orchestration.md`. Integration closure:
 `phases/06_phase_integration.md`.
 
-### Phase 7 — public/core construction surface
+## Phase 7 — public/core construction surface
 
-#### 7A — standardized public loaders
+### 7A — standardized public loaders
 
 ```text
 accepted head:       c338bc8eaa5199775e6d1355f20406be8ade1eb1
@@ -207,7 +206,7 @@ broad regression:    34593088762 / 103242605373 SUCCESS
 record:              phases/07A_public_loaders.md
 ```
 
-#### 7B — public cosmology/population specifications
+### 7B — public cosmology/population specifications
 
 ```text
 accepted head:       b97d949f32c0eff3bb48c574b5a2258f92fe82d5
@@ -217,7 +216,7 @@ broad regression:    34595489857 / 103250163890 SUCCESS
 record:              phases/07B_public_specs.md
 ```
 
-#### 7C1 — joint-prior resolver
+### 7C1 — joint-prior resolver
 
 ```text
 accepted head:       02b54e25740ff7cce1a030f372b3190121ad2b0f
@@ -226,10 +225,10 @@ broad regression:    34596093340 / 103252070365 SUCCESS
 record:              phases/07C1_joint_prior_resolver.md
 ```
 
-Restores the model-declared normalized cube maps required by the sampled GWTC-5
-population without reconstructing the giant legacy parameter-space builder.
+Restores model-declared normalized cube maps without reconstructing the giant
+legacy parameter-space builder.
 
-#### 7C2 — public `model()` / parameter plan
+### 7C2 — public `model()` / parameter plan
 
 ```text
 accepted head:       102c233f132cd3b68faaebf4f2adbe71defa731e
@@ -243,10 +242,9 @@ record:              phases/07C2_public_model_plan.md
 
 Adds typed composition for spectral, incomplete-catalog, and complete-catalog
 ordinary analyses, preserving frozen sampled-coordinate order and catalog
-nuisance blocks. It does not build runtime likelihood state or expose
-`ds.infer()` yet.
+nuisance blocks. It does not execute inference.
 
-#### 7C3 — portable HEALPix RING geometry
+### 7C3 — portable HEALPix RING geometry
 
 ```text
 accepted head:       7821c5d4cc6e0d7c21759b66db9fc406b9166939
@@ -261,9 +259,30 @@ record:              phases/07C3_healpix_geometry.md
 ```
 
 Adds dependency-free host-side `ang2pix_ring` with exact element-for-element
-parity to the frozen validated `healpy==1.17.3` RING mapper. The accepted-head
-second commit is workflow-only (`h5py` added to the focused test environment);
-production geometry did not change after its first commit.
+parity to frozen validated `healpy==1.17.3` RING behavior.
+
+### 7D — ordinary runtime binding
+
+```text
+accepted head:       1df8f78bb70371b9dae07c6a59a3c9fea2cc8e77
+accepted tree:       58e005450715e59456e3778b1431b909d6bb7636
+dedicated binding:  34622477272 / 103339542168 SUCCESS
+broad regression:   34622477307 / 103339541969 SUCCESS
+7C3 replay:          34622477253 SUCCESS
+7C2 replay:          34622477275 SUCCESS
+7C1 replay:          34622477258 SUCCESS
+7B replay:           34622477305 SUCCESS
+7A replay:           34622477196 SUCCESS
+record:              phases/07D_runtime_binding.md
+```
+
+The exact-head broad suite completed with `499 passed, 1 skipped`; the skip is
+the existing opt-in population-registry golden regeneration test. 7D binds
+`Analysis`, standardized GW stores and standardized catalogs to the already
+accepted fixed-theta spectral/incomplete/complete likelihoods. A real first-pass
+binder defect was found and fixed locally: compact catalog NumPy leaves must be
+converted once to JAX arrays before traced row indexing. No Phase-5 likelihood
+code changed.
 
 ## Frozen architecture direction
 
@@ -288,27 +307,23 @@ The reconstructed source tree contains no `universe_model` dispatcher and Phase
 
 None opened. No scientific behavior change is authorized during reconstruction.
 
-## Current action — ordinary runtime binding before `ds.infer()`
+## Current action — thin public `ds.infer()` facade
 
-Bind only the already accepted public declarations/data stores to the already
-accepted fixed-theta likelihood kernels:
+The next slice should expose only the conventional public execution seam over
+already accepted pieces:
 
-- consume `Analysis`, `GWStore`, and `SelectionStore`;
-- resolve the selected population's fitted spin coordinates and refuse
-  incompatible store density contracts loudly;
-- convert store RA/Dec to global RING pixels using accepted `ang2pix_ring`;
-- for catalog analyses, compact one PE-union-selection catalog and replace each
-  sample's global pixel with its compact row index;
-- construct barriered `GWEvent` PE/selection containers;
-- build the observed-density cache only for the incomplete-catalog path;
-- decode theta in the 7C2 frozen order into `CosmologyParameters`, the existing
-  population vector, and ordinary `CatalogParameters`, preserving the frozen
-  `n0 = 10**log10n0` mapping and catalog `z_depth` metadata;
-- expose a fixed-theta callable that delegates to the accepted spectral,
-  incomplete-catalog, or complete-catalog hierarchical likelihood explicitly.
+- keep package-root import dependency-light and make `ds.infer` lazy;
+- call the accepted 7D `bind_analysis` runtime seam;
+- build the accepted Phase-6 `make_prior_transform` from the exact 7C2 parameter
+  plan (`lower`, `upper`, `prior_kinds`, `joint_constraints`);
+- normalize public sampler keywords into the existing Phase-6 attribute-based
+  option contract rather than creating a new sampler abstraction;
+- delegate unchanged to the accepted Phase-6 `run_sampler` dispatcher;
+- preserve Phase-6 ordering: a zero-free analysis must return exact evidence
+  before sampler-name validation or optional backend import;
+- keep checkpointing off by default unless a resolved checkpoint plan is
+  explicitly supplied; do not invent new run-directory/persistence semantics;
+- return the existing standardized sampler result mapping directly.
 
-Acceptance should compare this binder at fixed theta with direct calls into the
-already legacy-parity-accepted Phase-4/5 kernels, plus the broad Phase-7 gate.
-Do not expose `ds.infer()` or invoke a sampler in this slice. After binding is
-accepted, `ds.infer()` can remain a thin layer over `make_prior_transform` and
-the Phase-6 `run_sampler` dispatcher.
+Do not add result persistence, campaign CLI behavior, raw survey handling,
+companion imports, or new sampler/backend logic in this slice.
