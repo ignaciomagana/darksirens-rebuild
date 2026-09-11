@@ -14,9 +14,11 @@ Legacy is read-only throughout reconstruction.
 
 ```text
 PHASE 7 — SMALL CORE EXTRAS + TARGET PUBLIC API
-status:       INVENTORY / SLICE DESIGN NEXT
+status:       7A–7B ACCEPTED; JOINT-PRIOR RESOLVER NEXT
 core repo:    ignaciomagana/darksirens-core
 core main:    d82becaf76bf62c0f72a71b32ebbf9b238ba4f13
+active branch:rebuild/phase7-public-api
+active head:  b97d949f32c0eff3bb48c574b5a2258f92fe82d5
 legacy ref:   c042527238bd71421b792936bc48c3b815b90d6d
 ```
 
@@ -73,6 +75,14 @@ status:   SUCCESS
 Most Phase-6/historical workflows do not push-trigger on `main`; no nonexistent
 post-merge broad run is claimed. The merged tree is byte-identical to the exact
 PR head on which the complete cross-phase matrix passed.
+
+Phase 7 is currently developed on:
+
+```text
+branch: rebuild/phase7-public-api
+7A:     c338bc8eaa5199775e6d1355f20406be8ade1eb1  ACCEPTED
+7B:     b97d949f32c0eff3bb48c574b5a2258f92fe82d5  ACCEPTED
+```
 
 ### Companion repositories
 
@@ -183,6 +193,36 @@ The final frozen/core inference-surface audit found no legitimate 6U slice.
 Record: `phases/06T_sampler_orchestration.md`. Integration closure:
 `phases/06_phase_integration.md`.
 
+### Phase 7 — public/core construction surface
+
+#### 7A — standardized public loaders
+
+```text
+accepted head:       c338bc8eaa5199775e6d1355f20406be8ade1eb1
+dedicated loader:    34593088782 / 103242605896 SUCCESS
+broad regression:    34593088762 / 103242605373 SUCCESS
+record:              phases/07A_public_loaders.md
+```
+
+Adds lazy root `load_events`, `load_injections`, and `load_catalog`, with exact
+frozen standardized catalog-loader parity and no survey-native/LSS/lensing
+staging.
+
+#### 7B — public cosmology/population specifications
+
+```text
+accepted head:       b97d949f32c0eff3bb48c574b5a2258f92fe82d5
+dedicated specs:     34595489924 / 103250164326 SUCCESS
+7A parity replay:     34595489912 / 103250164428 SUCCESS
+broad regression:    34595489857 / 103250163890 SUCCESS
+record:              phases/07B_public_specs.md
+```
+
+Adds lightweight `Cosmology` and `Population` declarations. The public
+`fixed="gwtc5"` spelling resolves to the existing validated
+`gwtc5_fiducial_bpl2peaks` registry entry; no population numbers or model
+implementation are duplicated.
+
 ## Frozen architecture direction
 
 Core owns standardized catalog runtime/IO, ordinary catalog redshift kernels and
@@ -206,23 +246,26 @@ The reconstructed source tree contains no `universe_model` dispatcher and Phase
 
 None opened. No scientific behavior change is authorized during reconstruction.
 
-## Current action — Phase 7 inventory and first slice
+## Current action — joint-prior resolver before `ds.model()`
 
-Inventory the frozen ordinary user path and current core public surface before
-coding. Decompose, rather than copy, the ordinary parts of legacy
-`inference/data.py`, `inference/loaders.py`, `inference/prior.py`,
-`inference/parameters.py`, and `inference/pop_extractor.py`, plus any angular
-model/public entrypoint actually required by the frozen conventional path.
+The Phase-6 unit-cube prior transform already implements the frozen joint maps,
+but model-driven resolution of those maps has not yet been reconstructed. This
+is scientifically required for population models such as the GWTC-5 fiducial
+BPL+2G model, whose declared constraints include the normalized simplex prior
+for `lambda0 + lambda1 <= 1` and the conditional prior
+`m2_low | m1_low ~ U(lower, m1_low)`.
 
-Classify each responsibility as:
+Port only the small generic resolver from frozen `inference/prior.py`:
 
-1. already reconstructed core functionality;
-2. a small conventional Phase-7 core facade/helper;
-3. survey-native staging owned by `darksirens-surveys`;
-4. Q/LSS/multitracer state owned by `darksirens-lss`;
-5. lensing state owned by `darksirens-lensing`;
-6. legacy campaign/CLI glue that should not be reconstructed.
+- read `constraint_groups` from the existing core population model registry;
+- resolve group labels to the currently sampled indices;
+- preserve exact admissibility rules for `ordered_le`, `simplex`, `ball3`, and
+  `conditional_upper`;
+- preserve the frozen warning/fallback-to-rejection behavior when bounds or
+  prior kinds make an exact cube map invalid;
+- parity-test against the pinned legacy resolver;
+- feed its result to the already accepted Phase-6 transform.
 
-Then choose the smallest conventional core-only parity slice, create a new
-Phase-7 branch from `d82becaf76bf62c0f72a71b32ebbf9b238ba4f13`, and gate it against the frozen
-legacy behavior before advancing further.
+Do not reconstruct the giant legacy parameter-space builder. After this resolver
+slice passes, build `ds.model()` as a typed analysis/parameter-plan composition
+layer; keep `ds.infer()` separate.
