@@ -14,11 +14,11 @@ Legacy is read-only throughout reconstruction.
 
 ```text
 PHASE 7 — SMALL CORE EXTRAS + TARGET PUBLIC API
-status:       7A–7B ACCEPTED; JOINT-PRIOR RESOLVER NEXT
+status:       7A–7C2 ACCEPTED; PORTABLE SKY GEOMETRY NEXT
 core repo:    ignaciomagana/darksirens-core
 core main:    d82becaf76bf62c0f72a71b32ebbf9b238ba4f13
 active branch:rebuild/phase7-public-api
-active head:  b97d949f32c0eff3bb48c574b5a2258f92fe82d5
+active head:  102c233f132cd3b68faaebf4f2adbe71defa731e
 legacy ref:   c042527238bd71421b792936bc48c3b815b90d6d
 ```
 
@@ -82,6 +82,8 @@ Phase 7 is currently developed on:
 branch: rebuild/phase7-public-api
 7A:     c338bc8eaa5199775e6d1355f20406be8ade1eb1  ACCEPTED
 7B:     b97d949f32c0eff3bb48c574b5a2258f92fe82d5  ACCEPTED
+7C1:    02b54e25740ff7cce1a030f372b3190121ad2b0f  ACCEPTED
+7C2:    102c233f132cd3b68faaebf4f2adbe71defa731e  ACCEPTED
 ```
 
 ### Companion repositories
@@ -204,10 +206,6 @@ broad regression:    34593088762 / 103242605373 SUCCESS
 record:              phases/07A_public_loaders.md
 ```
 
-Adds lazy root `load_events`, `load_injections`, and `load_catalog`, with exact
-frozen standardized catalog-loader parity and no survey-native/LSS/lensing
-staging.
-
 #### 7B — public cosmology/population specifications
 
 ```text
@@ -218,10 +216,34 @@ broad regression:    34595489857 / 103250163890 SUCCESS
 record:              phases/07B_public_specs.md
 ```
 
-Adds lightweight `Cosmology` and `Population` declarations. The public
-`fixed="gwtc5"` spelling resolves to the existing validated
-`gwtc5_fiducial_bpl2peaks` registry entry; no population numbers or model
-implementation are duplicated.
+#### 7C1 — joint-prior resolver
+
+```text
+accepted head:       02b54e25740ff7cce1a030f372b3190121ad2b0f
+dedicated resolver:  34596093457 / 103252070961 SUCCESS
+broad regression:    34596093340 / 103252070365 SUCCESS
+record:              phases/07C1_joint_prior_resolver.md
+```
+
+Restores the model-declared normalized cube maps required by the sampled GWTC-5
+population without reconstructing the giant legacy parameter-space builder.
+
+#### 7C2 — public `model()` / parameter plan
+
+```text
+accepted head:       102c233f132cd3b68faaebf4f2adbe71defa731e
+dedicated model:     34596633396 / 103253806465 SUCCESS
+broad regression:    34596632992 / 103253805105 SUCCESS
+7C1 replay:          34596632909 / 103253805578 SUCCESS
+7B replay:           34596633316 / 103253806135 SUCCESS
+7A replay:           34596633170 / 103253805984 SUCCESS
+record:              phases/07C2_public_model_plan.md
+```
+
+Adds typed composition for spectral, incomplete-catalog, and complete-catalog
+ordinary analyses, preserving frozen sampled-coordinate order and catalog
+nuisance blocks. It does not build runtime likelihood state or expose
+`ds.infer()` yet.
 
 ## Frozen architecture direction
 
@@ -246,26 +268,26 @@ The reconstructed source tree contains no `universe_model` dispatcher and Phase
 
 None opened. No scientific behavior change is authorized during reconstruction.
 
-## Current action — joint-prior resolver before `ds.model()`
+## Current action — portable sky geometry before runtime binding
 
-The Phase-6 unit-cube prior transform already implements the frozen joint maps,
-but model-driven resolution of those maps has not yet been reconstructed. This
-is scientifically required for population models such as the GWTC-5 fiducial
-BPL+2G model, whose declared constraints include the normalized simplex prior
-for `lambda0 + lambda1 <= 1` and the conditional prior
-`m2_low | m1_low ~ U(lower, m1_low)`.
+`GWStore` and `SelectionStore` carry sky position as RA/Dec. Ordinary catalog
+likelihoods consume catalog HEALPix row indices. Frozen staged loading used
+`healpy.ang2pix(nside, pi/2-dec, ra)` for this conversion, but the reconstructed
+core deliberately has no runtime `healpy` dependency.
 
-Port only the small generic resolver from frozen `inference/prior.py`:
+The next slice should reconstruct only the portable RING HEALPix geometry needed
+by ordinary core binding:
 
-- read `constraint_groups` from the existing core population model registry;
-- resolve group labels to the currently sampled indices;
-- preserve exact admissibility rules for `ordered_le`, `simplex`, `ball3`, and
-  `conditional_upper`;
-- preserve the frozen warning/fallback-to-rejection behavior when bounds or
-  prior kinds make an exact cube map invalid;
-- parity-test against the pinned legacy resolver;
-- feed its result to the already accepted Phase-6 transform.
+- host-side `ang2pix_ring(nside, ra, dec)` with radians-in / zero-based RING
+  pixel IDs out;
+- strict finite/declination/NSIDE validation appropriate for standardized
+  inputs;
+- vectorized NumPy implementation with allocation proportional to sample count;
+- exact parity against `healpy.ang2pix(..., nest=False)` over randomized sky
+  positions, all relevant NSIDEs, poles, equatorial/polar transition, and
+  longitude wrapping;
+- no `healpy` import or dependency in the installed core package.
 
-Do not reconstruct the giant legacy parameter-space builder. After this resolver
-slice passes, build `ds.model()` as a typed analysis/parameter-plan composition
-layer; keep `ds.infer()` separate.
+Do not mix GW runtime-event construction, catalog compaction, parameter decoding,
+or likelihood closure building into this geometry slice. Those belong to the
+next binding slice after the geometry is accepted.
