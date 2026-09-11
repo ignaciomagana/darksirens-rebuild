@@ -14,7 +14,7 @@ Legacy is read-only throughout reconstruction.
 
 ```text
 PHASE 6 — CORE INFERENCE / CHECKPOINTING / IO
-status:         6A–6S ACCEPTED; 6T SAMPLER ORCHESTRATION NEXT
+status:         6A–6T ACCEPTED; FUNCTIONALLY COMPLETE; INTEGRATION AUDIT NEXT
 core repo:      ignaciomagana/darksirens-core
 phase-6 base:   86e0c88a51482d17fac70f111057d277df9387fd
 working branch: rebuild/phase6-inference-io
@@ -37,6 +37,7 @@ accepted 6P:    73115e1d403e1c6eefa646c7e68867d6831dc7df
 accepted 6Q:    cfbde4a2d202398a531dab5646314ac1a485fcd5
 accepted 6R:    7bab631a786d4ad3a54bc93833157b0f64a046d4
 accepted 6S:    b620601e1a0cc776f7d9090c866e299f2138fbff
+accepted 6T:    d3e8dcdbf107d881405d1f14badab7bd0ea4d74f
 ```
 
 Phase 6 reconstructs only portable inference infrastructure. The legacy
@@ -44,35 +45,42 @@ Phase 6 reconstructs only portable inference infrastructure. The legacy
 backend-specific adapters with an exact parity gate for each slice; it is never
 copied wholesale.
 
+The final frozen/core inference-surface audit found no legitimate 6U functional
+slice. Remaining core-owned inference construction belongs to Phase 7, and
+LSS/Q/multitracer or lensing-specific state remains companion-owned. Detailed
+closure record: `phases/06T_sampler_orchestration.md`.
+
 ### Remaining core phases
 
-There are three core production phases remaining including the active Phase 6,
-and two after Phase 6:
+Two core production phases remain after the Phase-6 integration checkpoint:
 
 ```text
-Phase 6 — finish inference/sampler/result infrastructure and backend adapters
 Phase 7 — small core extras + target public API (`model`, `infer`, loaders, angular model)
 Phase 8 — extension seam + final dependency/API/install/example audit and core freeze
 ```
 
-Phase count is broader than commit count: Phase 6 intentionally contains several
-small parity slices before its final PR/merge. Flows remain deferred/optional
-unless the ordinary core path demonstrates that they are required for the
-frozen core contract. Companion packages start only after Phase 8 freezes the
-core surface.
+Flows remain deferred/optional unless the ordinary core path demonstrates that
+they are required for the frozen core contract. Companion packages start only
+after Phase 8 freezes the core surface.
 
 ## Production repository state
 
 ### `darksirens-core`
 
-`main` remains the Phase-5 squash merge:
+`main` remains the Phase-5 squash merge until the Phase-6 integration audit and
+merge are complete:
 
 ```text
 86e0c88a51482d17fac70f111057d277df9387fd
 ```
 
-Accepted Phase-6 work remains intentionally on
-`rebuild/phase6-inference-io`; Phase 6 is not ready to merge yet.
+The accepted Phase-6 integration head is:
+
+```text
+d3e8dcdbf107d881405d1f14badab7bd0ea4d74f
+```
+
+on `rebuild/phase6-inference-io`.
 
 ### Companion repositories
 
@@ -258,6 +266,22 @@ sampler-health diagnostics. The production adapter did not change after its
 initial implementation; subsequent 6S commits corrected only test/probe
 representation handling. Record: `phases/06S_numpyro_execution_adapter.md`.
 
+### 6T — sampler orchestration and Phase-6 surface closure
+
+```text
+accepted head:    d3e8dcdbf107d881405d1f14badab7bd0ea4d74f
+dedicated gate:  34590483237 / 103234397114 SUCCESS
+historical gate: 34590483006 / 103234396701 SUCCESS
+runtime guards:  34590482964 / 103234396617 SUCCESS
+```
+
+Thin sampler orchestration preserves the zero-dimensional short circuit before
+method validation, nested resume/preflight ordering, accepted backend delegation,
+lazy imports, and the frozen unknown-sampler error. The final inference-surface
+audit classified every frozen `darksirens/inference/` module and found no missing
+Phase-6 sampler/checkpoint/result/provenance responsibility. Record:
+`phases/06T_sampler_orchestration.md`.
+
 ## Frozen architecture direction
 
 Core owns standardized catalog runtime/IO, ordinary catalog redshift kernels and
@@ -280,11 +304,12 @@ The reconstructed source tree contains no `universe_model` dispatcher.
 
 None opened. No scientific behavior change is authorized during reconstruction.
 
-## Current action — Phase 6T
+## Current action — Phase 6 completion/integration audit
 
-Reconstruct only the thin top-level sampler orchestration seam: preserve the
-zero-dimensional exact short circuit before method validation; preserve nested
-Dynesty/TinyNS resume and preflight ordering; delegate to the already accepted
-TinyNS, Dynesty, and NumPyro slices; preserve the exact unknown-sampler error for
-positive-dimensional runs; keep backend imports lazy; and do not begin Phase 7
-until the remaining inference-surface audit confirms Phase 6 is complete.
+Hold the core branch at accepted 6T unless the audit exposes a packaging-only or
+integration defect. Compare the complete Phase-6 branch against the Phase-5
+`main` base; verify no orphaned Phase-6 functionality, forbidden companion
+imports, dependency regressions, or accidental Phase-7 construction code; verify
+all exact-head acceptance workflows remain green; then open/update and merge the
+Phase-6 PR with expected-head protection. Run the post-merge validation on
+`main`, record the merge SHA and gate here, and only then begin Phase 7.
