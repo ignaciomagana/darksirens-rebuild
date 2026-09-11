@@ -14,11 +14,11 @@ Legacy is read-only throughout reconstruction.
 
 ```text
 PHASE 7 — SMALL CORE EXTRAS + TARGET PUBLIC API
-status:        7A–7F2 ACCEPTED; ANGULAR COMPOSITION/WIRING NEXT
+status:        7A–7F3 ACCEPTED; PHASE-7 CLOSURE / INTEGRATION AUDIT NEXT
 core repo:     ignaciomagana/darksirens-core
 core main:     d82becaf76bf62c0f72a71b32ebbf9b238ba4f13
 active branch: rebuild/phase7-public-api
-active head:   877bda4e5e2e10ac52c657f7990159afcfa1093a
+active head:   be95e95bdf77144880cba5752ed5feafd40a697f
 legacy ref:    c042527238bd71421b792936bc48c3b815b90d6d
 ```
 
@@ -66,6 +66,7 @@ branch: rebuild/phase7-public-api
 7E:     f8aa93ed8bd7c7ebae3fe009f5e05db92cde456e  ACCEPTED
 7F1:    6f4126792be9481860f893042e1efa253b46d1ec  ACCEPTED
 7F2:    877bda4e5e2e10ac52c657f7990159afcfa1093a  ACCEPTED
+7F3:    be95e95bdf77144880cba5752ed5feafd40a697f  ACCEPTED
 ```
 
 ### Companion repositories
@@ -279,7 +280,26 @@ fiducials, representative `log g`, GP normalization diagnostics, 3-D fiducial
 volume weights, multipole ordering, positivity, and prior-volume fraction.
 No `healpy` runtime dependency enters core.
 
-All 7A–7F1 replay workflows are green on the accepted 7F2 head.
+### 7F3 — angular composition and likelihood wiring
+
+```text
+head:        be95e95bdf77144880cba5752ed5feafd40a697f
+tree:        55dfb24cb84edebb0175409bd33be2a6a57ecb8a
+dedicated:   34632081722 / 103371081194 SUCCESS
+broad:       34632081763 / 103371080968 SUCCESS
+result:      517 passed, 1 skipped
+record:      phases/07F3_angular_wiring.md
+```
+
+`ds.model(..., angular=...)` now composes the accepted angular registry with the
+ordinary public analysis. The angular block follows cosmology/population/catalog
+coordinates, dipole `ball3` uses the existing joint-prior resolver, and the same
+clamped-`dL` -> `z` -> `log g(nhat,z)` factor enters both PE and selection
+weights. Separate-process frozen/candidate dipole wiring parity is exact;
+`angular='isotropic'` is an exact no-op relative to the previously accepted
+ordinary likelihoods.
+
+All 7A–7F2 replay workflows are green on the accepted 7F3 head.
 
 ## Frozen architecture direction
 
@@ -305,27 +325,24 @@ The reconstructed source tree contains no `universe_model` dispatcher and Phase
 
 None opened. No scientific behavior change is authorized during reconstruction.
 
-## Current action — 7F3 angular composition and likelihood wiring
+## Current action — Phase-7 closure / integration audit
 
-The next slice must be deliberately thin:
+Before opening the Phase-7 integration PR, verify that the target ordinary core
+surface is complete and no legitimate 7G remains:
 
-- add a typed angular choice to ordinary `ds.model(...)`, defaulting to exact
-  frozen isotropy;
-- append the angular block after the existing cosmology/population/catalog
-  coordinates, matching frozen block ordering;
-- feed angular model joint constraints (notably dipole `ball3`) into the existing
-  joint-prior resolver without introducing a new transform layer;
-- decode angular parameters separately from cosmology, population, and catalog
-  parameters;
-- apply the same `log g(nhat,z)` factor to both PE and detected-injection target
-  weights;
-- prove `angular='isotropic'` is a fixed-theta no-op relative to the already
-  accepted ordinary likelihoods;
-- parity-test at least one nontrivial anisotropic model against the pinned legacy
-  behavior;
-- keep catalog-redshift/completeness construction unchanged;
-- preserve sampler, checkpoint, and result layers unchanged;
-- keep all survey/LSS/lensing/campaign knowledge outside core.
+- public standardized loaders are present and lazy;
+- declarative `Cosmology` / `Population` specs are present;
+- `ds.model()` provides typed spectral/incomplete/complete composition and
+  angular composition without a legacy switchboard;
+- runtime binding reaches the accepted fixed-theta likelihoods;
+- `ds.infer()` delegates to the accepted Phase-6 prior/sampler machinery;
+- reusable basic and advanced angular models are reconstructed and wired with
+  frozen PE/selection semantics;
+- package-root import remains dependency-light;
+- core has no companion-package imports;
+- raw survey, Q/LSS/multitracer, lensing and campaign concerns remain excluded.
 
-Only after this wiring is accepted should Phase 7 be audited for closure before
-moving to Phase 8.
+If this audit finds no concrete missing core-owned ordinary behavior, record
+that there is no Phase 7G, write the Phase-7 integration record, and open the
+Phase-7 PR to `main`. Do not invent another production slice merely to extend
+Phase 7.
