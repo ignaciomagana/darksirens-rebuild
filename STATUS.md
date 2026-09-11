@@ -12,16 +12,16 @@ control repo:      ignaciomagana/darksirens-rebuild
 
 ```text
 PHASE 6 — CORE INFERENCE / CHECKPOINTING / IO
-status:         STARTING FROM VERIFIED PHASE-5 MAIN
+status:         6A–6C1 ACCEPTED; GENERIC PRIOR TRANSFORM NEXT
 core repo:      ignaciomagana/darksirens-core
 phase-6 base:   86e0c88a51482d17fac70f111057d277df9387fd
 working branch: rebuild/phase6-inference-io
 ```
 
-Phase 5 is closed. The next core slice reconstructs only portable inference
-infrastructure: composable parameter/prior decoding, sampler-facing contracts,
-semantic checkpoint/resume state, run fingerprints, and JAX-free settings/results
-IO. Survey/LSS staging, raw catalog construction, `q_provenance`, campaign/CLI
+Phase 5 is closed. Phase 6 reconstructs only portable inference infrastructure:
+composable parameter/prior decoding, sampler-facing contracts, semantic
+checkpoint/resume state, run fingerprints, and JAX-free settings/results IO.
+Survey/LSS staging, raw catalog construction, `q_provenance`, campaign/CLI
 assembly, and the legacy mega factory are not Phase-6 migration units.
 
 ## Completed phase heads
@@ -54,10 +54,10 @@ PASS. Detailed record: `phases/03_population.md`.
 ```text
 accepted branch head: cfdb138d40d66614bf9b1264c2574d0b497b812d
 branch workflow run: 34445525661
-branch job:          102769369532
-squash-merge SHA:    0f97feff7eb283a1f541bef9a776c9347084e70e
-verified core main:  0f97feff7eb283a1f541bef9a776c9347084e70e
-post-merge run/job:  34447108888 / 102774202182 SUCCESS
+phase3 job:           102769369532
+squash-merge SHA:     0f97feff7eb283a1f541bef9a776c9347084e70e
+verified core main:   0f97feff7eb283a1f541bef9a776c9347084e70e
+post-merge run/job:   34447108888 / 102774202182 SUCCESS
 ```
 
 Scientific acceptance: 199 passed, 1 regen-only skip; spectral fixed-theta
@@ -152,17 +152,62 @@ was narrowed to preserve the actual boundary against legacy-redshift/LSS/lensing
 CLI imports. No production/scientific source changed, and all historical plus
 Phase-5 PR workflows passed before merge.
 
+### Phase 6A — atomic result artifact/completion protocol
+
+```text
+accepted head: 194e246666e6901624347d09ec570696f3c62e4d
+status:        SUCCESS
+```
+
+6A reconstructs only the JAX-free atomic result/completion contract used by
+resume logic. It does not port the full legacy results writer or CLI metadata.
+Focused behavior and separate-process legacy parity are exact.
+
+### Phase 6B — checkpoint/resume planning
+
+```text
+accepted head: 6a8a2c2c4a9e772f74a913b68c13264e55bef38f
+workflow run:  34535140962
+job:           103064891308
+result:        SUCCESS
+```
+
+6B reconstructs only backend-independent checkpoint-plan resolution and
+resume-target selection. Sampler serialization remains separate. Exact 6A/6B
+parity and all preserved Phase-5 parity passed.
+
+### Phase 6C1 — semantic fingerprint artifact/resume gate
+
+```text
+accepted head: 807687ccb5754af14f888df3089497f26706e234
+workflow run:  34536066003
+job:           103067845905
+result:        SUCCESS
+```
+
+Acceptance: 312 passed, 1 regeneration-only skip; the portable dependency audit
+passed; 6A, 6B and 6C1 separate-process behavior matched frozen legacy exactly;
+all Phase-5 comparators remained exact (`max_abs=max_rel=0`, `rtol=1e-12`,
+`atol=0`). 6C1 keeps semantic identity explicit and does not rediscover the
+statistical target from CLI/survey/LSS/sky globals. Detailed checkpoint:
+`phases/06C1_run_fingerprint_gate.md`.
+
 ## Production repository state
 
 ### `darksirens-core`
 
-`main` is the verified Phase-5 squash merge:
+`main` is still the verified Phase-5 squash merge:
 
 ```text
 86e0c88a51482d17fac70f111057d277df9387fd
 ```
 
-Phase 6 starts from this exact SHA.
+Accepted Phase-6 work lives on:
+
+```text
+rebuild/phase6-inference-io
+latest accepted checkpoint: 807687ccb5754af14f888df3089497f26706e234
+```
 
 ### `darksirens-surveys`
 
@@ -201,13 +246,13 @@ paths.
 
 The older migration inventory mentions `darksirens/inference/runtime.py`, but no
 such file exists at pinned legacy SHA
-`c042527238bd71421b792936bc48c3b815b90d6d`. Phase 6 must be derived from the
-actual pinned source tree, not from that stale entry.
+`c042527238bd71421b792936bc48c3b815b90d6d`. Phase 6 is derived from the actual
+pinned source tree, not that stale entry.
 
-Legacy `inference/sampling.py` is also not a migration unit as a whole: it mixes
+Legacy `inference/sampling.py` is not a migration unit as a whole: it mixes
 sampler adapters, diagnostics, checkpointing and backend/GPU behavior. Likewise,
 results/settings already live in a JAX-free `darksirens.io` namespace in the
-pinned tree; preserve that useful separation rather than collapsing all IO under
+pinned tree; preserve that separation rather than collapsing all IO under
 inference.
 
 ## Scientific questions
@@ -216,8 +261,9 @@ None opened. No scientific behavior change is authorized during reconstruction.
 
 ## Current action — Phase 6
 
-Create `rebuild/phase6-inference-io` from verified Phase-5 main. Freeze the
-portable inference/IO contracts against pinned legacy, then reconstruct them in
-small subphases with focused tests plus all historical regression/parity gates.
-Do not port survey/LSS staging, mega-factory dispatch, or campaign CLI behavior
-into core.
+Reconstruct the generic unit-cube prior transform from pinned
+`inference/prior.py` as the next small subphase. Preserve the frozen uniform,
+truncated-normal, truncated-lognormal, Beta(1,b), and explicit joint cube-map
+semantics with exact legacy/candidate probes. Do not migrate `build_parameter_space`,
+survey/LSS/sky discovery, CLI assembly, or sampler backend dispatch in the same
+step.
