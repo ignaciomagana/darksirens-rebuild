@@ -13,74 +13,66 @@ Legacy is read-only throughout reconstruction.
 ## Current phase
 
 ```text
-PHASE 6 — CORE INFERENCE / CHECKPOINTING / IO
-status:         6A–6T ACCEPTED; FUNCTIONALLY COMPLETE; INTEGRATION AUDIT NEXT
-core repo:      ignaciomagana/darksirens-core
-phase-6 base:   86e0c88a51482d17fac70f111057d277df9387fd
-working branch: rebuild/phase6-inference-io
-accepted 6A:    194e246666e6901624347d09ec570696f3c62e4d
-accepted 6B:    6a8a2c2c4a9e772f74a913b68c13264e55bef38f
-accepted 6C1:   807687ccb5754af14f888df3089497f26706e234
-accepted 6D:    5edc76c6c055e47a7e041d7f7477e347837f7554
-accepted 6E:    fe845dcc87787d19c69bf30a89f211d9de68be03
-accepted 6F:    05e7c339f190a04e0b92d40c16119e5bda56ef08
-accepted 6G:    251590e82eb373bace7f1e277805b75423bf4f10
-accepted 6H:    d1d39019ad2ca3750ef8171d0d451cdc0896adb0
-accepted 6I:    0084e3b7c5cba14d8ac85528ce18185941e46c05
-accepted 6J:    0373cc9055552dc003dd569b0dc10c515c04c4fe
-accepted 6K:    ffe82c8e7948bb0f7b8d0ad3d224037cd702d75d
-accepted 6L:    39d9ab8aef7b0b4e0847ce4e9894a6a2a8985087
-accepted 6M:    cb74900cff9be07049243548d72eef5e5e77bfaf
-accepted 6N:    39d4e36a8d5d3aa347761a9134e0c7c835cdb565
-accepted 6O:    28c5f06ad0cc40d8fdbb587bcaa3e98dd89089b4
-accepted 6P:    73115e1d403e1c6eefa646c7e68867d6831dc7df
-accepted 6Q:    cfbde4a2d202398a531dab5646314ac1a485fcd5
-accepted 6R:    7bab631a786d4ad3a54bc93833157b0f64a046d4
-accepted 6S:    b620601e1a0cc776f7d9090c866e299f2138fbff
-accepted 6T:    d3e8dcdbf107d881405d1f14badab7bd0ea4d74f
+PHASE 7 — SMALL CORE EXTRAS + TARGET PUBLIC API
+status:       INVENTORY / SLICE DESIGN NEXT
+core repo:    ignaciomagana/darksirens-core
+core main:    d82becaf76bf62c0f72a71b32ebbf9b238ba4f13
+legacy ref:   c042527238bd71421b792936bc48c3b815b90d6d
 ```
 
-Phase 6 reconstructs only portable inference infrastructure. The legacy
-`inference/sampling.py` monolith is split into small backend-independent or
-backend-specific adapters with an exact parity gate for each slice; it is never
-copied wholesale.
+Phase 6 is complete, merged, and closed. Detailed integration/merge record:
+`phases/06_phase_integration.md`.
 
-The final frozen/core inference-surface audit found no legitimate 6U functional
-slice. Remaining core-owned inference construction belongs to Phase 7, and
-LSS/Q/multitracer or lensing-specific state remains companion-owned. Detailed
-closure record: `phases/06T_sampler_orchestration.md`.
+Phase 7 owns only the remaining small, ordinary core construction/public
+surfaces: standardized ordinary loaders, small parameter/prior/model assembly,
+target `model` and `infer` APIs, and the ordinary angular-model surface where it
+is part of the core contract. It must not resurrect the frozen
+`universe_model`/`ParameterDecoder` switchboards or absorb staged survey,
+Q/LSS/multitracer, campaign, or lensing internals.
 
 ### Remaining core phases
-
-Two core production phases remain after the Phase-6 integration checkpoint:
 
 ```text
 Phase 7 — small core extras + target public API (`model`, `infer`, loaders, angular model)
 Phase 8 — extension seam + final dependency/API/install/example audit and core freeze
 ```
 
-Flows remain deferred/optional unless the ordinary core path demonstrates that
-they are required for the frozen core contract. Companion packages start only
-after Phase 8 freezes the core surface.
+Companion packages start only after Phase 8 freezes the core surface.
 
 ## Production repository state
 
 ### `darksirens-core`
 
-`main` remains the Phase-5 squash merge until the Phase-6 integration audit and
-merge are complete:
+Phase 6 was squash-merged through PR #5. Current `main`:
 
 ```text
-86e0c88a51482d17fac70f111057d277df9387fd
+d82becaf76bf62c0f72a71b32ebbf9b238ba4f13
 ```
 
-The accepted Phase-6 integration head is:
+Accepted Phase-6 integration head before squash:
 
 ```text
 d3e8dcdbf107d881405d1f14badab7bd0ea4d74f
 ```
 
-on `rebuild/phase6-inference-io`.
+The accepted head and squash merge have the identical Git tree:
+
+```text
+118e196b87538e387d433e4f71edff70b3b3385d
+```
+
+Post-merge `main` validation that actually auto-ran:
+
+```text
+workflow: reference-integrity
+run:      34592289964
+job:      103240104097 (frozen-reference)
+status:   SUCCESS
+```
+
+Most Phase-6/historical workflows do not push-trigger on `main`; no nonexistent
+post-merge broad run is claimed. The merged tree is byte-identical to the exact
+PR head on which the complete cross-phase matrix passed.
 
 ### Companion repositories
 
@@ -138,157 +130,66 @@ post-merge gate:              34534097673 / 103061536070 SUCCESS
 Phase-5 scientific parity is exact (`max_abs=max_rel=0`, `rtol=1e-12`,
 `atol=0`).
 
-## Phase 6 accepted slices
-
-### 6A–6J
-
-6A atomic result publication/completion; 6B checkpoint planning; 6C1 semantic
-resume fingerprint gate; 6D generic unit-cube prior transform; 6E Dynesty
-state-only checkpointing; 6F Dynesty prior-transform dispatch; 6G nested
-finite-logL preflight; 6H zero-free exact evidence; 6I dead-point packaging;
-6J dead-point HDF5 persistence. Each slice has exact frozen-behavior parity and
-its own checkpoint record under `phases/` where applicable.
-
-### 6K — TinyNS diagnostic normalization
+### Phase 6 — inference / checkpointing / IO
 
 ```text
-accepted head: ffe82c8e7948bb0f7b8d0ad3d224037cd702d75d
+phase base:        86e0c88a51482d17fac70f111057d277df9387fd
+accepted 6A:       194e246666e6901624347d09ec570696f3c62e4d
+accepted 6B:       6a8a2c2c4a9e772f74a913b68c13264e55bef38f
+accepted 6C1:      807687ccb5754af14f888df3089497f26706e234
+accepted 6D:       5edc76c6c055e47a7e041d7f7477e347837f7554
+accepted 6E:       fe845dcc87787d19c69bf30a89f211d9de68be03
+accepted 6F:       05e7c339f190a04e0b92d40c16119e5bda56ef08
+accepted 6G:       251590e82eb373bace7f1e277805b75423bf4f10
+accepted 6H:       d1d39019ad2ca3750ef8171d0d451cdc0896adb0
+accepted 6I:       0084e3b7c5cba14d8ac85528ce18185941e46c05
+accepted 6J:       0373cc9055552dc003dd569b0dc10c515c04c4fe
+accepted 6K:       ffe82c8e7948bb0f7b8d0ad3d224037cd702d75d
+accepted 6L:       39d9ab8aef7b0b4e0847ce4e9894a6a2a8985087
+accepted 6M:       cb74900cff9be07049243548d72eef5e5e77bfaf
+accepted 6N:       39d4e36a8d5d3aa347761a9134e0c7c835cdb565
+accepted 6O:       28c5f06ad0cc40d8fdbb587bcaa3e98dd89089b4
+accepted 6P:       73115e1d403e1c6eefa646c7e68867d6831dc7df
+accepted 6Q:       cfbde4a2d202398a531dab5646314ac1a485fcd5
+accepted 6R:       7bab631a786d4ad3a54bc93833157b0f64a046d4
+accepted 6S:       b620601e1a0cc776f7d9090c866e299f2138fbff
+accepted 6T:       d3e8dcdbf107d881405d1f14badab7bd0ea4d74f
+PR:                #5
+squash-merge SHA:  d82becaf76bf62c0f72a71b32ebbf9b238ba4f13
+shared tree:       118e196b87538e387d433e4f71edff70b3b3385d
 ```
 
-Backend-independent, defensive JSON-safe diagnostic normalization. Record:
-`phases/06K_tinyns_diagnostic_normalization.md`.
-
-### 6L — TinyNS diagnostic rendering
+Final 6T exact-head gates:
 
 ```text
-accepted head: 39d9ab8aef7b0b4e0847ce4e9894a6a2a8985087
+dedicated dispatcher: 34590483237 / 103234397114 SUCCESS
+historical/scientific: 34590483006 / 103234396701 SUCCESS
+runtime guards:        34590482964 / 103234396617 SUCCESS
 ```
 
-Frozen stdout renderer and formatting only. Record:
-`phases/06L_tinyns_diagnostic_rendering.md`.
-
-### 6M — TinyNS configuration resolution
+PR-triggered integration matrix on the exact accepted tree also passed Phase 3,
+Phase 4, Phase 5, Phase 6 integration, runtime, backend-specific, and reference
+checks. Representative runs:
 
 ```text
-accepted head: cb74900cff9be07049243548d72eef5e5e77bfaf
+Phase 3 population:     34591719751 SUCCESS
+Phase 4 spectral:       34591719734 SUCCESS
+Phase 5 catalog/sirens: 34591719712 SUCCESS
+Phase 6 integration:    34591719769 SUCCESS
+Phase 6 runtime:        34591719782 SUCCESS
 ```
 
-Presets/defaults/overrides/validation/mirroring plus sampler/run kwargs; no CLI
-or backend import. Record: `phases/06M_tinyns_config_resolution.md`.
-
-### 6N — TinyNS execution adapter
-
-```text
-accepted head:    39d4e36a8d5d3aa347761a9134e0c7c835cdb565
-dedicated gate:  34570968708 / 103172778145 SUCCESS
-historical gate: 34570968720 / 103172778202 SUCCESS
-runtime guards:  34570968671 / 103172778199 SUCCESS
-```
-
-Lazy JAX/TinyNS execution, deterministic split run/resampling streams,
-fresh/resume checkpoint routing, dead-point/diagnostic handoff, and lazy HDF5
-checkpoint I/O. Record: `phases/06N_tinyns_execution_adapter.md`.
-
-### 6O — Dynesty execution adapter
-
-```text
-accepted head:    28c5f06ad0cc40d8fdbb587bcaa3e98dd89089b4
-dedicated gate:  34571461016 / 103174270237 SUCCESS
-historical gate: 34571460958 / 103174269936 SUCCESS
-runtime guards:  34571460969 / 103174269973 SUCCESS
-```
-
-Lazy Dynesty execution, accepted 6F transform dispatch, accepted 6B/6E
-checkpoint/resume state, deterministic RNG contract, robust weighted resampling,
-accepted 6I dead points, and sampler provenance. Record:
-`phases/06O_dynesty_execution_adapter.md`.
-
-### 6P — Dynesty periodic diagnostics
-
-```text
-accepted head:    73115e1d403e1c6eefa646c7e68867d6831dc7df
-dedicated gate:  34578815115 / 103197379751 SUCCESS
-historical gate: 34578815027 / 103197379324 SUCCESS
-runtime guards:  34578815086 / 103197379648 SUCCESS
-6O rerun:        34578815084 / 103197379721 SUCCESS
-```
-
-Optional 10-minute diagnostic plotting is isolated behind lazy plotting imports.
-Concurrent live-result reads and plotting failures are contained, filenames and
-stdout preserve frozen behavior, and daemon shutdown is guaranteed in `finally`
-without changing 6O sampling semantics. Record:
-`phases/06P_dynesty_periodic_diagnostics.md`.
-
-### 6Q — NumPyro static contract
-
-```text
-accepted head:    cfbde4a2d202398a531dab5646314ac1a485fcd5
-dedicated gate:  34579421386 / 103199274439 SUCCESS
-historical gate: 34579421315 / 103199274166 SUCCESS
-runtime guards:  34579421323 / 103199274044 SUCCESS
-```
-
-Finite ordered bounds, NumPyro-compatible Beta bounds, joint-constraint
-classification and exact warnings, midpoint initialization seed, and NUTS option
-resolution/validation are reconstructed without importing NumPyro. The dedicated
-gate has exact frozen stdout/error/result parity; the broad gate preserves the
-full reconstructed suite and Phase-5 scientific fixtures. Record:
-`phases/06Q_numpyro_static_contract.md`.
-
-### 6R — NumPyro initialization and gradient preflight
-
-```text
-accepted head:    7bab631a786d4ad3a54bc93833157b0f64a046d4
-dedicated gate:  34580141816 / 103201551957 SUCCESS
-historical gate: 34580141630 / 103201551061 SUCCESS
-runtime guards:  34580141611 / 103201550056 SUCCESS
-```
-
-Midpoint initialization, deterministic seeded finite restart search,
-`conditional_upper` support repair, lazy JAX gradient preflight, and exact
-per-parameter finite/NaN/Inf/boundary failure diagnostics are reconstructed with
-frozen legacy parity. NumPyro itself remains outside this slice and is not loaded
-by importing the module. Record: `phases/06R_numpyro_initialization_preflight.md`.
-
-### 6S — NumPyro execution adapter
-
-```text
-accepted head:    b620601e1a0cc776f7d9090c866e299f2138fbff
-dedicated gate:  34589903572 / 103232549996 SUCCESS
-historical gate: 34589903506 / 103232549931 SUCCESS
-runtime guards:  34589903512 / 103232549984 SUCCESS
-```
-
-Lazy NumPyro/NUTS execution preserves all frozen prior-site kinds, dependent
-`conditional_upper` ordering, NUTS/MCMC arguments and seed construction,
-posterior stacking, sequential `lax.map` likelihood recovery, and frozen
-sampler-health diagnostics. The production adapter did not change after its
-initial implementation; subsequent 6S commits corrected only test/probe
-representation handling. Record: `phases/06S_numpyro_execution_adapter.md`.
-
-### 6T — sampler orchestration and Phase-6 surface closure
-
-```text
-accepted head:    d3e8dcdbf107d881405d1f14badab7bd0ea4d74f
-dedicated gate:  34590483237 / 103234397114 SUCCESS
-historical gate: 34590483006 / 103234396701 SUCCESS
-runtime guards:  34590482964 / 103234396617 SUCCESS
-```
-
-Thin sampler orchestration preserves the zero-dimensional short circuit before
-method validation, nested resume/preflight ordering, accepted backend delegation,
-lazy imports, and the frozen unknown-sampler error. The final inference-surface
-audit classified every frozen `darksirens/inference/` module and found no missing
-Phase-6 sampler/checkpoint/result/provenance responsibility. Record:
-`phases/06T_sampler_orchestration.md`.
+The final frozen/core inference-surface audit found no legitimate 6U slice.
+Record: `phases/06T_sampler_orchestration.md`. Integration closure:
+`phases/06_phase_integration.md`.
 
 ## Frozen architecture direction
 
 Core owns standardized catalog runtime/IO, ordinary catalog redshift kernels and
 completeness evaluation, counterpart/host objects, generic host-property
 weighting, runtime evaluation of ordinary serialized catalog-selection models,
-explicit spectral/dark/complete/bright hierarchical composition, and portable
-inference/checkpoint/result infrastructure.
+explicit spectral/dark/complete/bright hierarchical composition, portable
+inference/checkpoint/result infrastructure, and a small conventional public API.
 
 Core must not learn DESI/KIBO/Legacy/GLADE-native schemas, masks, depth-map
 construction, raw magnitude preparation, selection-function fitting, staged
@@ -298,18 +199,30 @@ runtime internals.
 Q_LSS, Q ensembles, latent fields/counts and multitracer machinery belong in
 `darksirens-lss`. Weak/strong lensing belongs in `darksirens-lensing`.
 
-The reconstructed source tree contains no `universe_model` dispatcher.
+The reconstructed source tree contains no `universe_model` dispatcher and Phase
+7 must not reintroduce one under another name.
 
 ## Scientific questions
 
 None opened. No scientific behavior change is authorized during reconstruction.
 
-## Current action — Phase 6 completion/integration audit
+## Current action — Phase 7 inventory and first slice
 
-Hold the core branch at accepted 6T unless the audit exposes a packaging-only or
-integration defect. Compare the complete Phase-6 branch against the Phase-5
-`main` base; verify no orphaned Phase-6 functionality, forbidden companion
-imports, dependency regressions, or accidental Phase-7 construction code; verify
-all exact-head acceptance workflows remain green; then open/update and merge the
-Phase-6 PR with expected-head protection. Run the post-merge validation on
-`main`, record the merge SHA and gate here, and only then begin Phase 7.
+Inventory the frozen ordinary user path and current core public surface before
+coding. Decompose, rather than copy, the ordinary parts of legacy
+`inference/data.py`, `inference/loaders.py`, `inference/prior.py`,
+`inference/parameters.py`, and `inference/pop_extractor.py`, plus any angular
+model/public entrypoint actually required by the frozen conventional path.
+
+Classify each responsibility as:
+
+1. already reconstructed core functionality;
+2. a small conventional Phase-7 core facade/helper;
+3. survey-native staging owned by `darksirens-surveys`;
+4. Q/LSS/multitracer state owned by `darksirens-lss`;
+5. lensing state owned by `darksirens-lensing`;
+6. legacy campaign/CLI glue that should not be reconstructed.
+
+Then choose the smallest conventional core-only parity slice, create a new
+Phase-7 branch from `d82becaf76bf62c0f72a71b32ebbf9b238ba4f13`, and gate it against the frozen
+legacy behavior before advancing further.
