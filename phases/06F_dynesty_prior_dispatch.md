@@ -7,11 +7,11 @@ legacy repository: ignaciomagana/darksirens
 legacy SHA:        c042527238bd71421b792936bc48c3b815b90d6d
 core repository:   ignaciomagana/darksirens-core
 phase-6 base:      86e0c88a51482d17fac70f111057d277df9387fd
+6E accepted:       fe845dcc87787d19c69bf30a89f211d9de68be03
 working branch:    rebuild/phase6-inference-io
 ```
 
-Legacy remains read-only. Production implementation must not begin until the
-preceding Phase 6E exact-head gate is accepted.
+Legacy remains read-only.
 
 ## Scope
 
@@ -22,148 +22,103 @@ pinned `darksirens/inference/sampling.py`:
 _make_dynesty_ptform(prior_transform, ndims, n_probe=512, mode="auto")
 ```
 
-It consumes the `host_native` and `prefer_jit` flags already established by the
-accepted 6D `make_prior_transform`. It does not run dynesty.
+It consumes the `host_native` and `prefer_jit` flags established by accepted 6D
+`make_prior_transform`. It does not run dynesty.
 
-A dedicated candidate module should own this adapter rather than recreating the
-legacy `sampling.py` monolith.
+Candidate ownership is `darksirens.inference.dynesty_transform`; the legacy
+`sampling.py` monolith is not recreated.
 
 ## Frozen dispatch semantics
 
-Accepted modes are exactly:
+Accepted modes are exactly `auto` and `eager`. Any other mode raises the frozen
+`ValueError` naming `prior_transform_dispatch`.
 
-```text
-auto
-eager
-```
+`mode="eager"` always evaluates
+`np.asarray(prior_transform(jnp.asarray(u)))` and announces/records
+`eager-forced`.
 
-Any other mode raises the frozen `ValueError` naming
-`prior_transform_dispatch`.
+If `prior_transform.host_native` is true under `auto`, dynesty's NumPy cube is
+handed directly to the transform and only the result is converted with
+`np.asarray`; dispatch is `host`.
 
-### Forced eager
+If `prior_transform.prefer_jit` is true, the wrapper:
 
-`mode="eager"` always evaluates:
+1. owns an independent `np.random.default_rng(0xB17C0DE)` probe stream;
+2. constructs `jax.jit(prior_transform)`;
+3. prefers one batched eager reference when the returned shape matches the cube;
+4. otherwise restricts to `min(32, n_probe)` rows and builds the eager reference
+   row by row;
+5. compares compiled per-row outputs with `np.array_equal`;
+6. uses compiled dispatch only when every row is bit-identical.
 
-```text
-np.asarray(prior_transform(jnp.asarray(u)))
-```
+Exact compilation is labelled `jit`; numerical drift falls back to
+`eager-not-bit-identical`; compilation/probe failure falls back to
+`eager-jit-unavailable`. An unflagged transform remains `eager`.
 
-and labels/announces the wrapper as:
-
-```text
-eager-forced
-```
-
-This is the reproducibility escape hatch for runs predating fast dispatch.
-
-### Host-native
-
-If `prior_transform.host_native` is true under `mode="auto"`, dynesty's NumPy
-cube is handed directly to the transform and only the result is passed through
-`np.asarray`. No JAX array conversion occurs. The wrapper is labelled/announced:
-
-```text
-host
-```
-
-### Prefer-JIT
-
-If `prior_transform.prefer_jit` is true:
-
-1. construct an independent deterministic probe cube with
-   `np.random.default_rng(0xB17C0DE)`;
-2. compile `jax.jit(prior_transform)`;
-3. prefer one batched eager reference call when it returns the expected cube
-   shape;
-4. otherwise restrict the probe to `min(32, n_probe)` rows and build the eager
-   reference per row;
-5. compare compiled per-row outputs to the eager reference with
-   `np.array_equal` — bit identity, not tolerance;
-6. use the compiled transform only if every probe row is exactly equal.
-
-Accepted compiled dispatch is labelled:
-
-```text
-jit
-```
-
-If compilation succeeds but values differ, fall back to the eager JAX spelling
-and label:
-
-```text
-eager-not-bit-identical
-```
-
-If compilation/probing raises, fall back to eager and label:
-
-```text
-eager-jit-unavailable
-```
-
-A JIT failure is a performance issue only; it must not abort inference.
-
-### Unflagged transform
-
-A transform with neither fast flag uses the eager JAX spelling and is labelled:
-
-```text
-eager
-```
-
-This includes all-uniform transforms with joint constraints and arbitrary
-caller-supplied callables.
-
-## Provenance/visibility
-
-Every selected convention is printed using the frozen
-`"  [i] dynesty prior transform: <dispatch> -- <detail>"` form and stored as the
-wrapper's `.dispatch` attribute. Later sampler/result integration may persist
-that attribute, but persistence is not part of 6F.
-
-The JIT probe must never consume or mutate dynesty's sampler RNG stream; it owns
-its independent `default_rng` above.
+Every choice is printed in the frozen
+`"  [i] dynesty prior transform: <dispatch> -- <detail>"` form and exposed as
+the wrapper's `.dispatch` attribute.
 
 ## Explicit non-scope
 
-Do not port in 6F:
-
-```text
-run_sampler
-NestedSampler construction/rstate
-checkpoint plan composition
-nested-sampler preflight
-nlive/dlogz/maxcall policy
-posterior resampling
-dead-point/result normalization
-diagnostics/plotting
-TinyNS
-NumPyro
-CLI
-```
+6F does not port `run_sampler`, NestedSampler construction/rstate, checkpoint
+plan composition, nested-sampler preflight, nlive/dlogz/maxcall policy,
+posterior resampling, result normalization, diagnostics, TinyNS, NumPyro, or
+CLI assembly.
 
 ## Dependency boundary
 
-The adapter may depend on NumPy/JAX and the already reconstructed 6D transform
-contract. It must not import dynesty itself, TinyNS, NumPyro, CLI, surveys, LSS,
-lensing, sky, or HEALPix.
+The adapter may depend on NumPy/JAX and the reconstructed transform contract. It
+does not import dynesty, TinyNS, NumPyro, CLI, surveys, LSS, lensing, sky, or
+HEALPix. Dynesty remains optional and absent from this module.
 
 ## Acceptance
 
-Focused tests plus separate-process legacy/candidate probes must pin:
+Accepted at exact core head:
 
 ```text
-invalid mode error text
-forced eager values + dispatch label + announcement
-host-native values + dispatch label + announcement
-prefer_jit exact transform -> jit
-prefer_jit value-moving transform -> eager-not-bit-identical
-prefer_jit untraceable transform -> eager-jit-unavailable
-unflagged transform -> eager
-actual 6D uniform transform -> host and exact old eager values
-actual 6D non-uniform transform -> whichever frozen live-backend decision occurs,
-                                  with values identical to eager
-probe RNG independence from NumPy global RNG / sampler state
+05e7c339f190a04e0b92d40c16119e5bda56ef08
 ```
 
-No tolerance is allowed for transformed parameter values. All accepted 6A–6E
-gates and preserved Phase-5 parity must remain green.
+Workflow:
+
+```text
+run:    34551503882
+job:    103115199277
+result: SUCCESS
+```
+
+Results:
+
+```text
+6A result-artifact tests:                10 passed
+6B checkpoint-plan tests:                36 passed
+6C1 fingerprint-gate tests:              15 passed
+6D prior-transform tests:                13 passed
+6E dynesty checkpoint-state tests:        8 passed
+6F dynesty transform-dispatch tests:     10 passed
+full reconstructed suite:               343 passed, 1 regeneration-only skip
+portable dependency audit:               PASS
+6A separate-process parity:              exact
+6B separate-process parity:              exact
+6C1 separate-process parity:             exact
+6D prior-transform parity:               bit-exact
+6E dynesty checkpoint-state parity:      exact
+6F dynesty transform-dispatch parity:    exact
+preserved Phase-5 parity:                exact, max_abs=max_rel=0
+comparison for Phase-5 probes:           rtol=1e-12, atol=0
+```
+
+The final head commit adds explicit coverage of the row-wise eager-reference
+fallback used when a preferred-JIT transform cannot produce the expected batched
+probe shape. No scientific source or tolerance changed in that final correction.
+The probe stream remains independent of NumPy's global RNG and therefore of the
+sampler RNG lineage.
+
+## Next
+
+Proceed to Phase 6G: reconstruct only the nested-sampler finite-logL preflight
+shared by fresh dynesty/TinyNS runs. Preserve the frozen independent RNG,
+early-stop rule, fail/warn thresholds and messages. Resume orchestration,
+sampler construction, TinyNS configuration/runtime, NumPyro, diagnostics and
+CLI remain outside that slice.
