@@ -1,4 +1,4 @@
-# Phase 6H plan — zero-free-parameter exact evidence
+# Phase 6H checkpoint — zero-free-parameter exact evidence
 
 ## Reference
 
@@ -16,89 +16,86 @@ Legacy remains read-only.
 ## Scope
 
 6H reconstructs only the `ndim == 0` short-circuit at the start of frozen
-`darksirens.inference.sampling.run_sampler`.
+`darksirens.inference.sampling.run_sampler`. Candidate ownership is
+`darksirens.inference.run.zero_free_parameter_result`.
 
-Candidate ownership is `darksirens.inference.run`, with a small helper such as
-
-```text
-zero_free_parameter_result(likelihood, ndim)
-```
-
-that returns `None` when `ndim != 0` and otherwise returns the exact fixed-point
-result. A later sampler runner may call this before any backend/preflight/
-checkpoint dispatch.
-
-## Frozen semantics
-
-For zero free dimensions:
-
-```python
-log_l_fixed = float(np.asarray(likelihood(jnp.zeros(0))))
-```
-
-The likelihood is evaluated exactly once. The unit-cube prior transform is not
-called. No sampler option is read and no sampler package is imported.
-
-The exact returned structure is:
+For nonzero dimension the helper returns `None` without evaluating the
+likelihood. For zero free dimensions it evaluates exactly once at
+`jnp.zeros(0)` and returns the exact point-mass evidence:
 
 ```text
 samples:        float array with shape (1, 0)
-logZ:           log_l_fixed
+logZ:           log L(fixed point)
 logZerr:        0.0
-log_likelihood: float array [log_l_fixed]
+log_likelihood: float array [log L(fixed point)]
 ```
 
-This follows directly from the point-mass prior: `Z = L(theta_fixed)`.
+The unit-cube prior transform is not called. No sampler option is read and no
+sampler backend is imported. The two frozen stdout lines, including `.6f`
+formatting, are preserved exactly. Non-finite fixed-point likelihood values pass
+through exactly as in legacy.
 
-The frozen messages are:
+## Ownership / dependency boundary
+
+`darksirens.inference.run` imports NumPy eagerly and JAX only inside the
+zero-dimensional call path. Importing the module remains light: no JAX,
+dynesty, TinyNS, NumPyro, HEALPix, CLI, survey, LSS, lensing or legacy
+redshift/sky module is loaded.
+
+6H does not port sampler dispatch, prior-transform dispatch, preflight,
+checkpoint/resume policy, RNG policy, backend construction, posterior
+resampling, dead-point packaging, diagnostics or CLI assembly.
+
+## Acceptance
+
+Accepted exact core head:
 
 ```text
-[*] 0 free parameters (all blocks fixed) - skipping nested sampling; evidence is exact at the fixed point.
-    log Z = log L(fixed point) = <value with .6f>
+d1d39019ad2ca3750ef8171d0d451cdc0896adb0
 ```
 
-For nonzero dimension the helper must return `None` without evaluating the
-likelihood.
-
-## Explicit non-scope
-
-Do not port in 6H:
+Dedicated runtime-guard workflow:
 
 ```text
-sampler method dispatch
-prior transform dispatch
-nested-sampler preflight
-resume/checkpoint policy
-dynesty/TinyNS/NumPyro construction
-RNG policy
-posterior resampling
-dead-point packaging
-diagnostics
-CLI
+run:    34555964680
+job:    103128606105
+result: SUCCESS
 ```
 
-## Dependency boundary
-
-`darksirens.inference.run` may import NumPy eagerly and JAX only inside the
-zero-dimensional call path. Importing the module itself must not load JAX or any
-sampler/backend/plugin. It must not import CLI, surveys, LSS, lensing, legacy
-redshift/sky, HEALPix, dynesty, TinyNS or NumPyro.
-
-## Acceptance matrix
-
-Focused tests and separate-process legacy/candidate probes must pin:
+Historical Phase-6 / preserved-Phase-5 replay at the same head:
 
 ```text
-ndim > 0 -> None, no likelihood call
-ndim == 0 -> exactly one likelihood call on a zero-length JAX array
-samples shape/dtype
-logZ/logZerr/log_likelihood values and dtypes
-exact stdout
-prior transform never called on the legacy adapter
-method-independent behavior for dynesty/numpyro/tinyns
-no sampler backend imported by the short-circuit
-non-finite fixed-point values pass through exactly as frozen
+run:    34555964712
+job:    103128605845
+result: SUCCESS
 ```
 
-No numerical tolerance is needed. Accepted 6A–6G gates and all preserved
-Phase-5 parity must remain green at the exact 6H head.
+Results:
+
+```text
+6G focused preflight tests:                8 passed
+6H focused zero-free tests:                6 passed
+full reconstructed suite:                357 passed, 1 regeneration-only skip
+6G/6H dependency/light-import audit:      PASS
+6G legacy/new preflight parity:           exact
+6H legacy/new zero-free parity:           exact
+6H method spellings checked:              dynesty, numpyro, tinyns
+6A result-artifact parity:                 exact
+6B checkpoint-plan parity:                 exact
+6C1 fingerprint-gate parity:              exact
+6D prior-transform parity:                bit-exact
+6E dynesty checkpoint-state parity:       exact
+6F dynesty transform-dispatch parity:     exact
+preserved Phase-5 parity:                 exact, max_abs=max_rel=0
+Phase-5 comparison:                       rtol=1e-12, atol=0
+```
+
+The 6G -> 6H scientific diff is one fast-forward commit. It adds only
+`inference/run.py`, its focused test/probe, and extends the existing small
+runtime-guards workflow. Accepted 6G source is unchanged.
+
+## Next
+
+Inspect the generic nested-sampler dead-point packaging helper as the next
+possible portable slice. Do not port a full sampler runner unless that smaller
+seam is exhausted and independently accepted.
