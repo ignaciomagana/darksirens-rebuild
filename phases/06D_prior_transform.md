@@ -74,7 +74,7 @@ parameter-space resolver; 6D does not import model registries to recreate it.
 - 6D does **not** port `_make_dynesty_ptform`; acceptance tests only verify the
   flags and transform values. The sampler-specific bit-identity probe/dispatch
   remains a later sampler-adapter subphase.
-- Batched `(..., ndim)` inputs must retain the frozen `u[..., i]` behavior.
+- Batched `(..., ndim)` inputs retain the frozen `u[..., i]` behavior.
 
 ## Explicit non-scope
 
@@ -96,32 +96,53 @@ LSS or lensing state
 
 ## Dependency boundary
 
-`darksirens.inference.prior` may import NumPy at module scope. JAX and
+`darksirens.inference.prior` imports NumPy at module scope. JAX and
 `jax.scipy.special` remain lazy/branch-local exactly as the frozen transform
 requires: importing the module or constructing an all-uniform/no-joint transform
-must not eagerly import sampler backends, CLI, surveys, LSS, lensing, or HEALPix.
+does not eagerly import sampler backends, CLI, surveys, LSS, lensing, or HEALPix.
 
 ## Acceptance
 
-Focused tests plus a separate-process legacy/candidate probe must establish exact
-behavior for:
+Accepted at exact core head:
 
 ```text
-uniform scalar and batched affine map
-host_native flag
-Beta(1,1) -> uniform normalization
-truncated normal
-truncated lognormal
-Beta(1,b), including truncated bounds
-prefer_jit flag for non-uniform spaces
-ordered_le
-simplex
-conditional_upper, including u_j=0 edge
-ball3
-multiple sequential joint constraints
-batched result == per-row result
+5edc76c6c055e47a7e041d7f7477e347837f7554
 ```
 
-The parity probe records dtype/shape/raw array bytes for deterministic fixtures,
-not rounded decimal summaries. All historical Phase-6 tests and all preserved
-Phase-5 parity gates must remain green. No tolerance widening is permitted.
+Workflow:
+
+```text
+run:    34550319391
+job:    103111665242
+result: SUCCESS
+```
+
+Results:
+
+```text
+6D focused tests:                 13 passed
+full reconstructed suite:        325 passed, 1 regeneration-only skip
+portable dependency audit:       PASS
+6A separate-process parity:       exact
+6B separate-process parity:       exact
+6C1 separate-process parity:      exact
+6D separate-process parity:       bit-exact dtype/shape/raw bytes
+preserved Phase-5 parity:         exact, max_abs=max_rel=0
+comparison:                       rtol=1e-12, atol=0
+```
+
+The parity probe explicitly enables the validated JAX x64 convention on both
+legacy and candidate processes, then records deterministic transform outputs as
+dtype, shape, and raw bytes rather than rounded decimals. Uniform/Beta(1,1),
+truncated normal/lognormal/Beta, all four joint maps, sequential maps, and
+batched/per-row spellings matched exactly.
+
+No target-specific parameter-space builder or sampler dispatch was accepted in
+6D.
+
+## Next
+
+Proceed to Phase 6E: dynesty state-only checkpoint serialization/rebinding. Keep
+dynesty optional and lazily imported. Do not introduce the full sampler runner,
+TinyNS configuration/runtime, diagnostics, RNG policy, or CLI assembly in the
+same slice.
