@@ -14,7 +14,7 @@ Legacy is read-only throughout reconstruction.
 
 ```text
 PHASE 6 — CORE INFERENCE / CHECKPOINTING / IO
-status:         6A–6R ACCEPTED; 6S NUMPYRO EXECUTION ADAPTER NEXT
+status:         6A–6S ACCEPTED; 6T SAMPLER ORCHESTRATION NEXT
 core repo:      ignaciomagana/darksirens-core
 phase-6 base:   86e0c88a51482d17fac70f111057d277df9387fd
 working branch: rebuild/phase6-inference-io
@@ -36,6 +36,7 @@ accepted 6O:    28c5f06ad0cc40d8fdbb587bcaa3e98dd89089b4
 accepted 6P:    73115e1d403e1c6eefa646c7e68867d6831dc7df
 accepted 6Q:    cfbde4a2d202398a531dab5646314ac1a485fcd5
 accepted 6R:    7bab631a786d4ad3a54bc93833157b0f64a046d4
+accepted 6S:    b620601e1a0cc776f7d9090c866e299f2138fbff
 ```
 
 Phase 6 reconstructs only portable inference infrastructure. The legacy
@@ -241,6 +242,22 @@ per-parameter finite/NaN/Inf/boundary failure diagnostics are reconstructed with
 frozen legacy parity. NumPyro itself remains outside this slice and is not loaded
 by importing the module. Record: `phases/06R_numpyro_initialization_preflight.md`.
 
+### 6S — NumPyro execution adapter
+
+```text
+accepted head:    b620601e1a0cc776f7d9090c866e299f2138fbff
+dedicated gate:  34589903572 / 103232549996 SUCCESS
+historical gate: 34589903506 / 103232549931 SUCCESS
+runtime guards:  34589903512 / 103232549984 SUCCESS
+```
+
+Lazy NumPyro/NUTS execution preserves all frozen prior-site kinds, dependent
+`conditional_upper` ordering, NUTS/MCMC arguments and seed construction,
+posterior stacking, sequential `lax.map` likelihood recovery, and frozen
+sampler-health diagnostics. The production adapter did not change after its
+initial implementation; subsequent 6S commits corrected only test/probe
+representation handling. Record: `phases/06S_numpyro_execution_adapter.md`.
+
 ## Frozen architecture direction
 
 Core owns standardized catalog runtime/IO, ordinary catalog redshift kernels and
@@ -263,10 +280,11 @@ The reconstructed source tree contains no `universe_model` dispatcher.
 
 None opened. No scientific behavior change is authorized during reconstruction.
 
-## Current action — Phase 6S
+## Current action — Phase 6T
 
-Reconstruct only the NumPyro execution adapter: prior-site/model construction,
-including dependent `conditional_upper` sites; NUTS/MCMC wiring; post-run
-likelihood recovery; and frozen sampler-health/result diagnostics. Keep the
-backend lazy outside execution paths, preserve the accepted 6Q/6R contracts, and
-do not begin generic dispatch or Phase 7 in this slice.
+Reconstruct only the thin top-level sampler orchestration seam: preserve the
+zero-dimensional exact short circuit before method validation; preserve nested
+Dynesty/TinyNS resume and preflight ordering; delegate to the already accepted
+TinyNS, Dynesty, and NumPyro slices; preserve the exact unknown-sampler error for
+positive-dimensional runs; keep backend imports lazy; and do not begin Phase 7
+until the remaining inference-surface audit confirms Phase 6 is complete.
