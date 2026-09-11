@@ -1,0 +1,115 @@
+name: surveys-s1-catalog
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/surveys-s1-catalog.yml'
+      - 'references/surveys_s0a_legacy_reference.json'
+
+jobs:
+  parity-and-core-consumer:
+    runs-on: ubuntu-latest
+    env:
+      SURVEYS_SHA: 91ed709a47b78182f065be89219d65a7eda2c5dd
+      CORE_SHA: af2488b0ccb48c65e63cffcae306a8a4a4bfeb66
+    steps:
+      - name: Checkout rebuild control repo
+        uses: actions/checkout@v4
+        with:
+          path: rebuild
+
+      - name: Checkout exact surveys candidate
+        uses: actions/checkout@v4
+        with:
+          repository: ignaciomagana/darksirens-surveys
+          ref: ${{ env.SURVEYS_SHA }}
+          path: surveys
+
+      - name: Checkout frozen core consumer
+        uses: actions/checkout@v4
+        with:
+          repository: ignaciomagana/darksirens-core
+          ref: ${{ env.CORE_SHA }}
+          path: core
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Verify exact revisions
+        run: |
+          test "$(git -C surveys rev-parse HEAD)" = "$SURVEYS_SHA"
+          test "$(git -C core rev-parse HEAD)" = "$CORE_SHA"
+
+      - name: Install candidate and minimal frozen-core consumer
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ./surveys
+          python -m pip install --no-deps -e ./core
+
+      - name: Candidate vs frozen S0a pixelization golden
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+          import numpy as np
+          from darksirens_surveys import CatalogRows, pixelate_catalog, write_catalog
+
+          golden = json.loads(Path('rebuild/references/surveys_s0a_legacy_reference.json').read_text())
+          p = golden['pixelate']
+          inp = p['input']
+          rows = CatalogRows(
+              ra=np.deg2rad(inp['ra_deg']),
+              dec=np.deg2rad(inp['dec_deg']),
+              z=np.asarray(inp['z'], dtype=np.float64),
+              dz=np.asarray(inp['dz'], dtype=np.float64),
+              weight=np.asarray(inp['weight'], dtype=np.float64),
+              extras={
+                  'mark_logmstar': np.asarray([10.1,10.3,10.6,10.9,11.0,11.2,10.4,10.2]),
+                  'gal_app_mag': np.asarray([17.2,18.1,18.9,19.4,20.0,20.5,18.4,17.9]),
+                  'gal_stratum': np.asarray([0,0,1,1,2,2,0,0], dtype=float),
+              },
+          )
+          cat = pixelate_catalog(rows, nside=2, z_depth=0.25)
+
+          def digest(a):
+              arr = np.ascontiguousarray(np.asarray(a))
+              h = hashlib.sha256()
+              h.update(str(arr.dtype).encode())
+              h.update(repr(arr.shape).encode())
+              h.update(arr.tobytes(order='C'))
+              return h.hexdigest()
+
+          arrays = {
+              'zgals': cat.zgals,
+              'dzgals': cat.dzgals,
+              'wgals': cat.wgals,
+              'ngals': cat.ngals,
+              **cat.extras,
+          }
+          got = {k: digest(v) for k, v in arrays.items()}
+          assert got == p['canonical_hashes'], (got, p['canonical_hashes'])
+          assert cat.zgals[29, :3].tolist() == [0.036, 0.043, 0.052]
+          assert cat.dzgals[29, :3].tolist() == [0.0013, 0.0012, 0.0011]
+          assert cat.wgals[29, :3].tolist() == [0.7, 1.2, 2.0]
+          write_catalog(cat, 'candidate_catalog.h5')
+          print('S1 candidate canonical S0a parity PASS')
+          PY
+
+      - name: Frozen core consumes candidate output
+        run: |
+          python - <<'PY'
+          import numpy as np
+          import darksirens as ds
+          store = ds.load_catalog('candidate_catalog.h5')
+          assert store.nside == 2
+          assert store.z_depth == 0.25
+          assert int(np.asarray(store.catalog.ngals).sum()) == 8
+          assert np.asarray(store.catalog.zgals)[29, :3].tolist() == [0.036, 0.043, 0.052]
+          assert np.asarray(store.catalog.dzgals)[29, :3].tolist() == [0.0013, 0.0012, 0.0011]
+          assert np.asarray(store.catalog.wgals)[29, :3].tolist() == [0.7, 1.2, 2.0]
+          print('frozen darksirens-core consumer PASS')
+          PY
