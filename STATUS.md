@@ -13,50 +13,48 @@ Legacy is read-only throughout reconstruction.
 ## Current phase
 
 ```text
-PHASE 7 — SMALL CORE EXTRAS + TARGET PUBLIC API
-status:        7A–7F3 ACCEPTED; PHASE-7 CLOSURE / INTEGRATION AUDIT NEXT
+PHASE 8 — EXTENSION SEAM + FINAL CORE FREEZE
+status:        INVENTORY / CONTRACT AUDIT
 core repo:     ignaciomagana/darksirens-core
-core main:     d82becaf76bf62c0f72a71b32ebbf9b238ba4f13
-active branch: rebuild/phase7-public-api
-active head:   be95e95bdf77144880cba5752ed5feafd40a697f
+core main:     6ed3dc74aa0fcde4da128036cc3d56c29250d370
+merged tree:   55dfb24cb84edebb0175409bd33be2a6a57ecb8a
 legacy ref:    c042527238bd71421b792936bc48c3b815b90d6d
 ```
 
-Phase 6 is complete, merged, and closed. Phase 7 owns only the remaining small,
-ordinary core construction/public surfaces. It must not resurrect the frozen
-`universe_model` / mega-`ParameterDecoder` switchboards or absorb staged survey,
-Q/LSS/multitracer, campaign, or lensing internals.
+Phase 7 is complete, merged, and closed. Phase 8 starts from the exact merged
+Phase-7 main and owns only the minimal one-way extension contracts plus the
+final dependency/API/install/example audit needed to freeze core. No companion
+repository starts until this phase is complete.
 
-Remaining core phases:
+Remaining core work:
 
 ```text
-Phase 7 — small core extras + target public API
 Phase 8 — extension seam + final dependency/API/install/example audit and core freeze
 ```
-
-Companion packages start only after Phase 8 freezes core.
 
 ## Production repository state
 
 ### `darksirens-core` main
 
-Phase 6 was squash-merged through PR #5:
+Phase 7 was squash-merged through PR #6:
 
 ```text
-main:                     d82becaf76bf62c0f72a71b32ebbf9b238ba4f13
-accepted Phase-6 head:    d3e8dcdbf107d881405d1f14badab7bd0ea4d74f
-shared accepted Git tree: 118e196b87538e387d433e4f71edff70b3b3385d
-post-merge integrity:     34592289964 / 103240104097 SUCCESS
+Phase-7 base:             d82becaf76bf62c0f72a71b32ebbf9b238ba4f13
+accepted Phase-7 head:    be95e95bdf77144880cba5752ed5feafd40a697f
+accepted Phase-7 tree:    55dfb24cb84edebb0175409bd33be2a6a57ecb8a
+PR:                       #6
+squash merge SHA:         6ed3dc74aa0fcde4da128036cc3d56c29250d370
+merged tree:              55dfb24cb84edebb0175409bd33be2a6a57ecb8a
+post-merge integrity:     34633321021 / 103375170965 SUCCESS
 ```
 
-The accepted Phase-6 head and squash merge have the identical Git tree. Heavy
-historical workflows do not all push-trigger on `main`; no nonexistent
-post-merge broad run is claimed.
+The accepted Phase-7 head and squash merge have the identical Git tree. The PR
+historical/scientific matrix completed 30/30 green. Only reference-integrity
+push-triggered on merged `main`; no nonexistent post-merge broad run is claimed.
 
-### Active Phase-7 branch
+### Phase-7 accepted slices
 
 ```text
-branch: rebuild/phase7-public-api
 7A:     c338bc8eaa5199775e6d1355f20406be8ade1eb1  ACCEPTED
 7B:     b97d949f32c0eff3bb48c574b5a2258f92fe82d5  ACCEPTED
 7C1:    02b54e25740ff7cce1a030f372b3190121ad2b0f  ACCEPTED
@@ -192,9 +190,6 @@ broad:       34596093340 / 103252070365 SUCCESS
 record:      phases/07C1_joint_prior_resolver.md
 ```
 
-Restores model-declared normalized cube maps without reconstructing the giant
-legacy parameter-space builder.
-
 ### 7C2 — public `model()` / parameter plan
 
 ```text
@@ -204,9 +199,6 @@ broad:       34596632992 / 103253805105 SUCCESS
 record:      phases/07C2_public_model_plan.md
 ```
 
-Typed spectral, incomplete-catalog and complete-catalog composition; exact
-sampler-coordinate order; no execution.
-
 ### 7C3 — portable HEALPix RING geometry
 
 ```text
@@ -215,9 +207,6 @@ dedicated:   34599757756 / 103263901736 SUCCESS
 broad:       34599757799 / 103263901914 SUCCESS
 record:      phases/07C3_healpix_geometry.md
 ```
-
-Dependency-free host-side `ang2pix_ring` with exact frozen
-`healpy==1.17.3` RING parity.
 
 ### 7D — ordinary runtime binding
 
@@ -230,10 +219,6 @@ result:      499 passed, 1 skipped
 record:      phases/07D_runtime_binding.md
 ```
 
-A real first-pass binder defect was fixed: compact catalog NumPy leaves are
-converted once to JAX arrays before traced row indexing. No Phase-5 likelihood
-code changed.
-
 ### 7E — thin public `ds.infer()`
 
 ```text
@@ -244,10 +229,6 @@ result:      502 passed, 1 skipped
 record:      phases/07E_public_infer.md
 ```
 
-`ds.infer()` is a lazy, thin facade over the accepted 7D binder and Phase-6
-sampler dispatcher. It creates no new backend/result/checkpoint abstraction and
-preserves the zero-free exact-evidence short circuit before sampler validation.
-
 ### 7F1 — basic angular source-population models
 
 ```text
@@ -257,11 +238,6 @@ broad:       34624190465 / 103345183648 SUCCESS
 result:      506 passed, 1 skipped
 record:      phases/07F1_angular_basic.md
 ```
-
-Exact separate-process frozen parity for `isotropic` and `dipole`, including
-bounds, labels, prior kinds, fiducials, `ball3` joint constraint, `log g`, and
-prior-volume correction. The only failed first pass was a legacy-probe dependency
-harness issue; production was not changed for it.
 
 ### 7F2 — advanced angular source-population models
 
@@ -274,12 +250,6 @@ result:      511 passed, 1 skipped
 record:      phases/07F2_angular_advanced.md
 ```
 
-Exact separate-process frozen parity for `sphere_gp`, `sphere_gp_z`,
-`overdensity_gp`, `multipole`, and `multipole_l3`, including prior metadata,
-fiducials, representative `log g`, GP normalization diagnostics, 3-D fiducial
-volume weights, multipole ordering, positivity, and prior-volume fraction.
-No `healpy` runtime dependency enters core.
-
 ### 7F3 — angular composition and likelihood wiring
 
 ```text
@@ -291,15 +261,20 @@ result:      517 passed, 1 skipped
 record:      phases/07F3_angular_wiring.md
 ```
 
-`ds.model(..., angular=...)` now composes the accepted angular registry with the
-ordinary public analysis. The angular block follows cosmology/population/catalog
-coordinates, dipole `ball3` uses the existing joint-prior resolver, and the same
-clamped-`dL` -> `z` -> `log g(nhat,z)` factor enters both PE and selection
-weights. Separate-process frozen/candidate dipole wiring parity is exact;
-`angular='isotropic'` is an exact no-op relative to the previously accepted
-ordinary likelihoods.
+### Phase-7 integration
 
-All 7A–7F2 replay workflows are green on the accepted 7F3 head.
+```text
+PR:                       #6
+PR matrix:                30/30 SUCCESS
+accepted head:            be95e95bdf77144880cba5752ed5feafd40a697f
+accepted tree:            55dfb24cb84edebb0175409bd33be2a6a57ecb8a
+squash merge:             6ed3dc74aa0fcde4da128036cc3d56c29250d370
+merged tree:              55dfb24cb84edebb0175409bd33be2a6a57ecb8a
+post-merge integrity:     34633321021 / 103375170965 SUCCESS
+record:                    phases/07_phase_integration.md
+```
+
+There is no Phase 7G. The accepted and merged trees are byte-identical.
 
 ## Frozen architecture direction
 
@@ -318,31 +293,29 @@ runtime internals.
 Q_LSS, Q ensembles, latent fields/counts and multitracer machinery belong in
 `darksirens-lss`. Weak/strong lensing belongs in `darksirens-lensing`.
 
-The reconstructed source tree contains no `universe_model` dispatcher and Phase
-7 must not reintroduce one under another name.
+No generic plugin framework. Extensions enter through small explicit interfaces.
+Core must import no companion package.
 
 ## Scientific questions
 
 None opened. No scientific behavior change is authorized during reconstruction.
 
-## Current action — Phase-7 closure / integration audit
+## Current action — Phase 8 inventory and core-freeze contract audit
 
-Before opening the Phase-7 integration PR, verify that the target ordinary core
-surface is complete and no legitimate 7G remains:
+Start from merged core `6ed3dc74aa0fcde4da128036cc3d56c29250d370`.
+Before changing production code:
 
-- public standardized loaders are present and lazy;
-- declarative `Cosmology` / `Population` specs are present;
-- `ds.model()` provides typed spectral/incomplete/complete composition and
-  angular composition without a legacy switchboard;
-- runtime binding reaches the accepted fixed-theta likelihoods;
-- `ds.infer()` delegates to the accepted Phase-6 prior/sampler machinery;
-- reusable basic and advanced angular models are reconstructed and wired with
-  frozen PE/selection semantics;
-- package-root import remains dependency-light;
-- core has no companion-package imports;
-- raw survey, Q/LSS/multitracer, lensing and campaign concerns remain excluded.
+- inventory the minimal one-way redshift/host-density extension seam required by
+  future `darksirens-lss`;
+- inventory the minimal analysis/sampler seam required by future
+  `darksirens-lensing`, without putting lensing physics in core;
+- determine whether ordinary bright sirens need a tiny public composition so the
+  architecture's final acceptance criterion is actually satisfied;
+- audit installability, package-root imports, public examples, dependency
+  direction, and companion-import firewalls;
+- do not add a generic plugin registry or resurrect a universe-model switchboard;
+- do not start companion repositories until the core surface is frozen.
 
-If this audit finds no concrete missing core-owned ordinary behavior, record
-that there is no Phase 7G, write the Phase-7 integration record, and open the
-Phase-7 PR to `main`. Do not invent another production slice merely to extend
-Phase 7.
+Create `phases/08_inventory.md` before any Phase-8 production commit. Then split
+only the proven missing core capabilities into small parity/contract-gated
+slices.
