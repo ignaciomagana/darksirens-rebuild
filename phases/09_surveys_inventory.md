@@ -1,6 +1,6 @@
 # Phase 09 — darksirens-surveys inventory / reference freeze
 
-Status: **INVENTORY / CONTRACT FREEZE — NO PRODUCTION PORT YET**
+Status: **S0A ACCEPTED / S0B SELECTION-FIT REFERENCE ACTIVE — NO PRODUCTION PORT YET**
 
 This is the first companion-repository stage after the frozen `darksirens-core`.
 It corresponds to the reconstruction workflow's survey phase. The frozen core is
@@ -160,6 +160,62 @@ Freeze separately from runtime evaluation:
 
 Do not move runtime `C_sel(z; theta)` evaluation out of core.
 
+## S0A — catalog construction / depth-map reference — ACCEPTED
+
+S0a freezes the geometry and standardized-catalog construction semantics before
+any companion package exists.
+
+Artifacts:
+
+```text
+tools/probe_surveys_build.py
+references/surveys_s0a_legacy_reference.json
+.github/workflows/surveys-s0a-reference.yml
+```
+
+Accepted gate:
+
+```text
+run: 34659489558
+job: 103458826552
+head: 95ad70ac09c4c46cdc2945d02da2694b7425badb
+result: SUCCESS
+```
+
+The gate checks out the pinned legacy repository in a separate process, executes
+the legacy pixelizer and depth-map routines on deterministic fixtures, runs the
+probe twice, and requires both outputs to match each other and the committed
+golden exactly.
+
+### Legacy equal-pixel row ordering is explicitly NOT a contract
+
+The first raw-array replay exposed a real determinism defect in the legacy
+pixelizer:
+
+```python
+sort_idx = np.argsort(ind)
+```
+
+NumPy's default sort is not stable, so galaxies sharing a pixel can be permuted
+between environments/runs. Their pixel membership and all coindexed values are
+unchanged. The frozen core loader already normalizes each real pixel row by a
+stable redshift sort.
+
+Therefore the S0a comparison contract is:
+
+1. preserve exact RING pixel membership;
+2. preserve the complete coindexed galaxy tuple;
+3. preserve `ngals`, schema, padding and `z_depth` exactly;
+4. canonicalize each real row by stable `zgals` order before parity comparison;
+5. do **not** preserve arbitrary legacy quicksort equal-key order.
+
+This is a determinism/harness normalization, not a scientific change. The golden
+records `legacy_raw_equal_pixel_order_is_unstable=true` so this exception cannot
+be forgotten later.
+
+Depth-map native and degraded `f_p` outputs are exact and did not show this
+instability.
+
 ## Planned surveys slices
 
 ```text
@@ -196,11 +252,18 @@ native products into `CatalogRows` later.
 
 ## Immediate next action
 
-1. Build S0 separate-process deterministic probes against the pinned legacy
-   pixelizer and depth-map routines.
-2. Identify/freeze the legacy selection-fit tests and one synthetic magnitude
-   fixture, but do not port fitting in S1.
-3. Only after S0 references are committed should `darksirens-surveys` be
-   scaffolded and S1 implemented.
+S0b: freeze the offline magnitude-selection fitting behavior separately from the
+runtime selection curves that remain in core. The reference should cover at
+least:
+
+- Gaussian truncated-LF fit and covariance ordering;
+- Schechter fit and `M_faint_offset` protocol semantics;
+- reference-absolute-magnitude H0 firewall;
+- K-correction handling for the Gaussian family;
+- deterministic fit metadata needed by the later serialized selection-fit
+  contract.
+
+After S0b is accepted, scaffold `darksirens-surveys` and implement S1 against
+S0a. S3 later ports the S0b-frozen fitting behavior.
 
 No `darksirens-core` production write is permitted in this phase.
