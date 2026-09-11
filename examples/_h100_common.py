@@ -1,11 +1,12 @@
 """Shared helpers for the darksirens-core H100 validation examples.
 
-This module is intentionally not part of darksirens-core.  It lives in the
+This module is intentionally not part of darksirens-core. It lives in the
 reconstruction/validation repository so timing and provenance machinery cannot
 become part of the frozen scientific API.
 """
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import platform
@@ -145,7 +146,11 @@ def validate_pair_with_gwcat(pe: Path, selection: Path, strict: bool = True) -> 
         "elapsed_s": elapsed,
         "strict": bool(strict),
         "checks": checks,
-        "all_checks_pass": all(checks.values()) if checks and all(isinstance(v, bool) for v in checks.values()) else None,
+        "all_checks_pass": (
+            all(checks.values())
+            if checks and all(isinstance(v, bool) for v in checks.values())
+            else None
+        ),
         "gwcat_version": package_version("gwcat"),
         "gwcat_git_sha": git_sha_for_module(gwcat),
         "reference_head_when_written": GWCAT_HEAD_WHEN_WRITTEN,
@@ -170,8 +175,11 @@ def nvidia_smi() -> list[str]:
         return []
     try:
         out = subprocess.check_output(
-            [exe, "--query-gpu=index,name,driver_version,memory.total,memory.used",
-             "--format=csv,noheader"],
+            [
+                exe,
+                "--query-gpu=index,name,driver_version,memory.total,memory.used",
+                "--format=csv,noheader",
+            ],
             text=True,
         )
         return [line.strip() for line in out.splitlines() if line.strip()]
@@ -192,7 +200,10 @@ def device_report(jax) -> dict[str, Any]:
         except Exception:
             stats = None
         if stats:
-            for key in ("bytes_in_use", "peak_bytes_in_use", "bytes_limit", "largest_free_block_bytes"):
+            for key in (
+                "bytes_in_use", "peak_bytes_in_use", "bytes_limit",
+                "largest_free_block_bytes",
+            ):
                 if key in stats:
                     row[key] = int(stats[key])
         devices.append(row)
@@ -242,7 +253,8 @@ def benchmark_likelihood(*, analysis, events, injections, jax, jnp, n_evals: int
 
     plan = analysis.parameters
     transform = make_prior_transform(
-        plan.lower, plan.upper,
+        plan.lower,
+        plan.upper,
         prior_kinds=plan.prior_kinds,
         joint_constraints=plan.joint_constraints,
     )
@@ -270,7 +282,9 @@ def benchmark_likelihood(*, analysis, events, injections, jax, jnp, n_evals: int
         "steady_mean_s": float(np.mean(arr)) if arr.size else None,
         "steady_p10_s": float(np.quantile(arr, 0.10)) if arr.size else None,
         "steady_p90_s": float(np.quantile(arr, 0.90)) if arr.size else None,
-        "steady_evals_per_s_from_median": (1.0 / median if median and median > 0 else None),
+        "steady_evals_per_s_from_median": (
+            1.0 / median if median and median > 0 else None
+        ),
         "reference_log_likelihood_leaf": first_numeric_leaf(jax, last),
         "theta_midpoint": np.asarray(theta).tolist(),
     }
@@ -291,8 +305,12 @@ def runtime_provenance(jax, darksirens_module) -> dict[str, Any]:
         "frozen_core_sha": FROZEN_DARKSIRENS_CORE_SHA,
         "environment": {
             "DARKSIRENS_XLA_CACHE": os.environ.get("DARKSIRENS_XLA_CACHE"),
-            "XLA_PYTHON_CLIENT_PREALLOCATE": os.environ.get("XLA_PYTHON_CLIENT_PREALLOCATE"),
-            "XLA_PYTHON_CLIENT_MEM_FRACTION": os.environ.get("XLA_PYTHON_CLIENT_MEM_FRACTION"),
+            "XLA_PYTHON_CLIENT_PREALLOCATE": os.environ.get(
+                "XLA_PYTHON_CLIENT_PREALLOCATE"
+            ),
+            "XLA_PYTHON_CLIENT_MEM_FRACTION": os.environ.get(
+                "XLA_PYTHON_CLIENT_MEM_FRACTION"
+            ),
         },
     })
     return report
@@ -327,7 +345,9 @@ def add_h100_args(parser) -> None:
 
 
 def add_sampler_args(parser) -> None:
-    parser.add_argument("--sampler", choices=("tinyns", "dynesty", "numpyro"), default="tinyns")
+    parser.add_argument(
+        "--sampler", choices=("tinyns", "dynesty", "numpyro"), default="tinyns"
+    )
     parser.add_argument("--nlive", type=int, default=1000)
     parser.add_argument("--dlogz", type=float, default=0.1)
     parser.add_argument("--max-samples", type=int, default=None)
