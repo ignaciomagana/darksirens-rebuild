@@ -39,21 +39,22 @@ jobs:
           python -m pip install \
             'numpy<2' h5py healpy matplotlib tqdm
 
-      - name: Run pinned legacy S0a probe
+      - name: Run pinned legacy S0a probe twice
         env:
           PYTHONPATH: ${{ github.workspace }}/legacy
           MPLBACKEND: Agg
         run: |
           python rebuild/tools/probe_surveys_build.py \
-            --output rebuild/surveys_s0a_legacy_reference.generated.json
+            --output rebuild/surveys_s0a_legacy_reference.generated1.json
+          python rebuild/tools/probe_surveys_build.py \
+            --output rebuild/surveys_s0a_legacy_reference.generated2.json
 
-      - name: Basic reference assertions
+      - name: Basic canonical reference assertions
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
-          p = Path('rebuild/surveys_s0a_legacy_reference.generated.json')
-          d = json.loads(p.read_text())
+          d = json.loads(Path('rebuild/surveys_s0a_legacy_reference.generated1.json').read_text())
           assert d['schema'] == 'darksirens-surveys-s0a-reference-2'
           assert d['legacy_sha'] == 'c042527238bd71421b792936bc48c3b815b90d6d'
           assert d['pixelate']['attrs'] == {'nside': 2, 'z_depth': 0.25}
@@ -70,9 +71,22 @@ jobs:
           print('S0a canonical legacy reference structure PASS')
           PY
 
-      - name: Upload regenerated reference candidate
+      - name: Compare repeated probes and committed golden exactly
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          one = json.loads(Path('rebuild/surveys_s0a_legacy_reference.generated1.json').read_text())
+          two = json.loads(Path('rebuild/surveys_s0a_legacy_reference.generated2.json').read_text())
+          golden = json.loads(Path('rebuild/references/surveys_s0a_legacy_reference.json').read_text())
+          assert one == two, 'canonicalized pinned-legacy probe is not deterministic across processes'
+          assert one == golden, 'canonicalized pinned-legacy probe differs from committed golden'
+          print('S0a repeated-process + exact golden comparison PASS')
+          PY
+
+      - name: Upload regenerated reference
         uses: actions/upload-artifact@v4
         with:
           name: surveys-s0a-legacy-reference
-          path: rebuild/surveys_s0a_legacy_reference.generated.json
+          path: rebuild/surveys_s0a_legacy_reference.generated1.json
           if-no-files-found: error
