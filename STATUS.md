@@ -14,7 +14,7 @@ Legacy is read-only throughout reconstruction.
 
 ```text
 PHASE 6 — CORE INFERENCE / CHECKPOINTING / IO
-status:         6A–6H ACCEPTED; NEXT PORTABLE SAMPLER-OUTPUT SEAM
+status:         6A–6I ACCEPTED; 6J DEAD-POINT HDF5 PERSISTENCE NEXT
 core repo:      ignaciomagana/darksirens-core
 phase-6 base:   86e0c88a51482d17fac70f111057d277df9387fd
 working branch: rebuild/phase6-inference-io
@@ -26,12 +26,28 @@ accepted 6E:    fe845dcc87787d19c69bf30a89f211d9de68be03
 accepted 6F:    05e7c339f190a04e0b92d40c16119e5bda56ef08
 accepted 6G:    251590e82eb373bace7f1e277805b75423bf4f10
 accepted 6H:    d1d39019ad2ca3750ef8171d0d451cdc0896adb0
+accepted 6I:    0084e3b7c5cba14d8ac85528ce18185941e46c05
 ```
 
 Phase 6 reconstructs only portable inference infrastructure. The legacy
 `inference/sampling.py` monolith is split into small backend-independent or
 backend-specific adapters with an exact parity gate for each slice; it is never
 copied wholesale.
+
+### Remaining core phases
+
+There are three core production phases remaining including the active Phase 6,
+and two after Phase 6:
+
+```text
+Phase 6 — finish inference/sampler/result infrastructure and backend adapters
+Phase 7 — small core extras + target public API (`model`, `infer`, loaders, angular model)
+Phase 8 — extension seam + final dependency/API/install/example audit and core freeze
+```
+
+Flows remain deferred/optional unless the ordinary core path demonstrates that
+they are required for the frozen core contract. Companion packages start only
+after Phase 8 freezes the core surface.
 
 ## Production repository state
 
@@ -192,6 +208,20 @@ exact legacy behavior for the `dynesty`, `numpyro`, and `tinyns` method
 spellings; no sampler backend imported on the zero-dimensional path. 6A–6G and
 all Phase-5 parity remain exact.
 
+### 6I — dead-point packaging
+
+```text
+accepted head: 0084e3b7c5cba14d8ac85528ce18185941e46c05
+dedicated gate: 34560606167 / 103142368277 SUCCESS
+historical gate: 34560606182 / 103142368473 SUCCESS
+runtime guards:  34560606263 / 103142368451 SUCCESS
+```
+
+Acceptance: 5 focused tests; 362 passed, 1 regeneration-only skip overall.
+Frozen `_dead_point_block` behavior is exact, candidate implementation is
+NumPy-only, and all 6A–6H plus Phase-5 scientific parity remain green. Detailed
+record: `phases/06I_dead_point_packaging.md`.
+
 ## Frozen architecture direction
 
 Core owns standardized catalog runtime/IO, ordinary catalog redshift kernels and
@@ -214,9 +244,10 @@ The reconstructed source tree contains no `universe_model` dispatcher.
 
 None opened. No scientific behavior change is authorized during reconstruction.
 
-## Current action — Phase 6
+## Current action — Phase 6J
 
-Inspect the frozen generic nested-sampler dead-point packaging helper
-`_dead_point_block` as the next possible small migration seam. If it is truly
-backend-independent, reconstruct it with focused tests and exact legacy/candidate
-parity before touching full dynesty/TinyNS/NumPyro runner assembly.
+Reconstruct additive HDF5 persistence of the already standardized nested
+sampler dead-point block: `logl_dead`, `logwt_dead`, `n_dead`, optional
+`n_live`, and the explicit non-row-alignment semantics. Preserve the generic
+6A atomic result protocol unchanged. Do not port `save_results_hdf5` or the
+legacy sampling/result monolith wholesale.
