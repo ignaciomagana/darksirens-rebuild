@@ -14,22 +14,31 @@ Legacy is read-only throughout reconstruction.
 
 ```text
 PHASE 8 — EXTENSION SEAM + FINAL CORE FREEZE
-status:        INVENTORY / CONTRACT AUDIT
-core repo:     ignaciomagana/darksirens-core
-core main:     6ed3dc74aa0fcde4da128036cc3d56c29250d370
-merged tree:   55dfb24cb84edebb0175409bd33be2a6a57ecb8a
-legacy ref:    c042527238bd71421b792936bc48c3b815b90d6d
+status:             ALL SLICES ACCEPTED; INTEGRATION PR NEXT
+core repo:          ignaciomagana/darksirens-core
+core main:          6ed3dc74aa0fcde4da128036cc3d56c29250d370
+main tree:          55dfb24cb84edebb0175409bd33be2a6a57ecb8a
+Phase-8 branch:     rebuild/phase8-core-freeze
+accepted 8D head:   53bf08fd3670da4d2e48a146319c193b9cff8858
+accepted 8D tree:   0608b75ff5c142bfba0fc15a4fad79e0fee1fa74
+legacy ref:         c042527238bd71421b792936bc48c3b815b90d6d
 ```
 
-Phase 7 is complete, merged, and closed. Phase 8 starts from the exact merged
-Phase-7 main and owns only the minimal one-way extension contracts plus the
-final dependency/API/install/example audit needed to freeze core. No companion
-repository starts until this phase is complete.
+All Phase-8 production slices are independently accepted. Core is **not yet
+marked frozen** because the accepted branch still must be integrated through a
+PR, the merged `main` tree must be verified byte-identical to the accepted tree,
+and the post-merge integrity gate must pass. No companion repository starts
+before that closeout is recorded.
 
 Remaining core work:
 
 ```text
-Phase 8 — extension seam + final dependency/API/install/example audit and core freeze
+1. open Phase-8 integration PR
+2. require PR historical/scientific checks green
+3. squash merge with expected-head protection
+4. verify merged tree == 0608b75ff5c142bfba0fc15a4fad79e0fee1fa74
+5. run/record post-merge integrity
+6. mark darksirens-core frozen
 ```
 
 ## Production repository state
@@ -65,6 +74,58 @@ push-triggered on merged `main`; no nonexistent post-merge broad run is claimed.
 7F1:    6f4126792be9481860f893042e1efa253b46d1ec  ACCEPTED
 7F2:    877bda4e5e2e10ac52c657f7990159afcfa1093a  ACCEPTED
 7F3:    be95e95bdf77144880cba5752ed5feafd40a697f  ACCEPTED
+```
+
+### Phase-8 accepted slices
+
+```text
+8A public counterpart/bright:
+  head:      5256141e00a2d96a72b9cbf2182a77174c8c269e
+  tree:      6252d1725ee07562840f0ce48b0dc6fe90a4aee4
+  dedicated: 34634374241 / 103378585284 SUCCESS
+  broad:     34634374571 / 103378586398 SUCCESS
+  result:    522 passed, 1 skipped
+
+8B InferenceTarget:
+  head:      2e98ca1f1a67cf688f8da8444c3747d446a4e91d
+  tree:      a893564f982aaa1174b41367927c2708148fd2b6
+  dedicated: 34635288617 / 103381567625 SUCCESS
+  8A replay: 34635288475 / 103381567028 SUCCESS
+  broad:     34635288518 / 103381567351 SUCCESS
+  result:    528 passed, 1 skipped
+
+8C host-density extension seam:
+  head:      875a949d5a9f5ffb89f3a64cad030dcfc6daf6a2
+  tree:      1219bba07d3327c83da0164602e60abe8083ba0b
+  dedicated: 34636321077 / 103384995159 SUCCESS
+  8B replay: 34636321027 / 103384994787 SUCCESS
+  8A replay: 34636321033 / 103384994066 SUCCESS
+  broad:     34636321017 / 103384994129 SUCCESS
+  result:    534 passed, 1 skipped
+
+8D packaging/API/install/examples final-freeze slice:
+  head:      53bf08fd3670da4d2e48a146319c193b9cff8858
+  tree:      0608b75ff5c142bfba0fc15a4fad79e0fee1fa74
+  dedicated: 34640864579 / 103399889477 SUCCESS
+  8C replay: 34640864573 / 103399889300 SUCCESS
+  8B replay: 34640864514 / 103399889791 SUCCESS
+  8A replay: 34640864511 / 103399889303 SUCCESS
+  broad:     34640864495 / 103399889097 SUCCESS
+  result:    534 passed, 1 skipped
+  firewall:  PASS
+```
+
+8D's dedicated clean-wheel gate proves `src/darksirens` has no diff from accepted
+8C. Phase 8D therefore changes only packaging, documentation, examples and the
+validation harness; it does not alter scientific/runtime implementation.
+
+Two pre-acceptance 8D heads failed documentation assertions only:
+
+```text
+3f67c61900ae6513ad5dc23e69e7abc44d1551b9
+  34640476226 / 103398636654 — harness-only docs grep
+54dc2e3ad8817a7da693da57830b7e372fbb7721
+  34640706728 / 103399379315 — harness-only case-sensitive docs grep
 ```
 
 ### Companion repositories
@@ -285,6 +346,14 @@ explicit spectral/dark/complete/bright hierarchical composition, portable
 inference/checkpoint/result infrastructure, reusable angular population models,
 and a small conventional public API.
 
+Phase 8 additionally freezes:
+
+- public counterpart/bright composition;
+- `InferenceTarget` as the sampler-facing specialized-analysis seam;
+- the explicit `RedshiftModel`/host-density extension seam;
+- the package-root API and dependency/install contract;
+- public ordinary/custom-target examples.
+
 Core must not learn DESI/KIBO/Legacy/GLADE-native schemas, masks, depth-map
 construction, raw magnitude preparation, selection-function fitting, staged
 survey loading, LSS/Q provenance, campaign-specific CLI assembly, or companion
@@ -298,24 +367,15 @@ Core must import no companion package.
 
 ## Scientific questions
 
-None opened. No scientific behavior change is authorized during reconstruction.
+None opened. No scientific behavior change was authorized during Phase 8. The
+accepted 8D clean-wheel gate verifies that scientific source is unchanged from
+accepted 8C.
 
-## Current action — Phase 8 inventory and core-freeze contract audit
+## Current action — Phase 8 integration
 
-Start from merged core `6ed3dc74aa0fcde4da128036cc3d56c29250d370`.
-Before changing production code:
-
-- inventory the minimal one-way redshift/host-density extension seam required by
-  future `darksirens-lss`;
-- inventory the minimal analysis/sampler seam required by future
-  `darksirens-lensing`, without putting lensing physics in core;
-- determine whether ordinary bright sirens need a tiny public composition so the
-  architecture's final acceptance criterion is actually satisfied;
-- audit installability, package-root imports, public examples, dependency
-  direction, and companion-import firewalls;
-- do not add a generic plugin registry or resurrect a universe-model switchboard;
-- do not start companion repositories until the core surface is frozen.
-
-Create `phases/08_inventory.md` before any Phase-8 production commit. Then split
-only the proven missing core capabilities into small parity/contract-gated
-slices.
+Open the integration PR from `rebuild/phase8-core-freeze` at exact head
+`53bf08fd3670da4d2e48a146319c193b9cff8858`. Do not merge a moved head. Require
+all PR-triggered historical/scientific gates to pass, then squash merge, verify
+the resulting tree is exactly `0608b75ff5c142bfba0fc15a4fad79e0fee1fa74`,
+and record the post-merge integrity run. Only then mark core frozen and begin any
+companion repository.
