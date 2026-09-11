@@ -14,69 +14,46 @@ Legacy is read-only throughout reconstruction.
 
 ```text
 PHASE 7 — SMALL CORE EXTRAS + TARGET PUBLIC API
-status:       7A–7D ACCEPTED; PUBLIC infer() NEXT
-core repo:    ignaciomagana/darksirens-core
-core main:    d82becaf76bf62c0f72a71b32ebbf9b238ba4f13
-active branch:rebuild/phase7-public-api
-active head:  1df8f78bb70371b9dae07c6a59a3c9fea2cc8e77
-legacy ref:   c042527238bd71421b792936bc48c3b815b90d6d
+status:        7A–7F2 ACCEPTED; ANGULAR COMPOSITION/WIRING NEXT
+core repo:     ignaciomagana/darksirens-core
+core main:     d82becaf76bf62c0f72a71b32ebbf9b238ba4f13
+active branch: rebuild/phase7-public-api
+active head:   877bda4e5e2e10ac52c657f7990159afcfa1093a
+legacy ref:    c042527238bd71421b792936bc48c3b815b90d6d
 ```
 
-Phase 6 is complete, merged, and closed. Detailed integration/merge record:
-`phases/06_phase_integration.md`.
-
-Phase 7 owns only the remaining small, ordinary core construction/public
-surfaces: standardized ordinary loaders, small parameter/prior/model assembly,
-target `model` and `infer` APIs, and the ordinary angular-model surface where it
-is part of the core contract. It must not resurrect the frozen
-`universe_model`/`ParameterDecoder` switchboards or absorb staged survey,
+Phase 6 is complete, merged, and closed. Phase 7 owns only the remaining small,
+ordinary core construction/public surfaces. It must not resurrect the frozen
+`universe_model` / mega-`ParameterDecoder` switchboards or absorb staged survey,
 Q/LSS/multitracer, campaign, or lensing internals.
 
-### Remaining core phases
+Remaining core phases:
 
 ```text
-Phase 7 — small core extras + target public API (`model`, `infer`, loaders, angular model)
+Phase 7 — small core extras + target public API
 Phase 8 — extension seam + final dependency/API/install/example audit and core freeze
 ```
 
-Companion packages start only after Phase 8 freezes the core surface.
+Companion packages start only after Phase 8 freezes core.
 
 ## Production repository state
 
-### `darksirens-core`
+### `darksirens-core` main
 
-Phase 6 was squash-merged through PR #5. Current `main`:
-
-```text
-d82becaf76bf62c0f72a71b32ebbf9b238ba4f13
-```
-
-Accepted Phase-6 integration head before squash:
+Phase 6 was squash-merged through PR #5:
 
 ```text
-d3e8dcdbf107d881405d1f14badab7bd0ea4d74f
+main:                     d82becaf76bf62c0f72a71b32ebbf9b238ba4f13
+accepted Phase-6 head:    d3e8dcdbf107d881405d1f14badab7bd0ea4d74f
+shared accepted Git tree: 118e196b87538e387d433e4f71edff70b3b3385d
+post-merge integrity:     34592289964 / 103240104097 SUCCESS
 ```
 
-The accepted head and squash merge have the identical Git tree:
+The accepted Phase-6 head and squash merge have the identical Git tree. Heavy
+historical workflows do not all push-trigger on `main`; no nonexistent
+post-merge broad run is claimed.
 
-```text
-118e196b87538e387d433e4f71edff70b3b3385d
-```
-
-Post-merge `main` validation that actually auto-ran:
-
-```text
-workflow: reference-integrity
-run:      34592289964
-job:      103240104097 (frozen-reference)
-status:   SUCCESS
-```
-
-Most Phase-6/historical workflows do not push-trigger on `main`; no nonexistent
-post-merge broad run is claimed. The merged tree is byte-identical to the exact
-PR head on which the complete cross-phase matrix passed.
-
-Phase 7 is currently developed on:
+### Active Phase-7 branch
 
 ```text
 branch: rebuild/phase7-public-api
@@ -86,6 +63,9 @@ branch: rebuild/phase7-public-api
 7C2:    102c233f132cd3b68faaebf4f2adbe71defa731e  ACCEPTED
 7C3:    7821c5d4cc6e0d7c21759b66db9fc406b9166939  ACCEPTED
 7D:     1df8f78bb70371b9dae07c6a59a3c9fea2cc8e77  ACCEPTED
+7E:     f8aa93ed8bd7c7ebae3fe009f5e05db92cde456e  ACCEPTED
+7F1:    6f4126792be9481860f893042e1efa253b46d1ec  ACCEPTED
+7F2:    877bda4e5e2e10ac52c657f7990159afcfa1093a  ACCEPTED
 ```
 
 ### Companion repositories
@@ -98,20 +78,18 @@ darksirens-lensing: not started
 
 ## Completed production phases
 
-### Phase 2
+### Phase 2 — foundation
 
 ```text
 core main after Phase 2: 450b9bdb66d2dc2d6e7f927143f9b4b4b9f9cec6
-workflow run:            34431185197
-job:                     102726848203
-status:                  SUCCESS
+workflow:                34431185197 / 102726848203 SUCCESS
 ```
 
 ### Phase 3 — population
 
 ```text
 accepted head:     2461954c47df587ed70f711769a42779775be692
-squash-merge SHA: e0b40fef65261a27b67aa9657a97216df3e8444f
+squash-merge SHA:  e0b40fef65261a27b67aa9657a97216df3e8444f
 ```
 
 Acceptance: 125 passed, 1 regeneration-only skip; population legacy/new parity
@@ -121,8 +99,8 @@ exact at `rtol=1e-12`, `atol=0`.
 
 ```text
 accepted head:     cfdb138d40d66614bf9b1264c2574d0b497b812d
-squash-merge SHA: 0f97feff7eb283a1f541bef9a776c9347084e70e
-post-merge gate:  34447108888 / 102774202182 SUCCESS
+squash-merge SHA:  0f97feff7eb283a1f541bef9a776c9347084e70e
+post-merge gate:   34447108888 / 102774202182 SUCCESS
 ```
 
 Acceptance: 199 passed, 1 regeneration-only skip; spectral fixed-theta parity
@@ -132,13 +110,13 @@ exact.
 
 ```text
 5A catalog kernel:             f418174a7fc8734bfbcf553d5b5c36f9f4280987
-5B ordinary completeness:     f4bc721496359f09fc58609fa23ccce21366f728
-5C dark/complete/bright:      57af56158757ddd9272e0a2f2dc9bfbb624c1fec
-5D1 generic marked hosts:     bf45e0f5c0afc404d291d00a0ca267f8126b7e7b
-5D2 magnitude-selection eval: 9d5624864ce7467d309c45125cbe5785c671e1a9
-PR integration head:          b66221734e7564922ac1c12534abec77333923f6
-squash-merge SHA:             86e0c88a51482d17fac70f111057d277df9387fd
-post-merge gate:              34534097673 / 103061536070 SUCCESS
+5B ordinary completeness:      f4bc721496359f09fc58609fa23ccce21366f728
+5C dark/complete/bright:       57af56158757ddd9272e0a2f2dc9bfbb624c1fec
+5D1 generic marked hosts:      bf45e0f5c0afc404d291d00a0ca267f8126b7e7b
+5D2 magnitude-selection eval:  9d5624864ce7467d309c45125cbe5785c671e1a9
+PR integration head:           b66221734e7564922ac1c12534abec77333923f6
+squash-merge SHA:              86e0c88a51482d17fac70f111057d277df9387fd
+post-merge gate:               34534097673 / 103061536070 SUCCESS
 ```
 
 Phase-5 scientific parity is exact (`max_abs=max_rel=0`, `rtol=1e-12`,
@@ -147,30 +125,29 @@ Phase-5 scientific parity is exact (`max_abs=max_rel=0`, `rtol=1e-12`,
 ### Phase 6 — inference / checkpointing / IO
 
 ```text
-phase base:        86e0c88a51482d17fac70f111057d277df9387fd
-accepted 6A:       194e246666e6901624347d09ec570696f3c62e4d
-accepted 6B:       6a8a2c2c4a9e772f74a913b68c13264e55bef38f
-accepted 6C1:      807687ccb5754af14f888df3089497f26706e234
-accepted 6D:       5edc76c6c055e47a7e041d7f7477e347837f7554
-accepted 6E:       fe845dcc87787d19c69bf30a89f211d9de68be03
-accepted 6F:       05e7c339f190a04e0b92d40c16119e5bda56ef08
-accepted 6G:       251590e82eb373bace7f1e277805b75423bf4f10
-accepted 6H:       d1d39019ad2ca3750ef8171d0d451cdc0896adb0
-accepted 6I:       0084e3b7c5cba14d8ac85528ce18185941e46c05
-accepted 6J:       0373cc9055552dc003dd569b0dc10c515c04c4fe
-accepted 6K:       ffe82c8e7948bb0f7b8d0ad3d224037cd702d75d
-accepted 6L:       39d9ab8aef7b0b4e0847ce4e9894a6a2a8985087
-accepted 6M:       cb74900cff9be07049243548d72eef5e5e77bfaf
-accepted 6N:       39d4e36a8d5d3aa347761a9134e0c7c835cdb565
-accepted 6O:       28c5f06ad0cc40d8fdbb587bcaa3e98dd89089b4
-accepted 6P:       73115e1d403e1c6eefa646c7e68867d6831dc7df
-accepted 6Q:       cfbde4a2d202398a531dab5646314ac1a485fcd5
-accepted 6R:       7bab631a786d4ad3a54bc93833157b0f64a046d4
-accepted 6S:       b620601e1a0cc776f7d9090c866e299f2138fbff
-accepted 6T:       d3e8dcdbf107d881405d1f14badab7bd0ea4d74f
-PR:                #5
-squash-merge SHA:  d82becaf76bf62c0f72a71b32ebbf9b238ba4f13
-shared tree:       118e196b87538e387d433e4f71edff70b3b3385d
+base:  86e0c88a51482d17fac70f111057d277df9387fd
+6A:    194e246666e6901624347d09ec570696f3c62e4d
+6B:    6a8a2c2c4a9e772f74a913b68c13264e55bef38f
+6C1:   807687ccb5754af14f888df3089497f26706e234
+6D:    5edc76c6c055e47a7e041d7f7477e347837f7554
+6E:    fe845dcc87787d19c69bf30a89f211d9de68be03
+6F:    05e7c339f190a04e0b92d40c16119e5bda56ef08
+6G:    251590e82eb373bace7f1e277805b75423bf4f10
+6H:    d1d39019ad2ca3750ef8171d0d451cdc0896adb0
+6I:    0084e3b7c5cba14d8ac85528ce18185941e46c05
+6J:    0373cc9055552dc003dd569b0dc10c515c04c4fe
+6K:    ffe82c8e7948bb0f7b8d0ad3d224037cd702d75d
+6L:    39d9ab8aef7b0b4e0847ce4e9894a6a2a8985087
+6M:    cb74900cff9be07049243548d72eef5e5e77bfaf
+6N:    39d4e36a8d5d3aa347761a9134e0c7c835cdb565
+6O:    28c5f06ad0cc40d8fdbb587bcaa3e98dd89089b4
+6P:    73115e1d403e1c6eefa646c7e68867d6831dc7df
+6Q:    cfbde4a2d202398a531dab5646314ac1a485fcd5
+6R:    7bab631a786d4ad3a54bc93833157b0f64a046d4
+6S:    b620601e1a0cc776f7d9090c866e299f2138fbff
+6T:    d3e8dcdbf107d881405d1f14badab7bd0ea4d74f
+PR:    #5
+merge: d82becaf76bf62c0f72a71b32ebbf9b238ba4f13
 ```
 
 Final 6T exact-head gates:
@@ -181,18 +158,7 @@ historical/scientific: 34590483006 / 103234396701 SUCCESS
 runtime guards:        34590482964 / 103234396617 SUCCESS
 ```
 
-Representative PR integration runs on the accepted Phase-6 tree:
-
-```text
-Phase 3 population:     34591719751 SUCCESS
-Phase 4 spectral:       34591719734 SUCCESS
-Phase 5 catalog/sirens: 34591719712 SUCCESS
-Phase 6 integration:    34591719769 SUCCESS
-Phase 6 runtime:        34591719782 SUCCESS
-```
-
-The final frozen/core inference-surface audit found no legitimate 6U slice.
-Record: `phases/06T_sampler_orchestration.md`. Integration closure:
+Detailed records: `phases/06T_sampler_orchestration.md` and
 `phases/06_phase_integration.md`.
 
 ## Phase 7 — public/core construction surface
@@ -200,29 +166,29 @@ Record: `phases/06T_sampler_orchestration.md`. Integration closure:
 ### 7A — standardized public loaders
 
 ```text
-accepted head:       c338bc8eaa5199775e6d1355f20406be8ade1eb1
-dedicated loader:    34593088782 / 103242605896 SUCCESS
-broad regression:    34593088762 / 103242605373 SUCCESS
-record:              phases/07A_public_loaders.md
+head:        c338bc8eaa5199775e6d1355f20406be8ade1eb1
+dedicated:   34593088782 / 103242605896 SUCCESS
+broad:       34593088762 / 103242605373 SUCCESS
+record:      phases/07A_public_loaders.md
 ```
 
 ### 7B — public cosmology/population specifications
 
 ```text
-accepted head:       b97d949f32c0eff3bb48c574b5a2258f92fe82d5
-dedicated specs:     34595489924 / 103250164326 SUCCESS
-7A parity replay:     34595489912 / 103250164428 SUCCESS
-broad regression:    34595489857 / 103250163890 SUCCESS
-record:              phases/07B_public_specs.md
+head:        b97d949f32c0eff3bb48c574b5a2258f92fe82d5
+dedicated:   34595489924 / 103250164326 SUCCESS
+7A replay:   34595489912 / 103250164428 SUCCESS
+broad:       34595489857 / 103250163890 SUCCESS
+record:      phases/07B_public_specs.md
 ```
 
 ### 7C1 — joint-prior resolver
 
 ```text
-accepted head:       02b54e25740ff7cce1a030f372b3190121ad2b0f
-dedicated resolver:  34596093457 / 103252070961 SUCCESS
-broad regression:    34596093340 / 103252070365 SUCCESS
-record:              phases/07C1_joint_prior_resolver.md
+head:        02b54e25740ff7cce1a030f372b3190121ad2b0f
+dedicated:   34596093457 / 103252070961 SUCCESS
+broad:       34596093340 / 103252070365 SUCCESS
+record:      phases/07C1_joint_prior_resolver.md
 ```
 
 Restores model-declared normalized cube maps without reconstructing the giant
@@ -231,58 +197,89 @@ legacy parameter-space builder.
 ### 7C2 — public `model()` / parameter plan
 
 ```text
-accepted head:       102c233f132cd3b68faaebf4f2adbe71defa731e
-dedicated model:     34596633396 / 103253806465 SUCCESS
-broad regression:    34596632992 / 103253805105 SUCCESS
-7C1 replay:          34596632909 / 103253805578 SUCCESS
-7B replay:           34596633316 / 103253806135 SUCCESS
-7A replay:           34596633170 / 103253805984 SUCCESS
-record:              phases/07C2_public_model_plan.md
+head:        102c233f132cd3b68faaebf4f2adbe71defa731e
+dedicated:   34596633396 / 103253806465 SUCCESS
+broad:       34596632992 / 103253805105 SUCCESS
+record:      phases/07C2_public_model_plan.md
 ```
 
-Adds typed composition for spectral, incomplete-catalog, and complete-catalog
-ordinary analyses, preserving frozen sampled-coordinate order and catalog
-nuisance blocks. It does not execute inference.
+Typed spectral, incomplete-catalog and complete-catalog composition; exact
+sampler-coordinate order; no execution.
 
 ### 7C3 — portable HEALPix RING geometry
 
 ```text
-accepted head:       7821c5d4cc6e0d7c21759b66db9fc406b9166939
-production commit:   a729189c819b6ff238d5efc297483f775d83773c
-dedicated geometry: 34599757756 / 103263901736 SUCCESS
-broad regression:   34599757799 / 103263901914 SUCCESS
-7C2 replay:          34599757836 / 103263902059 SUCCESS
-7C1 replay:          34599757883 / 103263902125 SUCCESS
-7B replay:           34599757739 / 103263901425 SUCCESS
-7A replay:           34599757746 / 103263901609 SUCCESS
-record:              phases/07C3_healpix_geometry.md
+head:        7821c5d4cc6e0d7c21759b66db9fc406b9166939
+dedicated:   34599757756 / 103263901736 SUCCESS
+broad:       34599757799 / 103263901914 SUCCESS
+record:      phases/07C3_healpix_geometry.md
 ```
 
-Adds dependency-free host-side `ang2pix_ring` with exact element-for-element
-parity to frozen validated `healpy==1.17.3` RING behavior.
+Dependency-free host-side `ang2pix_ring` with exact frozen
+`healpy==1.17.3` RING parity.
 
 ### 7D — ordinary runtime binding
 
 ```text
-accepted head:       1df8f78bb70371b9dae07c6a59a3c9fea2cc8e77
-accepted tree:       58e005450715e59456e3778b1431b909d6bb7636
-dedicated binding:  34622477272 / 103339542168 SUCCESS
-broad regression:   34622477307 / 103339541969 SUCCESS
-7C3 replay:          34622477253 SUCCESS
-7C2 replay:          34622477275 SUCCESS
-7C1 replay:          34622477258 SUCCESS
-7B replay:           34622477305 SUCCESS
-7A replay:           34622477196 SUCCESS
-record:              phases/07D_runtime_binding.md
+head:        1df8f78bb70371b9dae07c6a59a3c9fea2cc8e77
+tree:        58e005450715e59456e3778b1431b909d6bb7636
+dedicated:   34622477272 / 103339542168 SUCCESS
+broad:       34622477307 / 103339541969 SUCCESS
+result:      499 passed, 1 skipped
+record:      phases/07D_runtime_binding.md
 ```
 
-The exact-head broad suite completed with `499 passed, 1 skipped`; the skip is
-the existing opt-in population-registry golden regeneration test. 7D binds
-`Analysis`, standardized GW stores and standardized catalogs to the already
-accepted fixed-theta spectral/incomplete/complete likelihoods. A real first-pass
-binder defect was found and fixed locally: compact catalog NumPy leaves must be
+A real first-pass binder defect was fixed: compact catalog NumPy leaves are
 converted once to JAX arrays before traced row indexing. No Phase-5 likelihood
 code changed.
+
+### 7E — thin public `ds.infer()`
+
+```text
+head:        f8aa93ed8bd7c7ebae3fe009f5e05db92cde456e
+dedicated:   34623252701 / 103342078953 SUCCESS
+broad:       34623252604 / 103342078653 SUCCESS
+result:      502 passed, 1 skipped
+record:      phases/07E_public_infer.md
+```
+
+`ds.infer()` is a lazy, thin facade over the accepted 7D binder and Phase-6
+sampler dispatcher. It creates no new backend/result/checkpoint abstraction and
+preserves the zero-free exact-evidence short circuit before sampler validation.
+
+### 7F1 — basic angular source-population models
+
+```text
+head:        6f4126792be9481860f893042e1efa253b46d1ec
+dedicated:   34624190605 / 103345183970 SUCCESS
+broad:       34624190465 / 103345183648 SUCCESS
+result:      506 passed, 1 skipped
+record:      phases/07F1_angular_basic.md
+```
+
+Exact separate-process frozen parity for `isotropic` and `dipole`, including
+bounds, labels, prior kinds, fiducials, `ball3` joint constraint, `log g`, and
+prior-volume correction. The only failed first pass was a legacy-probe dependency
+harness issue; production was not changed for it.
+
+### 7F2 — advanced angular source-population models
+
+```text
+head:        877bda4e5e2e10ac52c657f7990159afcfa1093a
+tree:        9188244eea1f71bf3fbbb6f9e1e7162151e6df77
+dedicated:   34625983191 / 103351075167 SUCCESS
+broad:       34625983125 / 103351074718 SUCCESS
+result:      511 passed, 1 skipped
+record:      phases/07F2_angular_advanced.md
+```
+
+Exact separate-process frozen parity for `sphere_gp`, `sphere_gp_z`,
+`overdensity_gp`, `multipole`, and `multipole_l3`, including prior metadata,
+fiducials, representative `log g`, GP normalization diagnostics, 3-D fiducial
+volume weights, multipole ordering, positivity, and prior-volume fraction.
+No `healpy` runtime dependency enters core.
+
+All 7A–7F1 replay workflows are green on the accepted 7F2 head.
 
 ## Frozen architecture direction
 
@@ -290,7 +287,8 @@ Core owns standardized catalog runtime/IO, ordinary catalog redshift kernels and
 completeness evaluation, counterpart/host objects, generic host-property
 weighting, runtime evaluation of ordinary serialized catalog-selection models,
 explicit spectral/dark/complete/bright hierarchical composition, portable
-inference/checkpoint/result infrastructure, and a small conventional public API.
+inference/checkpoint/result infrastructure, reusable angular population models,
+and a small conventional public API.
 
 Core must not learn DESI/KIBO/Legacy/GLADE-native schemas, masks, depth-map
 construction, raw magnitude preparation, selection-function fitting, staged
@@ -307,23 +305,27 @@ The reconstructed source tree contains no `universe_model` dispatcher and Phase
 
 None opened. No scientific behavior change is authorized during reconstruction.
 
-## Current action — thin public `ds.infer()` facade
+## Current action — 7F3 angular composition and likelihood wiring
 
-The next slice should expose only the conventional public execution seam over
-already accepted pieces:
+The next slice must be deliberately thin:
 
-- keep package-root import dependency-light and make `ds.infer` lazy;
-- call the accepted 7D `bind_analysis` runtime seam;
-- build the accepted Phase-6 `make_prior_transform` from the exact 7C2 parameter
-  plan (`lower`, `upper`, `prior_kinds`, `joint_constraints`);
-- normalize public sampler keywords into the existing Phase-6 attribute-based
-  option contract rather than creating a new sampler abstraction;
-- delegate unchanged to the accepted Phase-6 `run_sampler` dispatcher;
-- preserve Phase-6 ordering: a zero-free analysis must return exact evidence
-  before sampler-name validation or optional backend import;
-- keep checkpointing off by default unless a resolved checkpoint plan is
-  explicitly supplied; do not invent new run-directory/persistence semantics;
-- return the existing standardized sampler result mapping directly.
+- add a typed angular choice to ordinary `ds.model(...)`, defaulting to exact
+  frozen isotropy;
+- append the angular block after the existing cosmology/population/catalog
+  coordinates, matching frozen block ordering;
+- feed angular model joint constraints (notably dipole `ball3`) into the existing
+  joint-prior resolver without introducing a new transform layer;
+- decode angular parameters separately from cosmology, population, and catalog
+  parameters;
+- apply the same `log g(nhat,z)` factor to both PE and detected-injection target
+  weights;
+- prove `angular='isotropic'` is a fixed-theta no-op relative to the already
+  accepted ordinary likelihoods;
+- parity-test at least one nontrivial anisotropic model against the pinned legacy
+  behavior;
+- keep catalog-redshift/completeness construction unchanged;
+- preserve sampler, checkpoint, and result layers unchanged;
+- keep all survey/LSS/lensing/campaign knowledge outside core.
 
-Do not add result persistence, campaign CLI behavior, raw survey handling,
-companion imports, or new sampler/backend logic in this slice.
+Only after this wiring is accepted should Phase 7 be audited for closure before
+moving to Phase 8.
