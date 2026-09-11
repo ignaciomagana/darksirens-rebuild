@@ -14,7 +14,7 @@ Legacy is read-only throughout reconstruction.
 
 ```text
 PHASE 6 — CORE INFERENCE / CHECKPOINTING / IO
-status:         6A–6Q ACCEPTED; 6R NUMPYRO INITIALIZATION/PREFLIGHT NEXT
+status:         6A–6R ACCEPTED; 6S NUMPYRO EXECUTION ADAPTER NEXT
 core repo:      ignaciomagana/darksirens-core
 phase-6 base:   86e0c88a51482d17fac70f111057d277df9387fd
 working branch: rebuild/phase6-inference-io
@@ -35,6 +35,7 @@ accepted 6N:    39d4e36a8d5d3aa347761a9134e0c7c835cdb565
 accepted 6O:    28c5f06ad0cc40d8fdbb587bcaa3e98dd89089b4
 accepted 6P:    73115e1d403e1c6eefa646c7e68867d6831dc7df
 accepted 6Q:    cfbde4a2d202398a531dab5646314ac1a485fcd5
+accepted 6R:    7bab631a786d4ad3a54bc93833157b0f64a046d4
 ```
 
 Phase 6 reconstructs only portable inference infrastructure. The legacy
@@ -225,6 +226,21 @@ gate has exact frozen stdout/error/result parity; the broad gate preserves the
 full reconstructed suite and Phase-5 scientific fixtures. Record:
 `phases/06Q_numpyro_static_contract.md`.
 
+### 6R — NumPyro initialization and gradient preflight
+
+```text
+accepted head:    7bab631a786d4ad3a54bc93833157b0f64a046d4
+dedicated gate:  34580141816 / 103201551957 SUCCESS
+historical gate: 34580141630 / 103201551061 SUCCESS
+runtime guards:  34580141611 / 103201550056 SUCCESS
+```
+
+Midpoint initialization, deterministic seeded finite restart search,
+`conditional_upper` support repair, lazy JAX gradient preflight, and exact
+per-parameter finite/NaN/Inf/boundary failure diagnostics are reconstructed with
+frozen legacy parity. NumPyro itself remains outside this slice and is not loaded
+by importing the module. Record: `phases/06R_numpyro_initialization_preflight.md`.
+
 ## Frozen architecture direction
 
 Core owns standardized catalog runtime/IO, ordinary catalog redshift kernels and
@@ -247,9 +263,10 @@ The reconstructed source tree contains no `universe_model` dispatcher.
 
 None opened. No scientific behavior change is authorized during reconstruction.
 
-## Current action — Phase 6R
+## Current action — Phase 6S
 
-Reconstruct only NumPyro initial-point selection, seeded finite restart search,
-`conditional_upper` initial-support repair, and the frozen JAX likelihood-gradient
-preflight with exact per-parameter failure diagnostics. Keep NumPyro model/NUTS/
-MCMC execution and result diagnostics for the following slice.
+Reconstruct only the NumPyro execution adapter: prior-site/model construction,
+including dependent `conditional_upper` sites; NUTS/MCMC wiring; post-run
+likelihood recovery; and frozen sampler-health/result diagnostics. Keep the
+backend lazy outside execution paths, preserve the accepted 6Q/6R contracts, and
+do not begin generic dispatch or Phase 7 in this slice.
