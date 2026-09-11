@@ -13,53 +13,49 @@ Legacy is read-only throughout reconstruction.
 ## Current phase
 
 ```text
-PHASE 8 — EXTENSION SEAM + FINAL CORE FREEZE
-status:             ALL SLICES ACCEPTED; INTEGRATION PR NEXT
+DARKSIRENS-CORE RECONSTRUCTION — COMPLETE / FROZEN
+status:             CORE FROZEN; STOP POINT REACHED
 core repo:          ignaciomagana/darksirens-core
-core main:          6ed3dc74aa0fcde4da128036cc3d56c29250d370
-main tree:          55dfb24cb84edebb0175409bd33be2a6a57ecb8a
+core main:          af2488b0ccb48c65e63cffcae306a8a4a4bfeb66
+main tree:          0608b75ff5c142bfba0fc15a4fad79e0fee1fa74
 Phase-8 branch:     rebuild/phase8-core-freeze
 accepted 8D head:   53bf08fd3670da4d2e48a146319c193b9cff8858
 accepted 8D tree:   0608b75ff5c142bfba0fc15a4fad79e0fee1fa74
+Phase-8 PR:         #7 — 34/34 SUCCESS
+post-merge gate:    34642213518 / 103404444142 SUCCESS
 legacy ref:         c042527238bd71421b792936bc48c3b815b90d6d
 ```
 
-All Phase-8 production slices are independently accepted. Core is **not yet
-marked frozen** because the accepted branch still must be integrated through a
-PR, the merged `main` tree must be verified byte-identical to the accepted tree,
-and the post-merge integrity gate must pass. No companion repository starts
-before that closeout is recorded.
+Phase 8 is integrated and closed. PR #7 was squash-merged with expected-head
+protection. The merged `main` tree is byte-identical to the accepted Phase-8
+tree, and the only push-triggered post-merge workflow, reference-integrity,
+passed in exact mode. `darksirens-core` is therefore frozen.
 
-Remaining core work:
-
-```text
-1. open Phase-8 integration PR
-2. require PR historical/scientific checks green
-3. squash merge with expected-head protection
-4. verify merged tree == 0608b75ff5c142bfba0fc15a4fad79e0fee1fa74
-5. run/record post-merge integrity
-6. mark darksirens-core frozen
-```
+No further core production work remains in this reconstruction. Companion
+repositories remain unstarted at this stop point.
 
 ## Production repository state
 
-### `darksirens-core` main
-
-Phase 7 was squash-merged through PR #6:
+### `darksirens-core` main — final frozen state
 
 ```text
-Phase-7 base:             d82becaf76bf62c0f72a71b32ebbf9b238ba4f13
-accepted Phase-7 head:    be95e95bdf77144880cba5752ed5feafd40a697f
-accepted Phase-7 tree:    55dfb24cb84edebb0175409bd33be2a6a57ecb8a
-PR:                       #6
-squash merge SHA:         6ed3dc74aa0fcde4da128036cc3d56c29250d370
-merged tree:              55dfb24cb84edebb0175409bd33be2a6a57ecb8a
-post-merge integrity:     34633321021 / 103375170965 SUCCESS
+Phase-7 base/main:         6ed3dc74aa0fcde4da128036cc3d56c29250d370
+accepted Phase-8 head:     53bf08fd3670da4d2e48a146319c193b9cff8858
+accepted Phase-8 tree:     0608b75ff5c142bfba0fc15a4fad79e0fee1fa74
+PR:                        #7
+PR historical/science:     34/34 SUCCESS
+squash merge SHA:          af2488b0ccb48c65e63cffcae306a8a4a4bfeb66
+merged tree:               0608b75ff5c142bfba0fc15a4fad79e0fee1fa74
+post-merge integrity:      34642213518 / 103404444142 SUCCESS
+post-merge exact result:   max_relerr=0.000e+00
+record:                     phases/08_phase_integration.md
 ```
 
-The accepted Phase-7 head and squash merge have the identical Git tree. The PR
-historical/scientific matrix completed 30/30 green. Only reference-integrity
-push-triggered on merged `main`; no nonexistent post-merge broad run is claimed.
+The accepted branch tree and squash-merged `main` tree are identical. On merged
+`main`, reference-integrity validated the frozen bundle and reported
+`PASS backend=cpu owner=all cells=15 mode=exact max_relerr=0.000e+00`.
+No nonexistent post-merge broad run is claimed; the full broad and historical
+matrices were green on the exact accepted PR head.
 
 ### Phase-7 accepted slices
 
@@ -127,6 +123,22 @@ Two pre-acceptance 8D heads failed documentation assertions only:
 54dc2e3ad8817a7da693da57830b7e372fbb7721
   34640706728 / 103399379315 — harness-only case-sensitive docs grep
 ```
+
+### Phase-8 integration
+
+```text
+PR:                    #7
+PR matrix:             34/34 SUCCESS
+accepted head:         53bf08fd3670da4d2e48a146319c193b9cff8858
+accepted tree:         0608b75ff5c142bfba0fc15a4fad79e0fee1fa74
+squash merge:          af2488b0ccb48c65e63cffcae306a8a4a4bfeb66
+merged tree:           0608b75ff5c142bfba0fc15a4fad79e0fee1fa74
+post-merge integrity:  34642213518 / 103404444142 SUCCESS
+record:                 phases/08_phase_integration.md
+```
+
+There is no further Phase-8 production slice. The accepted and merged trees are
+byte-identical and the core reconstruction is closed.
 
 ### Companion repositories
 
@@ -371,11 +383,14 @@ None opened. No scientific behavior change was authorized during Phase 8. The
 accepted 8D clean-wheel gate verifies that scientific source is unchanged from
 accepted 8C.
 
-## Current action — Phase 8 integration
+## Final state
 
-Open the integration PR from `rebuild/phase8-core-freeze` at exact head
-`53bf08fd3670da4d2e48a146319c193b9cff8858`. Do not merge a moved head. Require
-all PR-triggered historical/scientific gates to pass, then squash merge, verify
-the resulting tree is exactly `0608b75ff5c142bfba0fc15a4fad79e0fee1fa74`,
-and record the post-merge integrity run. Only then mark core frozen and begin any
-companion repository.
+`darksirens-core` reconstruction is complete and frozen at:
+
+```text
+main SHA:  af2488b0ccb48c65e63cffcae306a8a4a4bfeb66
+tree:      0608b75ff5c142bfba0fc15a4fad79e0fee1fa74
+```
+
+Stop here. Do not start `darksirens-surveys`, `darksirens-lss`, or
+`darksirens-lensing` as part of this closeout.
