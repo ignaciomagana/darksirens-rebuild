@@ -1,0 +1,127 @@
+# Phase 6D checkpoint — generic unit-cube prior transform
+
+## Reference
+
+```text
+legacy repository: ignaciomagana/darksirens
+legacy SHA:        c042527238bd71421b792936bc48c3b815b90d6d
+core repository:   ignaciomagana/darksirens-core
+phase-6 base:      86e0c88a51482d17fac70f111057d277df9387fd
+6C1 accepted:      807687ccb5754af14f888df3089497f26706e234
+working branch:    rebuild/phase6-inference-io
+```
+
+Legacy remains read-only.
+
+## Scope
+
+6D reconstructs only the generic, already-resolved unit-cube transform from
+pinned `darksirens/inference/prior.py`:
+
+```text
+make_prior_transform(lower, upper, prior_kinds=None, joint_constraints=None)
+```
+
+The caller supplies final bounds, one prior-kind triple per sampled coordinate,
+and any joint constraints already resolved to integer indices. Core does not
+look up population, survey, sky, LSS, or lensing models in this slice.
+
+## Frozen per-dimension semantics
+
+- `lower` and `upper` are converted to NumPy float arrays once when the closure
+  is built.
+- `prior_kinds=None` means an all-uniform affine map.
+- Supported frozen kind spellings are `uniform`, `normal`, `lognormal`, `beta`.
+- `normal` is an inverse-CDF Gaussian truncated to `[lower, upper]`.
+- `lognormal` applies the same truncated-normal inverse CDF in log space and
+  exponentiates.
+- `beta` is specifically Beta(1,b), with `b` in the scale slot and an analytic
+  inverse CDF; `[lower, upper]` acts as truncation bounds.
+- Beta(1,1) inside `[0,1]` is normalized to the uniform kind before dispatch.
+- The truncated-normal probability passed to `ndtri` is clipped to
+  `[1e-12, 1-1e-12]` exactly as in frozen legacy.
+- Family branches absent from a resolved space are not evaluated at trace time.
+
+## Frozen joint cube maps
+
+`joint_constraints` is a sequence of `(kind, index_tuple)` entries applied
+before the per-coordinate transforms:
+
+```text
+ordered_le         (i,j): sort the two cube coordinates
+simplex            (i,j): fold across u_i + u_j = 1
+conditional_upper  (i,j): u_i <- u_i * u_j, u_j unchanged
+ball3              (i,j,k): polar map to a uniform unit ball
+```
+
+The `conditional_upper` product spelling is load-bearing: the `u_j=0` edge
+returns the common lower bound exactly without introducing a denominator/NaN.
+`ball3` uses `r=u^(1/3)`, `cos(theta)=2u-1`, and `phi=2*pi*u` before mapping
+back to cube coordinates.
+
+This slice accepts only already-resolved index maps. Validation that a requested
+joint constraint is legal for model labels/bounds remains with the future
+parameter-space resolver; 6D does not import model registries to recreate it.
+
+## Numerical/dispatch semantics
+
+- All-uniform/no-joint transform remains host-native: NumPy input produces a
+  NumPy affine output with no forced JAX device round trip.
+- That closure carries `host_native=True`.
+- All-uniform with joint constraints is JAX-based but carries no fast-dispatch
+  flag.
+- Any genuinely non-uniform transform carries `prefer_jit=True`.
+- 6D does **not** port `_make_dynesty_ptform`; acceptance tests only verify the
+  flags and transform values. The sampler-specific bit-identity probe/dispatch
+  remains a later sampler-adapter subphase.
+- Batched `(..., ndim)` inputs must retain the frozen `u[..., i]` behavior.
+
+## Explicit non-scope
+
+Do not port in 6D:
+
+```text
+build_parameter_space
+resolve_joint_prior_constraints
+population/survey/sky registries
+prior override parsing
+fixed-parameter validation
+selection-fit prior discovery
+CLI options
+_make_dynesty_ptform
+run_sampler
+dynesty / TinyNS / NumPyro backends
+LSS or lensing state
+```
+
+## Dependency boundary
+
+`darksirens.inference.prior` may import NumPy at module scope. JAX and
+`jax.scipy.special` remain lazy/branch-local exactly as the frozen transform
+requires: importing the module or constructing an all-uniform/no-joint transform
+must not eagerly import sampler backends, CLI, surveys, LSS, lensing, or HEALPix.
+
+## Acceptance
+
+Focused tests plus a separate-process legacy/candidate probe must establish exact
+behavior for:
+
+```text
+uniform scalar and batched affine map
+host_native flag
+Beta(1,1) -> uniform normalization
+truncated normal
+truncated lognormal
+Beta(1,b), including truncated bounds
+prefer_jit flag for non-uniform spaces
+ordered_le
+simplex
+conditional_upper, including u_j=0 edge
+ball3
+multiple sequential joint constraints
+batched result == per-row result
+```
+
+The parity probe records dtype/shape/raw array bytes for deterministic fixtures,
+not rounded decimal summaries. All historical Phase-6 tests and all preserved
+Phase-5 parity gates must remain green. No tolerance widening is permitted.
