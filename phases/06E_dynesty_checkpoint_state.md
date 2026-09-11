@@ -7,11 +7,11 @@ legacy repository: ignaciomagana/darksirens
 legacy SHA:        c042527238bd71421b792936bc48c3b815b90d6d
 core repository:   ignaciomagana/darksirens-core
 phase-6 base:      86e0c88a51482d17fac70f111057d277df9387fd
+6D accepted:       5edc76c6c055e47a7e041d7f7477e347837f7554
 working branch:    rebuild/phase6-inference-io
 ```
 
-Legacy remains read-only. Production implementation must not begin until the
-preceding Phase 6D exact-head acceptance gate is green.
+Legacy remains read-only.
 
 ## Scope
 
@@ -27,7 +27,9 @@ restore_dynesty_sampler
 rebind_dynesty_callables
 ```
 
-The already accepted 6B planning contract remains unchanged.
+Candidate ownership is deliberately split into
+`darksirens.inference.dynesty_checkpoint` so the accepted 6B planning module
+remains backend-independent.
 
 ## Why this is separate
 
@@ -60,22 +62,15 @@ running.
 Restoration in `finally` is load-bearing: a failed checkpoint write must not
 leave the live sampler detached.
 
-`install_dynesty_checkpointing(sampler)`:
+`install_dynesty_checkpointing(sampler)` installs a bound instance method that
+routes through `save_dynesty_checkpoint` and returns the same sampler.
 
-- installs an instance method named `save` with `types.MethodType`;
-- that method routes to `save_dynesty_checkpoint(self, fname)`;
-- returns the same sampler object.
+`restore_dynesty_sampler(path, loglike, prior_transform)` lazily restores through
+`dynesty.NestedSampler.restore(path)`, rebinds the caller-supplied live
+functions, and returns the restored sampler.
 
-`restore_dynesty_sampler(path, loglike, prior_transform)`:
-
-- lazily imports `dynesty.NestedSampler`;
-- restores sampler state through `NestedSampler.restore(path)`;
-- calls `rebind_dynesty_callables` with the caller-supplied live functions;
-- returns the restored sampler.
-
-`rebind_dynesty_callables` writes the live likelihood back to
-`sampler.loglikelihood.loglikelihood`, writes the live prior transform to
-`sampler.prior_transform`, and returns the same sampler.
+`rebind_dynesty_callables` replaces both callable slots and returns the same
+sampler.
 
 ## Explicit non-scope
 
@@ -95,35 +90,54 @@ NumPyro runtime
 CLI registration
 ```
 
-A later sampler-adapter subphase will compose this primitive with the accepted
-6B plan and 6D prior transform.
-
 ## Dependency boundary
 
-`checkpointing.py` must remain importable with no dynesty installed. Dynesty is
-imported only inside the save/restore calls. The module must not acquire JAX,
-NumPyro, TinyNS, CLI, survey, LSS, lensing, sky, or HEALPix imports.
+The dedicated adapter is importable with no dynesty installed. Dynesty is
+imported only inside save/restore operations. It does not import JAX, NumPyro,
+TinyNS, CLI, surveys, LSS, lensing, sky, or HEALPix.
 
 ## Acceptance
 
-Focused tests and a separate-process legacy/candidate probe should use a minimal
-fake dynesty module/sampler so the primitive itself is isolated from dynesty
-version/runtime behavior. They must establish exact behavior for:
+Accepted at exact core head:
 
 ```text
-placeholder defensive error text
-save sees both callable slots detached
-instance save override is absent during serialization
-successful save restores all live state
-failed save still restores all live state
-no original instance save override remains absent afterward
-install hook is a bound method and returns same sampler
-installed hook routes through state-only save
-rebind returns same sampler and replaces both callables
-restore calls NestedSampler.restore(path), then rebinds supplied functions
-module import does not load dynesty or other sampler/plugin/runtime packages
+fe845dcc87787d19c69bf30a89f211d9de68be03
 ```
 
-The parity probe compares deterministic structural behavior and frozen exception
-messages exactly. No scientific/numerical tolerance is involved. All accepted
-6A–6D gates and preserved Phase-5 parity must remain green.
+Workflow:
+
+```text
+run:    34550891118
+job:    103113378025
+result: SUCCESS
+```
+
+Results:
+
+```text
+6E focused tests:                 8 passed
+full reconstructed suite:        333 passed, 1 regeneration-only skip
+portable dependency audit:       PASS
+6A separate-process parity:       exact
+6B separate-process parity:       exact
+6C1 separate-process parity:      exact
+6D prior-transform parity:        bit-exact
+6E checkpoint-state parity:       exact structural/error behavior
+preserved Phase-5 parity:         exact, max_abs=max_rel=0
+comparison:                       rtol=1e-12, atol=0
+```
+
+The 6E probe used a minimal fake dynesty module on both legacy and candidate
+sides. This isolates the actual migration contract: both live callable slots are
+detached during serialization, instance save overrides are absent from the
+pickle, state is restored on success and failure, the installed bound hook uses
+the same protocol, and restored samplers are rebound identically.
+
+No dynesty runtime policy or nested-sampling result behavior was accepted here.
+
+## Next
+
+Proceed to Phase 6F: the dynesty prior-transform dispatch wrapper consuming the
+accepted 6D `host_native`/`prefer_jit` contract. Keep full sampler construction,
+checkpoint-plan composition, preflight, RNG policy, diagnostics, TinyNS and
+NumPyro outside that slice.
