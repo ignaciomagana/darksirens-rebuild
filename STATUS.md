@@ -14,7 +14,7 @@ Legacy is read-only throughout reconstruction.
 
 ```text
 PHASE 6 — CORE INFERENCE / CHECKPOINTING / IO
-status:         6A–6O ACCEPTED; 6P DYNESTY PERIODIC DIAGNOSTICS NEXT
+status:         6A–6P ACCEPTED; 6Q NUMPYRO STATIC CONTRACT NEXT
 core repo:      ignaciomagana/darksirens-core
 phase-6 base:   86e0c88a51482d17fac70f111057d277df9387fd
 working branch: rebuild/phase6-inference-io
@@ -33,6 +33,7 @@ accepted 6L:    39d9ab8aef7b0b4e0847ce4e9894a6a2a8985087
 accepted 6M:    cb74900cff9be07049243548d72eef5e5e77bfaf
 accepted 6N:    39d4e36a8d5d3aa347761a9134e0c7c835cdb565
 accepted 6O:    28c5f06ad0cc40d8fdbb587bcaa3e98dd89089b4
+accepted 6P:    73115e1d403e1c6eefa646c7e68867d6831dc7df
 ```
 
 Phase 6 reconstructs only portable inference infrastructure. The legacy
@@ -188,14 +189,29 @@ runtime guards:  34571460969 / 103174269973 SUCCESS
 
 Lazy Dynesty execution, accepted 6F transform dispatch, accepted 6B/6E
 checkpoint/resume state, deterministic RNG contract, robust weighted resampling,
-accepted 6I dead points, and sampler provenance. Periodic plotting diagnostics
-were deliberately left out of 6O rather than silently changed. Record:
+accepted 6I dead points, and sampler provenance. Record:
 `phases/06O_dynesty_execution_adapter.md`.
 
-The accepted 6O historical gate re-ran the full reconstructed suite, exact
+### 6P — Dynesty periodic diagnostics
+
+```text
+accepted head:    73115e1d403e1c6eefa646c7e68867d6831dc7df
+dedicated gate:  34578815115 / 103197379751 SUCCESS
+historical gate: 34578815027 / 103197379324 SUCCESS
+runtime guards:  34578815086 / 103197379648 SUCCESS
+6O rerun:        34578815084 / 103197379721 SUCCESS
+```
+
+Optional 10-minute diagnostic plotting is isolated behind lazy plotting imports.
+Concurrent live-result reads and plotting failures are contained, filenames and
+stdout preserve frozen behavior, and daemon shutdown is guaranteed in `finally`
+without changing 6O sampling semantics. Record:
+`phases/06P_dynesty_periodic_diagnostics.md`.
+
+The accepted 6P historical gate re-ran the full reconstructed suite, exact
 6A–6F parity, Phase-5 legacy and reconstructed fixtures, and preserved Phase-5
-scientific parity. Runtime guards and all dedicated 6I–6N gates also reran green
-at the exact 6O head.
+scientific parity. Runtime guards and the dedicated 6O gate also reran green on
+the exact accepted 6P head.
 
 ## Frozen architecture direction
 
@@ -219,10 +235,10 @@ The reconstructed source tree contains no `universe_model` dispatcher.
 
 None opened. No scientific behavior change is authorized during reconstruction.
 
-## Current action — Phase 6P
+## Current action — Phase 6Q
 
-Isolate the frozen Dynesty periodic diagnostics machinery as an optional helper:
-consistent concurrent `sampler.results` reads, runplot/traceplot writing,
-10-minute daemon scheduling, exception containment, and clean shutdown. Wire it
-into accepted 6O without changing sampler initialization, RNG, checkpoint,
-`run_nested`, resampling, evidence, or result semantics.
+Reconstruct only the static NumPyro/NUTS contract: finite ordered bounds,
+NumPyro-compatible Beta bounds, joint-constraint classification and exact
+warnings, midpoint initial-value seed, and NUTS option resolution/validation.
+Keep initialization search/gradient preflight and actual NumPyro model/NUTS
+execution for later slices.
