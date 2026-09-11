@@ -1,0 +1,28 @@
+name: examples-static
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'examples/**'
+      - '.github/workflows/examples-static.yml'
+  pull_request:
+    paths:
+      - 'examples/**'
+      - '.github/workflows/examples-static.yml'
+
+jobs:
+  pycompile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile validation examples
+        run: |
+          python -m py_compile \
+            examples/_h100_common.py \
+            examples/generate_mock_dark_siren_closure.py \
+            examples/spectral_sirens_gwcat_h100.py \
+            examples/dark_sirens_gwcat_h100.py
