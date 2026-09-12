@@ -90,7 +90,7 @@ def _build_tracer(label: str, *, variant: int):
     depth = build_field_depth_inputs(
         jnp.asarray(z), jnp.asarray(dz), jnp.asarray(w), jnp.asarray(n)
     )
-    apix = np.pi  # four equal pixels span 4*pi in this toy
+    apix = np.pi
     empty = np.setdiff1d(np.arange(n_pix), np.asarray(occ))
     cat = EMCatalog(
         apix=apix,
@@ -319,13 +319,15 @@ def main(argv=None) -> int:
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args(argv)
 
+    from darksirens.redshift import zgrid
+
     amplitudes = np.asarray([-0.065, -0.020, 0.035, 0.070])
     A = _build_tracer("A", variant=0)
     B = _build_tracer("B", variant=1)
     ga, qa = _global_probe(*A, amplitudes)
     gb, qb = _global_probe(*B, amplitudes)
 
-    center = min(200, qa.shape[-1] - 1)
+    center = int(np.argmin(np.abs(np.asarray(zgrid, dtype=float) - 0.19)))
     a_series = qa[:, 0, center]
     b_series = qb[:, 0, center]
     corr = float(np.corrcoef(a_series, b_series)[0, 1])
@@ -335,6 +337,8 @@ def main(argv=None) -> int:
         "schema": "darksirens-lss-l7-field-global-reference-1",
         "legacy_sha": LEGACY_SHA,
         "amplitudes": _f64(amplitudes),
+        "shared_member_node_index": center,
+        "shared_member_node_z": float(np.asarray(zgrid)[center]),
         "tracer_A": ga,
         "tracer_B": gb,
         "shared_member_axis": {
