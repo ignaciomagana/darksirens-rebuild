@@ -39,20 +39,21 @@ def _one_field():
         poisson_lognormal_gp3d_map,
     )
 
-    M_sph, M_z = 8, 4
-    Zn, Zz = lowrank_inducing_nodes(M_sph, M_z, z_node_hi=2.0)
+    # This is the legacy test_lss_completion_gp3d angular-borrowing fixture.
+    M_sph, M_z = 32, 6
+    Zn, Zz = lowrank_inducing_nodes(M_sph, M_z, z_node_hi=3.0)
     Zn = np.asarray(Zn, dtype=float)
     Zz = np.asarray(Zz, dtype=float)
 
     A = np.array([0.0, 0.0, 1.0])
-    th = np.deg2rad(18.0)
+    th = np.deg2rad(15.0)
     B = np.array([np.sin(th), 0.0, np.cos(th)])
     C = np.array([0.0, 0.0, -1.0])
-    z_s = np.linspace(0.10, 1.40, 7)
+    z_s = np.linspace(0.10, 1.50, 6)
     X_n = np.repeat(A[None, :], z_s.size, axis=0)
     X_z = np.log1p(z_s)
 
-    amp, ls_sph, ls_z, bias = 0.9, 0.65, 0.55, 1.2
+    amp, ls_sph, ls_z, bias = 1.0, 0.6, 0.6, 1.0
     Phi, L = build_lowrank_operator(
         Zn, Zz, X_n, X_z,
         amp=amp, ls_sph=ls_sph, ls_z=ls_z,
@@ -60,9 +61,9 @@ def _one_field():
     Phi = np.asarray(Phi, dtype=float)
     L = np.asarray(L, dtype=float)
 
-    base = np.full(z_s.size, 12.0)
+    base = np.full(z_s.size, 10.0)
     N = base.copy()
-    N[3] = 70.0
+    N[3] = 80.0
     mp = poisson_lognormal_gp3d_map(N, base, Phi, bias=bias)
     assert mp["diagnostics"]["converged"]
 
@@ -85,7 +86,6 @@ def _one_field():
         L=L, pix_chunk=2,
     ), dtype=float)
 
-    # Homogeneous posterior mean: xi=0, H=I => exact Q=1 to numerical precision.
     homogeneous = np.asarray(eval_logq_gp3d(
         np.zeros(Zn.shape[0]), Zn, Zz,
         amp=amp, ls_sph=ls_sph, ls_z=ls_z,
@@ -95,7 +95,8 @@ def _one_field():
 
     j = 3
     assert det[0, j] > det[1, j] > det[2, j]
-    assert det[1, j] > 0.01
+    assert det[1, j] > 0.05
+    assert abs(det[2, j]) < 0.05
 
     return {
         "M_sph": M_sph,
@@ -119,7 +120,7 @@ def _one_field():
         "solver_diagnostics": dict(mp["diagnostics"]),
         "det_logq": det.tolist(),
         "det_hash": _hash_array(det),
-        "member_xi": np.asarray(xi_mem).tolist(),
+        "member_xi_first2_first8": np.asarray(xi_mem)[:2, :8].tolist(),
         "member_xi_hash": _hash_array(xi_mem),
         "member_logq_first": members[0].tolist(),
         "member_logq_hash": _hash_array(members),
@@ -152,7 +153,6 @@ def _joint_field():
     C = np.array([0.0, 0.0, -1.0])
     biases = np.array([0.8, 1.35])
 
-    # Survey A has structure at A. Survey B has its own occupied direction B.
     PhiA, L = build_lowrank_operator(
         Zn, Zz, np.repeat(A[None, :], z_s.size, axis=0), Xz,
         amp=amp, ls_sph=ls_sph, ls_z=ls_z,
@@ -206,8 +206,6 @@ def _joint_field():
         L=L, pix_chunk=2,
     ))
 
-    # Same xi_m draw set must induce positively correlated member fluctuations
-    # at the same physical output voxel across survey responses.
     sA = memA[:, 0, 2]
     sB = memB[:, 0, 2]
     corr = float(np.corrcoef(sA, sB)[0, 1])
@@ -221,6 +219,7 @@ def _joint_field():
         "xi_map_first8": np.asarray(mp["xi_map"])[:8].tolist(),
         "H_diag_first8": np.diag(np.asarray(mp["H_chol"]))[:8].tolist(),
         "solver_diagnostics": dict(mp["diagnostics"]),
+        "shared_member_xi_first2_first8": np.asarray(xi_members)[:2, :8].tolist(),
         "shared_member_xi_hash": _hash_array(xi_members),
         "mapA": mapA.tolist(),
         "mapB": mapB.tolist(),
