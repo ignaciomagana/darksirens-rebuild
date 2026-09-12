@@ -1,0 +1,114 @@
+name: lss-l0b-reference
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/probe_lss_fixed_table.py'
+      - 'references/lss_l0b_legacy_reference.json'
+      - '.github/workflows/lss-l0b-reference.yml'
+
+jobs:
+  legacy-reference:
+    runs-on: ubuntu-24.04
+    env:
+      JAX_PLATFORMS: cpu
+      JAX_ENABLE_X64: 'true'
+      DARKSIRENS_ZMAX: '5.0'
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      NUMEXPR_NUM_THREADS: '1'
+    steps:
+      - name: Checkout rebuild control repo
+        uses: actions/checkout@v4
+        with:
+          path: rebuild
+
+      - name: Checkout pinned legacy oracle
+        uses: actions/checkout@v4
+        with:
+          repository: ignaciomagana/darksirens
+          ref: c042527238bd71421b792936bc48c3b815b90d6d
+          path: legacy
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Verify pinned legacy SHA
+        run: |
+          test "$(git -C legacy rev-parse HEAD)" = "c042527238bd71421b792936bc48c3b815b90d6d"
+
+      - name: Install pinned fixed-table numerical dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install \
+            'numpy==1.26.4' \
+            'scipy==1.12.0' \
+            'h5py==3.12.1' \
+            'jax==0.4.34' \
+            'jaxlib==0.4.34' \
+            'astropy>=6,<8'
+
+      - name: Run pinned legacy L0B probe twice
+        env:
+          PYTHONPATH: ${{ github.workspace }}/legacy
+        run: |
+          python rebuild/tools/probe_lss_fixed_table.py \
+            --output rebuild/lss_l0b_legacy_reference.generated1.json
+          python rebuild/tools/probe_lss_fixed_table.py \
+            --output rebuild/lss_l0b_legacy_reference.generated2.json
+
+      - name: Assert deterministic fixed-table structure
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          one = json.loads(Path('rebuild/lss_l0b_legacy_reference.generated1.json').read_text())
+          two = json.loads(Path('rebuild/lss_l0b_legacy_reference.generated2.json').read_text())
+          assert one == two, 'pinned legacy L0B probe is not deterministic across processes'
+          assert one['schema'] == 'darksirens-lss-l0b-reference-1'
+          assert one['legacy_sha'] == 'c042527238bd71421b792936bc48c3b815b90d6d'
+          r = one['runtime']
+          assert r['compact_global_bit_identical'] is True
+          assert r['off_footprint_bit_identical_to_unity'] is True
+          assert r['support_above_max_abs_ratio_minus_1'] == 0.0
+          assert r['support_below_max_abs_ratio_minus_2'] < 2e-12
+          assert abs(r['clip_row0_ratio'] - 1096.6331584284585) < 1e-9
+          assert abs(r['clip_row1_ratio'] - 0.0009118819655545162) < 1e-15
+          assert r['grid_mismatch_error']['type'] == 'ValueError'
+          assert 'N_grid' in r['grid_mismatch_error']['message']
+          assert r['prior_max_abs_q_effect'] > 1e-5
+          l = one['loader']
+          assert l['indexing_enum'] == 2
+          assert l['table_hash'] == l['loaded_table_hash']
+          assert l['c_mode_mismatch_error']['type'] == 'ValueError'
+          assert 'c_mode mismatch' in l['c_mode_mismatch_error']['message']
+          assert l['shifted_zgrid_error']['type'] == 'ValueError'
+          assert 'no silent interpolation' in l['shifted_zgrid_error']['message']
+          print('L0B repeated-process deterministic structure PASS')
+          PY
+
+      - name: Compare committed golden when present
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          generated = json.loads(Path('rebuild/lss_l0b_legacy_reference.generated1.json').read_text())
+          golden_path = Path('rebuild/references/lss_l0b_legacy_reference.json')
+          if golden_path.exists():
+              golden = json.loads(golden_path.read_text())
+              assert generated == golden, 'pinned legacy L0B probe differs from committed golden'
+              print('L0B exact committed golden comparison PASS')
+          else:
+              print('L0B bootstrap run: committed golden not present yet')
+          PY
+
+      - name: Upload regenerated reference
+        uses: actions/upload-artifact@v4
+        with:
+          name: lss-l0b-legacy-reference
+          path: rebuild/lss_l0b_legacy_reference.generated1.json
+          if-no-files-found: error
