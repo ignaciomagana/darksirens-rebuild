@@ -55,18 +55,18 @@
 
 ## LSS acceptance
 
-- [ ] Q_LSS table parity
-- [ ] missing-count conservation
-- [ ] row/pixel ordering
-- [ ] ensemble/marginalization
-- [ ] single-tracer parity
-- [ ] multitracer parity
-- [ ] provenance guards
-- [ ] latent basis parity
-- [ ] latent count likelihood parity
-- [ ] latent field normalization
-- [ ] full fixed-theta core+LSS parity
-- [ ] no runtime dependency on surveys
+- [x] Q_LSS table parity
+- [x] missing-count conservation
+- [x] row/pixel ordering
+- [x] ensemble/marginalization
+- [x] single-tracer parity
+- [x] multitracer parity
+- [x] provenance guards
+- [x] latent basis parity
+- [x] latent count likelihood parity
+- [x] latent field normalization
+- [x] full fixed-theta core+LSS parity
+- [x] no runtime dependency on surveys
 
 ## Lensing acceptance
 
