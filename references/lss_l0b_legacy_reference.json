@@ -1,0 +1,86 @@
+{
+  "legacy_sha": "c042527238bd71421b792936bc48c3b815b90d6d",
+  "loader": {
+    "c_mode_mismatch_error": {
+      "message": "LSS completion c_mode mismatch: table '<TMP>/fixed_q.h5' was built against the 'aggregate' completeness base, but this run's survey uses c_mode='per_pixel'. Q is the fit residual to its completeness base, and the two bases differ by the entire observed clustering signal -- consuming a per-pixel-base table in aggregate mode double-counts the clustering, and the reverse drops it. Rebuild the table with darksirens_build_lognormal_completion --c-mode per_pixel, or run with --c_mode aggregate.",
+      "type": "ValueError"
+    },
+    "indexing_enum": 2,
+    "loaded_table_hash": "5a7b3e4310a037419eab395b3855d08f11dc03a0ef6db64fc8c8ebff4905f57b",
+    "provenance": {
+      "f_p_aware": true,
+      "member_content_sha256": null,
+      "n_members": null,
+      "path": "<TMP>/fixed_q.h5",
+      "realization_set_id": "phase10-l0b-fixed"
+    },
+    "shifted_zgrid_error": {
+      "message": "LSS completion zgrid does not match the package zgrid (no silent interpolation).",
+      "type": "ValueError"
+    },
+    "table_hash": "5a7b3e4310a037419eab395b3855d08f11dc03a0ef6db64fc8c8ebff4905f57b"
+  },
+  "runtime": {
+    "clip_dN_miss_hash": "060dbca6b80e1fdde9231947b7d348751b8cec0ac80eb6d2054cf55c8b9e16bc",
+    "clip_row0_ratio": 1096.6331584284585,
+    "clip_row1_ratio": 0.0009118819655545162,
+    "compact_N_miss": [
+      5061691991.54231,
+      8436153322.667488
+    ],
+    "compact_dN_miss_hash": "be066242f07fd4c6314b508903c1d9a79b010075e5046a5e2b3efafe37d699a7",
+    "compact_global_bit_identical": true,
+    "global_dN_miss_hash": "be066242f07fd4c6314b508903c1d9a79b010075e5046a5e2b3efafe37d699a7",
+    "grid_mismatch_error": {
+      "message": "LSS completion table has N_grid=1001 but the package zgrid has size 1000; the offline builder must use the same redshift grid (no silent interpolation).",
+      "type": "ValueError"
+    },
+    "n_grid": 1000,
+    "off_footprint_bit_identical_to_unity": true,
+    "off_footprint_row_hash": "eebe6289294deb0c55982d63cdc9f02cd1d5dbfb2f13530c1437abc5a2a37640",
+    "off_footprint_unity_hash": "eebe6289294deb0c55982d63cdc9f02cd1d5dbfb2f13530c1437abc5a2a37640",
+    "prior_logp_q": [
+      -6.293368583194001,
+      -4.88357092152026,
+      -4.446413977412931,
+      -3.9113798761872545,
+      -3.381789866503734,
+      -2.067680206864374
+    ],
+    "prior_logp_q_hash": "853a5dc6db042b447e6f1bacf62de889947e7c0c5e88ffd4cc6e74a0e46f064e",
+    "prior_logp_unity": [
+      -6.518635201277666,
+      -5.177903957143947,
+      -4.7713614971923235,
+      -3.6833483832563054,
+      -3.206031924491942,
+      -2.1381668794456488
+    ],
+    "prior_logp_unity_hash": "6d0f7fa0562a48ed0ebf36d48dd42ab35cd7d32171291e874c8bdd0b8e2c53cd",
+    "prior_logq_table_hash": "b599db60ae92f33efb9e1457aea35e3de2d3c9050325bfdc692209e15bef5cef",
+    "prior_max_abs_q_effect": 0.32494751977939274,
+    "prior_query_pix": [
+      0,
+      0,
+      0,
+      1,
+      1,
+      1
+    ],
+    "prior_query_z": [
+      0.055,
+      0.1105,
+      0.13725,
+      0.251,
+      0.3333,
+      0.701
+    ],
+    "support_above_max_abs_ratio_minus_1": 0.0,
+    "support_below_max_abs_ratio_minus_2": 0.0,
+    "support_dN_miss_hash": "8d82a6c759c427dcc61856ebd0720c3b91241c05f67322426b8e123989a6fd45",
+    "support_logq_hash": "f7464254e8e219cb35b07edef6ea957714c63c89518c3e8f5ac6517d261280f9",
+    "unity_dN_miss_hash": "0a0fdd683518f285e7b99dea2eb9251d9d699208d3c50cbd1d551b3310fac411",
+    "zgrid_hash": "daa2790273939e0a61030562f47d381ba2d1028e222e53b2909eda857faded99"
+  },
+  "schema": "darksirens-lss-l0b-reference-1"
+}
