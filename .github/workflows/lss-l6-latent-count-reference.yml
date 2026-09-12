@@ -1,0 +1,151 @@
+name: lss-l6-latent-count-reference
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/probe_lss_latent_count.py'
+      - 'references/lss_l6_latent_count_legacy_reference.json'
+      - '.github/workflows/lss-l6-latent-count-reference.yml'
+
+jobs:
+  legacy-reference:
+    runs-on: ubuntu-24.04
+    env:
+      JAX_PLATFORMS: cpu
+      JAX_ENABLE_X64: 'true'
+      DARKSIRENS_ZMAX: '5.0'
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      NUMEXPR_NUM_THREADS: '1'
+    steps:
+      - name: Checkout rebuild control repo
+        uses: actions/checkout@v4
+        with:
+          path: rebuild
+
+      - name: Checkout pinned legacy oracle
+        uses: actions/checkout@v4
+        with:
+          repository: ignaciomagana/darksirens
+          ref: c042527238bd71421b792936bc48c3b815b90d6d
+          path: legacy
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Verify pinned legacy SHA
+        run: test "$(git -C legacy rev-parse HEAD)" = "c042527238bd71421b792936bc48c3b815b90d6d"
+
+      - name: Install pinned latent-count numerical dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install \
+            'numpy==1.26.4' \
+            'scipy==1.12.0' \
+            'h5py==3.12.1' \
+            'jax==0.4.34' \
+            'jaxlib==0.4.34' \
+            'astropy>=6,<8' \
+            'healpy==1.19.0'
+
+      - name: Run pinned legacy L6 probe twice
+        env:
+          PYTHONPATH: ${{ github.workspace }}/legacy
+        run: |
+          python rebuild/tools/probe_lss_latent_count.py --output rebuild/lss_l6_latent_count.generated1.json
+          python rebuild/tools/probe_lss_latent_count.py --output rebuild/lss_l6_latent_count.generated2.json
+
+      - name: Compare repeated processes numerically and structurally
+        run: |
+          python - <<'PY'
+          import json
+          import math
+          from pathlib import Path
+
+          a = json.loads(Path('rebuild/lss_l6_latent_count.generated1.json').read_text())
+          b = json.loads(Path('rebuild/lss_l6_latent_count.generated2.json').read_text())
+
+          def compare(x, y, path='root'):
+              if isinstance(x, dict):
+                  assert isinstance(y, dict) and set(x) == set(y), path
+                  for k in x:
+                      if k.endswith('_hash'):
+                          continue
+                      compare(x[k], y[k], path + '.' + k)
+              elif isinstance(x, list):
+                  assert isinstance(y, list) and len(x) == len(y), path
+                  for i, (u, v) in enumerate(zip(x, y)):
+                      compare(u, v, f'{path}[{i}]')
+              elif isinstance(x, bool) or x is None or isinstance(x, str):
+                  assert x == y, (path, x, y)
+              elif isinstance(x, (int, float)):
+                  if isinstance(x, int) and isinstance(y, int):
+                      assert x == y, (path, x, y)
+                  else:
+                      assert math.isclose(float(x), float(y), rel_tol=3e-10, abs_tol=3e-11), (path, x, y)
+              else:
+                  assert x == y, (path, x, y)
+
+          compare(a, b)
+          assert a['schema'] == 'darksirens-lss-l6-latent-count-reference-1'
+          assert a['legacy_sha'] == 'c042527238bd71421b792936bc48c3b815b90d6d'
+          assert a['single_count']['map_grad_inf'] < 1e-8
+          assert a['multi_count']['map_grad_inf'] < 1e-8
+          assert a['single_count']['hessian_min_eig'] >= 1.0 - 1e-10
+          assert a['single_count']['hessian_ad_max_abs'] < 1e-9
+          assert a['multi_count']['one_tracer_wrapper_bit_identical'] is True
+          assert a['latent_seam']['off_footprint_bit_zero'] is True
+          assert a['latent_seam']['out_of_support_bit_zero'] is True
+          assert a['latent_seam']['budget_max_abs_supported'] < 1e-9
+          print('L6 repeated-process numerical/structural parity PASS')
+          PY
+
+      - name: Compare committed golden when present
+        run: |
+          python - <<'PY'
+          import json
+          import math
+          from pathlib import Path
+
+          generated = json.loads(Path('rebuild/lss_l6_latent_count.generated1.json').read_text())
+          gp = Path('rebuild/references/lss_l6_latent_count_legacy_reference.json')
+          if not gp.exists():
+              print('L6 bootstrap run: committed golden not present yet')
+              raise SystemExit(0)
+          golden = json.loads(gp.read_text())
+
+          def compare(x, y, path='root'):
+              if isinstance(x, dict):
+                  assert isinstance(y, dict) and set(x) == set(y), path
+                  for k in x:
+                      if k.endswith('_hash'):
+                          continue
+                      compare(x[k], y[k], path + '.' + k)
+              elif isinstance(x, list):
+                  assert isinstance(y, list) and len(x) == len(y), path
+                  for i, (u, v) in enumerate(zip(x, y)):
+                      compare(u, v, f'{path}[{i}]')
+              elif isinstance(x, bool) or x is None or isinstance(x, str):
+                  assert x == y, (path, x, y)
+              elif isinstance(x, (int, float)):
+                  if isinstance(x, int) and isinstance(y, int):
+                      assert x == y, (path, x, y)
+                  else:
+                      assert math.isclose(float(x), float(y), rel_tol=4e-10, abs_tol=4e-11), (path, x, y)
+              else:
+                  assert x == y, (path, x, y)
+
+          compare(generated, golden)
+          print('L6 committed golden numerical/structural parity PASS')
+          PY
+
+      - name: Upload regenerated reference
+        uses: actions/upload-artifact@v4
+        with:
+          name: lss-l6-latent-count-legacy-reference
+          path: rebuild/lss_l6_latent_count.generated1.json
+          if-no-files-found: error
