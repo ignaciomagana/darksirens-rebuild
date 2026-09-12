@@ -49,7 +49,8 @@ jobs:
             'scipy==1.12.0' \
             'h5py==3.12.1' \
             'jax==0.4.34' \
-            'jaxlib==0.4.34'
+            'jaxlib==0.4.34' \
+            'astropy>=6,<8'
 
       - name: Run pinned legacy L0A probe twice
         env:
