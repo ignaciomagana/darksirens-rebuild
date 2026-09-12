@@ -1,0 +1,269 @@
+{
+  "budget_renormalization": {
+    "map_hash": "67b029dbfb716a5ff3389c2ec37c4c9cda5cc87e4b6f849cb88d69207810817d",
+    "map_monopole": [
+      0.24404704864703425,
+      0.3192499311439256,
+      0.17270783463713268,
+      0.0,
+      0.1889937459035362,
+      -0.02128661225887337,
+      0.6503554677577744,
+      -0.0007762425386339147,
+      0.05516736915145871,
+      0.47393758957522547,
+      -0.10325420613864186,
+      0.43434782985974313,
+      0.21653186732201724,
+      0.03374962524425721,
+      0.37468576663068187,
+      -0.1699637778817823
+    ],
+    "map_monopole_hash": "dcfd3e06b0088dc07cfae378c0c8e2c6554aa84698413e296bd32ba7ffb2ef06",
+    "map_weighted_mean_q": [
+      1.0,
+      0.9999999999999998,
+      1.0,
+      1.0,
+      1.0,
+      1.0000000000000002,
+      1.0,
+      1.0,
+      1.0000000000000002,
+      1.0,
+      0.9999999999999998,
+      1.0,
+      1.0000000000000002,
+      0.9999999999999998,
+      1.0,
+      0.9999999999999999
+    ],
+    "member_hash": "4d58161ae4c27869403487ab7aea4cf82a73c48c3aba579ebcb3f0657d4f6f0d",
+    "member_monopole_first": [
+      -0.021169432694419614,
+      -0.255320298579542,
+      0.07421195368674105,
+      0.0,
+      -0.24008028970195738,
+      0.029452221397407368,
+      0.7449524422190938,
+      -0.15476886995391598,
+      0.05766870128889059,
+      0.4378111754808349,
+      0.001160093299441184,
+      0.15464662732154705,
+      0.1373145265953432,
+      -0.38467706770077753,
+      -0.23496974951259275,
+      -0.012675874089264494
+    ],
+    "member_monopole_hash": "bd46979aeb9942cb6e351043337ba57e0f3748c6a09179380b9dcb27b4b0b5c9",
+    "member_shape": [
+      4,
+      5,
+      16
+    ],
+    "member_weighted_mean_q": [
+      [
+        1.0,
+        0.9999999999999999,
+        0.9999999999999999,
+        1.0,
+        1.0000000000000002,
+        1.0000000000000002,
+        1.0000000000000002,
+        0.9999999999999999,
+        1.0,
+        1.0000000000000002,
+        1.0,
+        1.0000000000000002,
+        1.0,
+        0.9999999999999998,
+        1.0,
+        1.0
+      ],
+      [
+        1.0,
+        1.0,
+        1.0000000000000002,
+        1.0,
+        1.0,
+        1.0000000000000002,
+        1.0,
+        0.9999999999999998,
+        1.0,
+        1.0,
+        1.0,
+        0.9999999999999999,
+        0.9999999999999999,
+        1.0,
+        1.0,
+        1.0
+      ],
+      [
+        1.0,
+        1.0000000000000002,
+        1.0000000000000002,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0000000000000002,
+        1.0,
+        1.0000000000000002,
+        1.0,
+        0.9999999999999999,
+        0.9999999999999999,
+        1.0000000000000004,
+        1.0,
+        1.0
+      ],
+      [
+        1.0000000000000002,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0000000000000002,
+        1.0,
+        0.9999999999999997,
+        1.0,
+        0.9999999999999999,
+        1.0000000000000002,
+        1.0000000000000002,
+        0.9999999999999996,
+        0.9999999999999998,
+        1.0,
+        1.0
+      ]
+    ],
+    "shape": [
+      5,
+      16
+    ],
+    "zero_budget_bins": [
+      3
+    ],
+    "zero_budget_map_column_unchanged": true,
+    "zero_budget_member_column_unchanged": true
+  },
+  "fail_closed": {
+    "mean_one_without_monopole_error": {
+      "message": "budget_renormalized=True requires budget_monopole_logq: the removed per-z monopole curve is the provenance record of what the renormalization took out of Q; a table stamped mean-one without it cannot be audited. Pass the curve returned by renormalize_q_mean_one.",
+      "type": "ValueError"
+    },
+    "poisoned_file_absent": true,
+    "poisoned_table_error": {
+      "message": "refusing to save logq_map with 1 non-finite entries: a NaN/inf logQ cell poisons the missing-density term for every event in its pixel. Fix the build (raise --maxiter, check the catalog) instead of persisting the artifact.",
+      "type": "ValueError"
+    },
+    "unauditable_file_absent": true
+  },
+  "hdf5_contract": {
+    "budget_monopole_hash": "dcfd3e06b0088dc07cfae378c0c8e2c6554aa84698413e296bd32ba7ffb2ef06",
+    "budget_renormalized": true,
+    "c_mode": "aggregate",
+    "completion_kind": "laplace_members",
+    "diagnostics": {
+      "allow_unconverged": false,
+      "converged": true,
+      "n_converged": 5,
+      "n_rows": 5,
+      "probe": "phase10-l0a"
+    },
+    "expected_member_content_sha256": "7711daf227dd7894f5751dd4e10edfa3f1c64966415600de9b6daa58e3769395",
+    "f_p_aware": true,
+    "indexing": "global",
+    "logq_map_hash": "67b029dbfb716a5ff3389c2ec37c4c9cda5cc87e4b6f849cb88d69207810817d",
+    "logq_members_hash": "4d58161ae4c27869403487ab7aea4cf82a73c48c3aba579ebcb3f0657d4f6f0d",
+    "member_content_sha256": "7711daf227dd7894f5751dd4e10edfa3f1c64966415600de9b6daa58e3769395",
+    "model": "poisson_lognormal",
+    "n_members": 4,
+    "q_support_depth": 0.55,
+    "realization_set_id": "phase10-l0a-fixed-realization-set",
+    "zgrid_hash": "593ed2338bcdcf3fe0ce90697ab7f0ca0ff08b7133f534e76e789c67f87511da"
+  },
+  "laplace_members": {
+    "first_member_first8": [
+      -0.17047863942166652,
+      -0.18028240157622957,
+      -0.17717578459051508,
+      -0.1617026643412114,
+      -0.13512627330546179,
+      -0.10118091406397342,
+      -0.06474104673237853,
+      -0.0318289006396182
+    ],
+    "logq_mean_hash": "de0528941d08547ea6825281e1febac4d1c1a4dfd9c88cefaf72c39391b8ec64",
+    "logq_members_hash": "640d5d9f23b2785a1d49c19f2b015a8f11ccd3333fbb44da2e62c98a4be2095a",
+    "mean_shape": [
+      1,
+      64
+    ],
+    "same_seed_bit_identical": true,
+    "shape": [
+      4,
+      1,
+      64
+    ]
+  },
+  "legacy_sha": "c042527238bd71421b792936bc48c3b815b90d6d",
+  "radial_map": {
+    "diagnostics": {
+      "converged": true,
+      "maxiter": 300,
+      "n_converged": 1,
+      "n_rows": 1
+    },
+    "high_count_max_abs_q_minus_one": 0.014279061945711047,
+    "lambda_first8": [
+      1.738452187766063,
+      2.0531035998670197,
+      2.4814987438371747,
+      3.0576169245864815,
+      3.82287914616312,
+      4.826841169949377,
+      6.127615935533018,
+      7.791889274523248
+    ],
+    "lambda_hash": "d7e2127c2bbf45a1ea7d34fb6ca3893be7aafbc14de540edd4f0f19e88360a64",
+    "q_hash": "cf2c39f64839a17997111ce10e15bcfdf3207d56b07bc68702a743ae61a65b8b",
+    "q_max": 1.0046245661568396,
+    "q_min": 0.985720938054289,
+    "q_shape": [
+      1,
+      64
+    ],
+    "s_hash": "54611a30ff5223b7b36b0e35172fa8c9c3c34e0a4804fb3dfd96f16a92850cbd",
+    "s_map_first8": [
+      0.00021835525439618063,
+      0.00024731182291349386,
+      0.00030129252880937437,
+      0.0003760665437801624,
+      0.00047143224186378197,
+      0.000592976474030909,
+      0.0007503228241733021,
+      0.0009538232931587965
+    ]
+  },
+  "schema": "darksirens-lss-l0a-reference-1",
+  "spectrum": {
+    "first8": [
+      1.1279827233848,
+      0.999952268975078,
+      0.6966421318924676,
+      0.3814115562751195,
+      0.16410869870454678,
+      0.05549105771181499,
+      0.014745789844646248,
+      0.0030794046131049713
+    ],
+    "hash": "81f2d611b1e38885a3aafef59a2ba56fd7fbae67a9ddd6963975e3f0b54ff6d1",
+    "max": 1.1279827233848,
+    "mean": 0.0900000068191053,
+    "min": 1.1279827233848001e-08,
+    "shape": [
+      64
+    ]
+  }
+}
