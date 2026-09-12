@@ -1,0 +1,146 @@
+name: lss-l0c-reference
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/probe_lss_ensemble.py'
+      - 'references/lss_l0c_legacy_reference.json'
+      - '.github/workflows/lss-l0c-reference.yml'
+
+jobs:
+  legacy-reference:
+    runs-on: ubuntu-24.04
+    env:
+      JAX_PLATFORMS: cpu
+      JAX_ENABLE_X64: 'true'
+      DARKSIRENS_ZMAX: '5.0'
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      NUMEXPR_NUM_THREADS: '1'
+    steps:
+      - name: Checkout rebuild control repo
+        uses: actions/checkout@v4
+        with:
+          path: rebuild
+
+      - name: Checkout pinned legacy oracle
+        uses: actions/checkout@v4
+        with:
+          repository: ignaciomagana/darksirens
+          ref: c042527238bd71421b792936bc48c3b815b90d6d
+          path: legacy
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Verify pinned legacy SHA
+        run: |
+          test "$(git -C legacy rev-parse HEAD)" = "c042527238bd71421b792936bc48c3b815b90d6d"
+
+      - name: Install pinned ensemble numerical dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install \
+            'numpy==1.26.4' \
+            'scipy==1.12.0' \
+            'h5py==3.12.1' \
+            'jax==0.4.34' \
+            'jaxlib==0.4.34' \
+            'astropy>=6,<8' \
+            'healpy==1.19.0'
+
+      - name: Run pinned legacy L0C probe twice
+        env:
+          PYTHONPATH: ${{ github.workspace }}/legacy
+        run: |
+          python rebuild/tools/probe_lss_ensemble.py \
+            --output rebuild/lss_l0c_legacy_reference.generated1.json
+          python rebuild/tools/probe_lss_ensemble.py \
+            --output rebuild/lss_l0c_legacy_reference.generated2.json
+
+      - name: Normalize ephemeral temporary paths
+        run: |
+          python - <<'PY'
+          import json
+          import re
+          from pathlib import Path
+
+          pattern = re.compile(r"/tmp/darksirens-lss-l0c-[^/'\" ]+")
+          def clean(value):
+              if isinstance(value, str):
+                  return pattern.sub('<TMP>', value)
+              if isinstance(value, list):
+                  return [clean(v) for v in value]
+              if isinstance(value, dict):
+                  return {k: clean(v) for k, v in value.items()}
+              return value
+
+          for name in (
+              'rebuild/lss_l0c_legacy_reference.generated1.json',
+              'rebuild/lss_l0c_legacy_reference.generated2.json',
+          ):
+              path = Path(name)
+              data = clean(json.loads(path.read_text()))
+              path.write_text(json.dumps(data, indent=2, sort_keys=True) + '\n')
+          print('ephemeral path normalization PASS')
+          PY
+
+      - name: Assert repeated-process ensemble structure
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          one = json.loads(Path('rebuild/lss_l0c_legacy_reference.generated1.json').read_text())
+          two = json.loads(Path('rebuild/lss_l0c_legacy_reference.generated2.json').read_text())
+          assert one == two, 'pinned legacy L0C probe is not deterministic after path normalization'
+          assert one['schema'] == 'darksirens-lss-l0c-reference-1'
+          assert one['legacy_sha'] == 'c042527238bd71421b792936bc48c3b815b90d6d'
+          r = one['runtime']
+          assert r['n_members'] == 4
+          assert r['fallback_vs_manual_max_abs'] < 1e-12
+          assert r['fallback_vs_exp_mean_logq_max_abs'] > 1e-3
+          assert r['depth_members_identical_above'] is True
+          assert abs(r['factored_minus_expected']) < 1e-6
+          assert abs(r['reference_minus_expected']) < 1e-6
+          assert abs(r['scalar_fallback_delta']) < 1e-6
+          assert abs(r['single_member_delta']) < 1e-6
+          assert r['asymmetric_selection_error']['type'] == 'ValueError'
+          assert r['missing_members_error']['type'] == 'ValueError'
+          p = one['provenance']
+          assert p['shared_guard_passed'] is True
+          assert p['shared_content_hashes_differ'] is True
+          assert p['shared_A_member_sha256'] != p['shared_B_member_sha256']
+          assert p['shared_n_members'] == 3
+          assert p['distinct_id_error']['type'] == 'ValueError'
+          assert p['legacy_error']['type'] == 'ValueError'
+          assert p['unequal_m_error']['type'] == 'ValueError'
+          assert p['allow_unverified_warning_contains_independent_fields'] is True
+          assert p['deterministic_skips_shared_member_guard'] is True
+          print('L0C repeated-process deterministic structure PASS')
+          PY
+
+      - name: Compare committed golden when present
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          generated = json.loads(Path('rebuild/lss_l0c_legacy_reference.generated1.json').read_text())
+          golden_path = Path('rebuild/references/lss_l0c_legacy_reference.json')
+          if golden_path.exists():
+              golden = json.loads(golden_path.read_text())
+              assert generated == golden, 'pinned legacy L0C probe differs from committed golden'
+              print('L0C exact committed golden comparison PASS')
+          else:
+              print('L0C bootstrap run: committed golden not present yet')
+          PY
+
+      - name: Upload regenerated reference
+        uses: actions/upload-artifact@v4
+        with:
+          name: lss-l0c-legacy-reference
+          path: rebuild/lss_l0c_legacy_reference.generated1.json
+          if-no-files-found: error
