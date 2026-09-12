@@ -68,7 +68,6 @@ jobs:
           import json
           import re
           from pathlib import Path
-
           pattern = re.compile(r"/tmp/darksirens-lss-l0c-[^/'\" ]+")
           def clean(value):
               if isinstance(value, str):
@@ -78,7 +77,6 @@ jobs:
               if isinstance(value, dict):
                   return {k: clean(v) for k, v in value.items()}
               return value
-
           for name in (
               'rebuild/lss_l0c_legacy_reference.generated1.json',
               'rebuild/lss_l0c_legacy_reference.generated2.json',
@@ -103,7 +101,9 @@ jobs:
           assert r['n_members'] == 4
           assert r['fallback_vs_manual_max_abs'] < 1e-12
           assert r['fallback_vs_exp_mean_logq_max_abs'] > 1e-3
-          assert r['depth_members_identical_above'] is True
+          assert r['depth_edge_member_spread'] > 1e-8
+          assert r['depth_far_member_spread'] == 0.0
+          assert r['depth_far_members_identical'] is True
           assert abs(r['factored_minus_expected']) < 1e-6
           assert abs(r['reference_minus_expected']) < 1e-6
           assert abs(r['scalar_fallback_delta']) < 1e-6
