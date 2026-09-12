@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Pinned-legacy Phase-10 L0C probe for loaded Q-ensemble semantics.
 
-Oracle only.  It freezes the loaded-member contract before L3 production code:
+Oracle only. It freezes the loaded-member contract before L3 production code:
 mean-Q deterministic fallback, per-member priors/normalizers, full-likelihood
 logmeanexp marginalization, depth-edge interpolation, and K>=2 shared-member
 provenance.
@@ -136,10 +136,11 @@ def _runtime_fixture():
     assert member_lp.shape == (m, query_z.size)
     assert np.all(np.isfinite(member_lp))
 
-    # Depth relaxation is applied independently at the two grid nodes BEFORE
-    # interpolation.  Therefore a query just above a non-grid-aligned z_depth
-    # may still straddle one below-depth node and retain member dependence;
-    # farther above, once both bracket nodes are above depth, Q_m == 1 exactly.
+    # Depth relaxation is nodewise before interpolation. A query just above a
+    # non-grid-aligned depth may therefore straddle one below-depth Q node. Once
+    # both nodes are above depth, the LOCAL missing numerator is member-independent
+    # (Q=1), but the normalized prior still differs through each member's global
+    # row normalizer Z_m, which integrated the member-dependent lower-z budget.
     survey_depth = survey._replace(z_depth=0.25)
     state_depth = prepare_redshift_prior_state(
         "dark_sirens", cosmo, survey_depth, cat_ens
@@ -152,12 +153,15 @@ def _runtime_fixture():
     ))
     depth_edge_spread = float(np.ptp(depth_member_lp[:, 1]))
     depth_far_spread = float(np.ptp(depth_member_lp[:, 2]))
-    assert depth_edge_spread > 1e-8
-    assert depth_far_spread == 0.0
-    np.testing.assert_array_equal(
-        depth_member_lp[:, 2],
-        np.full(m, depth_member_lp[0, 2]),
+    depth_logz = np.asarray(state_depth.log_Z_members)[:, 1]
+    far_relative = depth_member_lp[:, 2] - depth_member_lp[0, 2]
+    normalizer_relative = -(depth_logz - depth_logz[0])
+    depth_far_normalizer_max_abs = float(
+        np.max(np.abs(far_relative - normalizer_relative))
     )
+    assert depth_edge_spread > 1e-8
+    assert depth_far_spread > 1e-8
+    assert depth_far_normalizer_max_abs < 1e-12
 
     def gw(n_events, n_samp, seed):
         rng = np.random.default_rng(seed)
@@ -242,9 +246,10 @@ def _runtime_fixture():
         "bayes_prior_logmeanexp": bayes_prior_lp.tolist(),
         "depth_query_z": [0.249, 0.251, 0.40],
         "depth_member_logp": depth_member_lp.tolist(),
+        "depth_log_Z_members_row1": depth_logz.tolist(),
         "depth_edge_member_spread": depth_edge_spread,
         "depth_far_member_spread": depth_far_spread,
-        "depth_far_members_identical": True,
+        "depth_far_normalizer_relation_max_abs": depth_far_normalizer_max_abs,
         "per_member_log_likelihood": per_member_ll.tolist(),
         "logmeanexp_expected": expected_ll,
         "marginalized_factored": ll_factored,
@@ -346,9 +351,6 @@ def _provenance_probe(tmp: Path):
     qb = save_q(tmp / "qb.h5", seed=200, rid=shared)
     la, lb = load_lss_completion_hdf5(qa), load_lss_completion_hdf5(qb)
     assert la["realization_set_id"] == lb["realization_set_id"] == shared
-    # Survey-specific Q bytes legitimately differ even when member m is the
-    # same underlying shared LSS realization.  The mature cross-catalog guard
-    # therefore checks realization_set_id + M, not member-content hash equality.
     assert la["member_content_sha256"] != lb["member_content_sha256"]
     assert la["n_members"] == lb["n_members"] == 3
     assert len(load_multitracer_catalog_bundles(opts([qa, qb]), gw_inputs())) == 2
