@@ -61,6 +61,34 @@ jobs:
           python rebuild/tools/probe_lss_fixed_table.py \
             --output rebuild/lss_l0b_legacy_reference.generated2.json
 
+      - name: Normalize ephemeral temporary paths
+        run: |
+          python - <<'PY'
+          import json
+          import re
+          from pathlib import Path
+
+          pattern = re.compile(r"/tmp/darksirens-lss-l0b-[^/'\" ]+")
+
+          def clean(value):
+              if isinstance(value, str):
+                  return pattern.sub('<TMP>', value)
+              if isinstance(value, list):
+                  return [clean(v) for v in value]
+              if isinstance(value, dict):
+                  return {k: clean(v) for k, v in value.items()}
+              return value
+
+          for name in (
+              'rebuild/lss_l0b_legacy_reference.generated1.json',
+              'rebuild/lss_l0b_legacy_reference.generated2.json',
+          ):
+              path = Path(name)
+              data = clean(json.loads(path.read_text()))
+              path.write_text(json.dumps(data, indent=2, sort_keys=True) + '\n')
+          print('ephemeral path normalization PASS')
+          PY
+
       - name: Assert deterministic fixed-table structure
         run: |
           python - <<'PY'
@@ -68,7 +96,7 @@ jobs:
           from pathlib import Path
           one = json.loads(Path('rebuild/lss_l0b_legacy_reference.generated1.json').read_text())
           two = json.loads(Path('rebuild/lss_l0b_legacy_reference.generated2.json').read_text())
-          assert one == two, 'pinned legacy L0B probe is not deterministic across processes'
+          assert one == two, 'pinned legacy L0B probe is not deterministic across processes after path normalization'
           assert one['schema'] == 'darksirens-lss-l0b-reference-1'
           assert one['legacy_sha'] == 'c042527238bd71421b792936bc48c3b815b90d6d'
           r = one['runtime']
@@ -88,6 +116,7 @@ jobs:
           assert 'c_mode mismatch' in l['c_mode_mismatch_error']['message']
           assert l['shifted_zgrid_error']['type'] == 'ValueError'
           assert 'no silent interpolation' in l['shifted_zgrid_error']['message']
+          assert l['provenance']['path'].startswith('<TMP>/')
           print('L0B repeated-process deterministic structure PASS')
           PY
 
