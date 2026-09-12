@@ -172,12 +172,19 @@ def _latent_seam_probe(lq):
     import jax.numpy as jnp
 
     # One member, three fitted rows, one explicit zero pad row for off-footprint.
-    row_fit = np.array([
+    # The production seam stores row_fac in f32.  The moment tables MUST be built
+    # from those same stored values, promoted back to f64 for the reductions;
+    # otherwise rho normalizes a slightly different field than the seam consumes.
+    row_fit_f64 = np.array([
         [0.20, -0.10],
         [0.10, 0.30],
         [-0.20, 0.05],
     ], dtype=float)
-    row_fac = np.concatenate([row_fit, np.zeros((1, 2))], axis=0)[None, :, :]
+    row_fac = np.concatenate(
+        [row_fit_f64.astype(np.float32), np.zeros((1, 2), dtype=np.float32)],
+        axis=0,
+    )[None, :, :]
+    row_fit_stored = row_fac[0, :3].astype(np.float64)
     phi_z = np.array([
         [1.00, 0.00],
         [0.80, 0.20],
@@ -188,17 +195,28 @@ def _latent_seam_probe(lq):
     below = np.array([True, True, True, True, False])
     fp = np.array([0.80, 0.60, 0.40], dtype=float)
     P_F, F_F = 3.0, float(fp.sum())
-    b_nodes = np.array([0.0, 0.2928932188134524, 1.0, 1.7071067811865475, 2.0])
-    field = row_fit @ phi_z.T
-    A = np.empty((1, b_nodes.size, phi_z.shape[0]))
-    B = np.empty_like(A)
-    for j, b in enumerate(b_nodes):
-        e = np.exp(b * field)
-        A[0, j] = e.sum(axis=0)
-        B[0, j] = fp @ e
-    # Above support is an inert zero pad in the mature artifact convention.
-    A[..., ~below] = 0.0
-    B[..., ~below] = 0.0
+
+    # Mature latent artifacts use a 33-node Chebyshev-Lobatto grid.  A 5-node
+    # toy grid leaves a ~7e-7 interpolation residual at b=0.9 even when moments
+    # and row_fac are precision-aligned; that is interpolation error, not a
+    # budget-gauge failure.  Freeze the production-resolution convention here.
+    k = np.arange(33)
+    b_nodes = 1.0 - np.cos(np.pi * k / 32.0)  # [0, 2]
+
+    def moments(rows):
+        field = np.asarray(rows, dtype=np.float64) @ phi_z.T
+        A = np.empty((1, b_nodes.size, phi_z.shape[0]))
+        B = np.empty_like(A)
+        for j, bval in enumerate(b_nodes):
+            e = np.exp(bval * field)
+            A[0, j] = e.sum(axis=0)
+            B[0, j] = fp @ e
+        A[..., ~below] = 0.0
+        B[..., ~below] = 0.0
+        return A, B
+
+    A, B = moments(row_fit_stored)
+    A_misaligned, B_misaligned = moments(row_fit_f64)
 
     plan = lq.LatentQPlan(
         phi_z=jnp.asarray(phi_z),
@@ -218,8 +236,9 @@ def _latent_seam_probe(lq):
         plan.A[0], plan.B[0], c, b, plan.b_nodes,
         plan.P_F, plan.F_F, plan.below_depth,
     )
-    # Three footprint rows plus one off-footprint row.
-    rows = jnp.asarray(row_fac[0])
+    # Three footprint rows plus one off-footprint row, taken from the actual
+    # stored plan leaf rather than from the pre-quantization source array.
+    rows = jnp.asarray(plan.row_fac[0])
     on_fp = jnp.asarray([True, True, True, False])
     block = lq.latent_logq_rows(plan, rows, rho, b, on_fp)
     block_np = np.asarray(block)
@@ -233,6 +252,23 @@ def _latent_seam_probe(lq):
     lhs = np.sum(w * q, axis=0)
     rhs = np.sum(w, axis=0)
     np.testing.assert_allclose(lhs[below], rhs[below], rtol=3e-12, atol=3e-12)
+
+    # Freeze the precision-closure reason as a diagnostic: moments rebuilt from
+    # the original f64 source rows normalize a different field than the stored
+    # f32 row_fac consumed by the seam, leaving a small but non-zero residual.
+    rho_misaligned = lq.rho_from_moments(
+        jnp.asarray(A_misaligned[0]), jnp.asarray(B_misaligned[0]),
+        c, b, plan.b_nodes, plan.P_F, plan.F_F, plan.below_depth,
+    )
+    block_misaligned = lq.latent_logq_rows(
+        plan, rows, rho_misaligned, b, on_fp
+    )
+    q_misaligned = np.exp(np.asarray(block_misaligned)[:3])
+    lhs_misaligned = np.sum(w * q_misaligned, axis=0)
+    precision_mismatch = float(
+        np.max(np.abs(lhs_misaligned[below] - rhs[below]))
+    )
+    assert precision_mismatch > 1e-10
 
     # Hot gathered-pair kernel must agree with the full-row block.
     row_idx = np.array([0, 1, 2, 3], dtype=int)
@@ -248,12 +284,14 @@ def _latent_seam_probe(lq):
         np.asarray(hot), block_np[row_idx, z_idx], rtol=0.0, atol=2e-15)
 
     return {
-        "b_nodes": _f64(b_nodes),
+        "b_nodes_first8": _f64(b_nodes[:8]),
+        "n_b_nodes": int(b_nodes.size),
         "rho": _f64(np.asarray(rho)),
         "logq_rows": _f64(block_np),
         "budget_lhs": _f64(lhs),
         "budget_rhs": _f64(rhs),
         "budget_max_abs_supported": float(np.max(np.abs(lhs[below] - rhs[below]))),
+        "misaligned_precision_budget_max_abs": precision_mismatch,
         "off_footprint_bit_zero": bool(np.all(block_np[3] == 0.0)),
         "out_of_support_bit_zero": bool(np.all(block_np[:, ~below] == 0.0)),
         "hot_values": _f64(np.asarray(hot)),
