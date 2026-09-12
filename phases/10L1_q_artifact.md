@@ -113,6 +113,33 @@ no source import of darksirens-surveys or darksirens-lensing
 no SciPy/JAX/core distribution dependency in L1
 ```
 
+## Post-acceptance portability note
+
+During L2 integration, the same deterministic fixture was regenerated on
+additional GitHub-hosted CPU runners. The weighted mean-one values and all
+scientific invariants agreed at floating-point precision, but arrays involving
+NumPy/JAX `exp`/`log` did not retain one universal SHA-256 across runner CPU/libm
+paths, including when NumPy was pinned back to 1.26.4.
+
+This does **not** invalidate the accepted L0A golden or the L1 acceptance above.
+The exact hashes remain the immutable record of the pinned L0A oracle run. What
+changed after L2 was the package-level replay policy: cross-runner tests now pin
+the actual frozen numerical monopoles with tight tolerance and exact mean-one /
+zero-budget invariants, rather than treating backend last bits as part of the
+science.
+
+Byte identity is still required where bytes are genuinely the contract:
+
+```text
+HDF5 round-trip of caller-supplied Q arrays
+member_content_sha256 over the exact supplied member bytes
+zero-budget bins copied unchanged within one run
+```
+
+The portability correction was accepted as part of L2; see
+`phases/10L2_fixed_table_model.md`. The original L1 workflow evidence and exact
+L0A hashes above are intentionally retained rather than rewritten.
+
 ## Next action
 
 Before adding a production fixed-table Q `RedshiftModel`, freeze L0B from the
