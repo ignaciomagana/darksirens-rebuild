@@ -11,7 +11,7 @@ Freezes the minimum algebra needed before production L7 code:
 * matched member indices are a composition property, not a table provenance id.
 
 The probe intentionally excludes marked hosts, stratified selection, and the
-rung-1 theta-response approximation.  Those are not needed to freeze L7's
+rung-1 theta-response approximation. Those are not needed to freeze L7's
 normalization/composition boundary.
 """
 from __future__ import annotations
@@ -57,7 +57,10 @@ def _build_tracer(label: str, *, variant: int):
         SurveyParams,
     )
     from darksirens.redshift import zgrid
-    from darksirens.redshift.completion import build_field_normalization_inputs
+    from darksirens.redshift.completion import (
+        build_field_depth_inputs,
+        build_field_normalization_inputs,
+    )
 
     n_pix, maxg = 4, 4
     z = np.zeros((n_pix, maxg), dtype=float)
@@ -84,7 +87,11 @@ def _build_tracer(label: str, *, variant: int):
     fobs, n_empty, nobs, occ = build_field_normalization_inputs(
         jnp.asarray(z), jnp.asarray(w), jnp.asarray(n)
     )
+    depth = build_field_depth_inputs(
+        jnp.asarray(z), jnp.asarray(dz), jnp.asarray(w), jnp.asarray(n)
+    )
     apix = np.pi  # four equal pixels span 4*pi in this toy
+    empty = np.setdiff1d(np.arange(n_pix), np.asarray(occ))
     cat = EMCatalog(
         apix=apix,
         zgals=jnp.asarray(z),
@@ -98,9 +105,12 @@ def _build_tracer(label: str, *, variant: int):
         field_n_empty=jnp.asarray(float(n_empty)),
         field_N_obs_total=jnp.asarray(float(nobs)),
         field_occupied_pixels=jnp.asarray(occ, dtype=jnp.int32),
+        field_depth_z=depth.z,
+        field_depth_dz=depth.dz,
+        field_depth_c=depth.c,
         f_p_rows=jnp.asarray(fp, dtype=jnp.float32),
         field_f_p_occ=jnp.asarray(fp[np.asarray(occ)], dtype=jnp.float32),
-        field_f_p_empty_sum=jnp.asarray(float(fp[np.setdiff1d(np.arange(n_pix), np.asarray(occ))].sum())),
+        field_f_p_empty_sum=jnp.asarray(float(fp[empty].sum())),
         f_p_total_sum=jnp.asarray(float(fp.sum())),
     )
     survey = SurveyParams(
@@ -119,8 +129,6 @@ def _build_tracer(label: str, *, variant: int):
 
 
 def _gauge_members(cosmo, survey, cat, fp, amplitudes):
-    import jax.numpy as jnp
-
     from darksirens.redshift import zgrid
     from darksirens.redshift.completion import _precompute_grids
 
@@ -153,17 +161,16 @@ def _global_probe(label, cosmo, survey, cat, fp, amplitudes):
     unity = np.ones_like(members[0])
     logz0 = float(field_global_log_Z(cosmo, survey, cat, latent_q_rows=unity))
     V0, _ = _field_missing_curve(cosmo, survey, cat, latent_q_rows=unity)
-    logzs, vdiff = [], []
-    gauge_resid = []
+    logzs, vdiff, gauge_resid = [], [], []
     occ = np.asarray(cat.field_occupied_pixels, dtype=int)
     f = fp[occ]
     for q in members:
         logzs.append(float(field_global_log_Z(cosmo, survey, cat, latent_q_rows=q)))
         V, _ = _field_missing_curve(cosmo, survey, cat, latent_q_rows=q)
         vdiff.append(float(np.max(np.abs(np.asarray(V) - np.asarray(V0)))))
-        w = 1.0 - f[:, None] * cbar[None, :]
-        lhs = np.sum(w * q, axis=0)
-        rhs = np.sum(w, axis=0)
+        ww = 1.0 - f[:, None] * cbar[None, :]
+        lhs = np.sum(ww * q, axis=0)
+        rhs = np.sum(ww, axis=0)
         gauge_resid.append(float(np.max(np.abs(lhs - rhs))))
 
     return {
@@ -182,7 +189,6 @@ def _global_probe(label, cosmo, survey, cat, fp, amplitudes):
 
 def _eval_field(state, cosmo, survey, cat, z, pix):
     import jax.numpy as jnp
-
     from darksirens.redshift.prior import eval_redshift_prior_with_state
 
     return np.asarray(
@@ -210,7 +216,6 @@ def _mixture_logp(logps, logw):
 
 def _composition_probe(A, B):
     import jax.numpy as jnp
-
     from darksirens.redshift.prior import prepare_redshift_prior_state
 
     _, ca, sa, cata, _ = A
@@ -228,9 +233,6 @@ def _composition_probe(A, B):
     se_p = np.asarray([1, 0, 0, 1, 1, 1, 0], dtype=np.int32)
     N = 3.0
 
-    # K=1: perturbing one survey-global normalizer shifts every PE and
-    # selection log-prior by the same constant, which cancels from the
-    # event-minus-selection reduction exactly up to floating arithmetic.
     lpa_pe = _eval_field(sta, ca, sa, cata, pe_z, pe_p)
     lpa_se = _eval_field(sta, ca, sa, cata, se_z, se_p)
     ll1 = float(N * (_logmeanexp(lpa_pe) - _logmeanexp(lpa_se)))
@@ -240,9 +242,6 @@ def _composition_probe(A, B):
     lpa_se_s = _eval_field(sta_shift, ca, sa, cata, se_z, se_p)
     ll1s = float(N * (_logmeanexp(lpa_pe_s) - _logmeanexp(lpa_se_s)))
 
-    # K=2: each catalog is normalized before the mixture.  A COMMON Z shift is
-    # still an overall constant and cancels, but a RELATIVE tracer shift changes
-    # the catalog mixture and hence the reduced likelihood.
     lpb_pe = _eval_field(stb, cb, sb, catb, pe_z, pe_p)
     lpb_se = _eval_field(stb, cb, sb, catb, se_z, se_p)
     logw = np.log(np.asarray([0.37, 0.63]))
@@ -287,14 +286,14 @@ def _composition_probe(A, B):
         )
     )
 
-    # Recover the unnormalized per-catalog field numerators directly.  The
-    # correct K=2 mixture is logsumexp(log w_k + log numerator_k - log Z_k).
     za, zb = float(sta.log_Z_global), float(stb.log_Z_global)
     num_a = lpa_pe + za
     num_b = lpb_pe + zb
     mix_manual = np.asarray(
-        jnp.logaddexp(logw[0] + jnp.asarray(num_a) - za,
-                      logw[1] + jnp.asarray(num_b) - zb)
+        jnp.logaddexp(
+            logw[0] + jnp.asarray(num_a) - za,
+            logw[1] + jnp.asarray(num_b) - zb,
+        )
     )
 
     return {
@@ -326,9 +325,6 @@ def main(argv=None) -> int:
     ga, qa = _global_probe(*A, amplitudes)
     gb, qb = _global_probe(*B, amplitudes)
 
-    # Same member amplitude/order drives both tracer Q sets.  Their detailed
-    # responses differ because C_k and f_{k,p} differ, but member index is the
-    # shared latent realization coordinate.
     center = min(200, qa.shape[-1] - 1)
     a_series = qa[:, 0, center]
     b_series = qb[:, 0, center]
