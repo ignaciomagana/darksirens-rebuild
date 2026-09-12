@@ -1,0 +1,207 @@
+{
+  "legacy_sha": "c042527238bd71421b792936bc48c3b815b90d6d",
+  "provenance": {
+    "allow_unverified_warning_contains_independent_fields": true,
+    "deterministic_skips_shared_member_guard": true,
+    "distinct_id_error": {
+      "message": "--lss_marginalize with a K>=2 mixture marginalizes over ONE SHARED member index: member m of every catalog must sample the SAME LSS realization. The per-catalog Q_LSS ensembles do not share a verified realization set (equal, non-null realization_set_id):\n  - <TMP>/qx.h5: realization_set_id=1b102965e0a54404b65a8f55f3679c31\n  - <TMP>/qy.h5: realization_set_id=d5bc0489d8344cca9826b837262a91c8\nPairing member m across independently built ensembles marginalizes over an INDEPENDENT-fields product prior, not the matched shared-field prior. Remedies: (1) rebuild the ensembles JOINTLY with darksirens_build_joint_lognormal_completion (ONE builder run over all K catalogs infers a single shared LSS field and stamps the same realization_set_id across the K files), or (2) pass --allow_unverified_shared_lss_members to explicitly accept the independent-fields approximation.",
+      "type": "ValueError"
+    },
+    "legacy_error": {
+      "message": "--lss_marginalize with a K>=2 mixture marginalizes over ONE SHARED member index: member m of every catalog must sample the SAME LSS realization. The per-catalog Q_LSS ensembles do not share a verified realization set (equal, non-null realization_set_id):\n  - <TMP>/legacyA.h5: LEGACY (no provenance)\n  - <TMP>/legacyB.h5: LEGACY (no provenance)\nPairing member m across independently built ensembles marginalizes over an INDEPENDENT-fields product prior, not the matched shared-field prior. Remedies: (1) rebuild the ensembles JOINTLY with darksirens_build_joint_lognormal_completion (ONE builder run over all K catalogs infers a single shared LSS field and stamps the same realization_set_id across the K files), or (2) pass --allow_unverified_shared_lss_members to explicitly accept the independent-fields approximation.",
+      "type": "ValueError"
+    },
+    "shared_A_member_sha256": "191ddbb7e1e0a4a289b81836f30d14b792226c9a1b1220b8528b629d4002e000",
+    "shared_B_member_sha256": "431c63ecc456214b7560ce96a08740bda834a0ac71fdcfc5a85109b6e3c00524",
+    "shared_content_hashes_differ": true,
+    "shared_guard_passed": true,
+    "shared_n_members": 3,
+    "shared_realization_set_id": "0123456789abcdef0123456789abcdef",
+    "unequal_m_error": {
+      "message": "--lss_marginalize with a K-catalog mixture requires EQUAL ensemble sizes across catalogs (a shared member index over matched LSS realizations); got <TMP>/surveyA.h5: M=3, <TMP>/surveyB.h5: M=2. Rebuild the Q ensembles with the same --n-members from matched realizations.",
+      "type": "ValueError"
+    }
+  },
+  "runtime": {
+    "N_miss_members": [
+      [
+        2226625312.098377,
+        2226625314.356491
+      ],
+      [
+        13871345404.714891,
+        13871345405.72189
+      ],
+      [
+        32210305458742.715,
+        32210305458742.645
+      ],
+      [
+        155767458056907.2,
+        155767458056905.62
+      ]
+    ],
+    "asymmetric_selection_error": {
+      "message": "lss_marginalize=True requires the LSS-completion ENSEMBLE on EVERY SELECTION catalog too; catalog(s) [1] have none. The per-member redshift-prior normalizer Z_m cancels only against mu(Q_m); pairing member numerators with a posterior-mean-Q mu makes the member average a Z_m^{-N_obs}-weighted pick, not a marginalization. Build the selection catalog's Q_LSS with the same members as the PE catalog's.",
+      "type": "ValueError"
+    },
+    "base_miss_hash": "ed13c7d6601521751473ba9de33ffcb3c831f17186eba471b98c5ff9d2cdfa7e",
+    "bayes_prior_logmeanexp": [
+      -2.242261391583889,
+      -1.6705445327397275,
+      -1.3104112101602217,
+      -0.9470423393472593,
+      -0.7336774759442277,
+      -0.6907193340220776
+    ],
+    "depth_edge_member_spread": 0.06856150510352776,
+    "depth_far_member_spread": 0.00035056717219106304,
+    "depth_far_normalizer_relation_max_abs": 0.0,
+    "depth_log_Z_members_row1": [
+      25.851775685313523,
+      25.851581115223663,
+      25.851481376720812,
+      25.851425118141332
+    ],
+    "depth_member_logp": [
+      [
+        -3.9424489893063246,
+        -3.7141160844542753,
+        -2.9158920726341826
+      ],
+      [
+        -3.770752393601356,
+        -3.693256043339659,
+        -2.9156975025443224
+      ],
+      [
+        -3.62364942260864,
+        -3.672808676009737,
+        -2.915597764041472
+      ],
+      [
+        -3.4520876593282708,
+        -3.6455545793507476,
+        -2.9155415054619915
+      ]
+    ],
+    "depth_query_z": [
+      0.249,
+      0.251,
+      0.4
+    ],
+    "factored_minus_expected": 3.552713678800501e-15,
+    "factored_minus_reference": 3.552713678800501e-15,
+    "fallback_q_hash": "7023505d7fb8c23461fbd3d0d6dedc04ca64de2527befe5892c37ee467ac1b92",
+    "fallback_vs_exp_mean_logq_max_abs": 547.317035155212,
+    "fallback_vs_manual_max_abs": 1.1368683772161603e-13,
+    "log_Z_members": [
+      [
+        21.52375296459081,
+        21.52375296515584
+      ],
+      [
+        23.35309106784604,
+        23.353091067846545
+      ],
+      [
+        31.103307562578,
+        31.103307562577967
+      ],
+      [
+        32.679385357567504,
+        32.67938535756748
+      ]
+    ],
+    "logmeanexp_expected": 0.4687017948971439,
+    "manual_mean_q_hash": "45baa4ebd7ad5565f173c2c04274b496c894e87693c22a65074bb955574a9744",
+    "marginalized_factored": 0.4687017948971475,
+    "marginalized_reference": 0.4687017948971439,
+    "member_logp": [
+      [
+        -0.9547829617125458,
+        -0.3954752435305018,
+        -0.049445273658434985,
+        0.28489001343352527,
+        0.4475872765177691,
+        0.43912263815986563
+      ],
+      [
+        -3.2198006514831654,
+        -2.5359265054914992,
+        -2.063375017673522,
+        -1.5059317126671594,
+        -1.0334980602025432,
+        -0.791714040731847
+      ],
+      [
+        -11.3434480369774,
+        -10.552804056301564,
+        -9.971802972625117,
+        -9.223125419467102,
+        -8.485208827380049,
+        -8.028925518736003
+      ],
+      [
+        -13.355185002843164,
+        -12.439977851278488,
+        -11.732449215642092,
+        -10.76066645531337,
+        -9.7130259976595,
+        -9.006493062983907
+      ]
+    ],
+    "member_table_hash": "770ac8b1734368742b4b71ad046456ef574ce9c6c74d7346987cc2c2d8b71e08",
+    "missing_members_error": {
+      "message": "lss_marginalize=True requires an LSS-completion ENSEMBLE on EVERY PE catalog; catalog(s) [1] have none. Build Q_LSS with members (darksirens_build_lognormal_completion --n-members M > 0) and pass it via --lss_completion; only universe_model='dark_sirens' supports it.",
+      "type": "ValueError"
+    },
+    "n_grid": 1000,
+    "n_members": 4,
+    "per_member_log_likelihood": [
+      0.539810404001166,
+      0.48005411106323237,
+      0.4409236688466933,
+      0.40925007984185413
+    ],
+    "per_member_spread": 0.13056032415931185,
+    "query_pix": [
+      0,
+      0,
+      0,
+      1,
+      1,
+      1
+    ],
+    "query_z": [
+      0.0755,
+      0.1111,
+      0.14725,
+      0.211,
+      0.2995,
+      0.371
+    ],
+    "reference_minus_expected": 0.0,
+    "scalar_ensemble": 0.46296655566007416,
+    "scalar_fallback_delta": 0.0,
+    "scalar_logp_mean_q": [
+      -11.431323742830788,
+      -10.744088907289626,
+      -10.251650268960514,
+      -9.616634914211417,
+      -8.945802777812624,
+      -8.47204936686822
+    ],
+    "scalar_mean_q": 0.46296655566007416,
+    "single_member_delta": 1.4210854715202004e-14,
+    "single_member_deterministic": 0.4409236688466933,
+    "single_member_marginalized": 0.44092366884670753,
+    "slopes": [
+      -5.0,
+      -1.5,
+      1.5,
+      5.0
+    ]
+  },
+  "schema": "darksirens-lss-l0c-reference-1"
+}
