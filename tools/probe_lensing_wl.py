@@ -121,14 +121,14 @@ def _tabulated_probe():
     lc = np.clip(np.log(np.asarray(qmu)), float(lg[0]), float(lg[-1]))
     expected = 0.7*zc + 1.3*lc - 0.2
 
-    bad = np.asarray(table); bad[1, 2] = -np.inf
+    bad = np.asarray(table).copy(); bad[1, 2] = -np.inf
     minus_inf_allowed = True
     try:
         make_tabulated_wl_params(zg, lg, jnp.asarray(bad))
     except Exception:
         minus_inf_allowed = False
 
-    poisoned = np.asarray(table); poisoned[1, 2] = np.nan
+    poisoned = np.asarray(table).copy(); poisoned[1, 2] = np.nan
     nan_rejected = False
     try:
         make_tabulated_wl_params(zg, lg, jnp.asarray(poisoned))
