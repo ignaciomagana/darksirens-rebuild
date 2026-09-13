@@ -1,0 +1,128 @@
+name: lensing-l0c-selection-reference
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/probe_lensing_selection_singleton.py'
+      - 'references/lensing_l0c_selection_legacy_reference.json'
+      - '.github/workflows/lensing-l0c-selection-reference.yml'
+
+jobs:
+  legacy-reference:
+    runs-on: ubuntu-24.04
+    env:
+      JAX_PLATFORMS: cpu
+      JAX_ENABLE_X64: 'true'
+      DARKSIRENS_ZMAX: '5.0'
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      NUMEXPR_NUM_THREADS: '1'
+    steps:
+      - name: Checkout rebuild control repo
+        uses: actions/checkout@v4
+        with:
+          path: rebuild
+      - name: Checkout pinned legacy oracle
+        uses: actions/checkout@v4
+        with:
+          repository: ignaciomagana/darksirens
+          ref: c042527238bd71421b792936bc48c3b815b90d6d
+          path: legacy
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify pinned legacy SHA
+        run: |
+          test "$(git -C legacy rev-parse HEAD)" = "c042527238bd71421b792936bc48c3b815b90d6d"
+      - name: Install pinned numerical environment
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install \
+            'numpy==1.26.4' 'scipy==1.12.0' 'h5py==3.12.1' \
+            'jax==0.4.34' 'jaxlib==0.4.34' 'astropy==6.1.4' 'tqdm==4.66.5'
+      - name: Run pinned legacy selection probe twice
+        env:
+          PYTHONPATH: ${{ github.workspace }}/legacy
+        run: |
+          python rebuild/tools/probe_lensing_selection_singleton.py --output rebuild/lensing_l0c_selection.generated1.json
+          python rebuild/tools/probe_lensing_selection_singleton.py --output rebuild/lensing_l0c_selection.generated2.json
+      - name: Assert repeated-process parity and scientific pins
+        run: |
+          python - <<'PY'
+          import json, math
+          from pathlib import Path
+          def close(a,b,path='root'):
+              if isinstance(a,bool) or isinstance(b,bool): assert a is b,(path,a,b); return
+              if isinstance(a,(int,float)) and isinstance(b,(int,float)):
+                  assert math.isclose(float(a),float(b),rel_tol=5e-9,abs_tol=5e-10),(path,a,b); return
+              assert type(a) is type(b),(path,type(a),type(b))
+              if isinstance(a,dict):
+                  assert a.keys()==b.keys(),path
+                  for k in a: close(a[k],b[k],f'{path}.{k}')
+              elif isinstance(a,list):
+                  assert len(a)==len(b),path
+                  for i,(x,y) in enumerate(zip(a,b)): close(x,y,f'{path}[{i}]')
+              else: assert a==b,(path,a,b)
+          one=json.loads(Path('rebuild/lensing_l0c_selection.generated1.json').read_text())
+          two=json.loads(Path('rebuild/lensing_l0c_selection.generated2.json').read_text())
+          close(one,two)
+          assert one['schema']=='darksirens-lensing-l0c-selection-reference-1'
+          assert one['legacy_sha']=='c042527238bd71421b792936bc48c3b815b90d6d'
+          s=one['selection']; c=s['counts']
+          assert c['loaded_pair_kept']==c['both']
+          assert c['loaded_single_kept']==c['exactly_one']
+          assert c['both']+c['exactly_one']+c['none']==c['n_draw']
+          p=s['pair_selection']; q=s['single_selection']
+          assert abs(p['manual_delta'])<2e-10
+          assert abs(q['manual_delta'])<2e-10
+          assert abs(p['tag_half_log_mu_delta']+math.log(2.0))<2e-10
+          assert abs(p['tag_half_Neff_delta'])<2e-8
+          assert abs(p['tag_half_log_sigma2_delta']+2*math.log(2.0))<2e-10
+          assert max(abs(x) for x in p['alt_cosmo_argument_delta'])<2e-12
+          assert max(abs(x) for x in q['alt_cosmo_argument_delta'])<2e-12
+          assert p['tau_zero_log_mu_is_neginf'] is True
+          assert q['tau_zero_log_mu_is_neginf'] is True
+          e=one['lensed_single_event']
+          assert e['n_pe']==40 and e['n_y']==16
+          assert abs(e['default_minus_explicit'])<2e-14
+          assert abs(e['default_var_minus_explicit'])<2e-14
+          assert math.isfinite(e['default_logL']) and math.isfinite(e['shared_iota_logL'])
+          assert abs(e['shared_minus_independent'])>1e-6
+          assert e['tau_zero_is_neginf'] is True
+          assert one['selection_cosmology_contract'].startswith('pre-rendered detection subsets')
+          print('Lensing L0C-S selection/singleton structure PASS')
+          PY
+      - name: Compare committed golden when present
+        run: |
+          python - <<'PY'
+          import json, math
+          from pathlib import Path
+          def close(a,b,path='root'):
+              if isinstance(a,bool) or isinstance(b,bool): assert a is b,(path,a,b); return
+              if isinstance(a,(int,float)) and isinstance(b,(int,float)):
+                  assert math.isclose(float(a),float(b),rel_tol=5e-8,abs_tol=5e-10),(path,a,b); return
+              assert type(a) is type(b),(path,type(a),type(b))
+              if isinstance(a,dict):
+                  assert a.keys()==b.keys(),path
+                  for k in a: close(a[k],b[k],f'{path}.{k}')
+              elif isinstance(a,list):
+                  assert len(a)==len(b),path
+                  for i,(x,y) in enumerate(zip(a,b)): close(x,y,f'{path}[{i}]')
+              else: assert a==b,(path,a,b)
+          generated=json.loads(Path('rebuild/lensing_l0c_selection.generated1.json').read_text())
+          golden=Path('rebuild/references/lensing_l0c_selection_legacy_reference.json')
+          if golden.exists():
+              close(generated,json.loads(golden.read_text()))
+              print('Lensing L0C-S committed golden comparison PASS')
+          else:
+              print('Lensing L0C-S bootstrap run: no committed golden yet')
+          PY
+      - name: Upload regenerated reference
+        uses: actions/upload-artifact@v4
+        with:
+          name: lensing-l0c-selection-legacy-reference
+          path: rebuild/lensing_l0c_selection.generated1.json
+          if-no-files-found: error
