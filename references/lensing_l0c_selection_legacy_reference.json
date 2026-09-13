@@ -1,0 +1,66 @@
+{
+  "legacy_sha": "c042527238bd71421b792936bc48c3b815b90d6d",
+  "lensed_single_event": {
+    "default_logL": -24.14280869121646,
+    "default_mc_variance": 0.03877501441781569,
+    "default_minus_explicit": 0.0,
+    "default_var_minus_explicit": 0.0,
+    "explicit_independent_logL": -24.14280869121646,
+    "explicit_independent_mc_variance": 0.03877501441781569,
+    "n_pe": 40,
+    "n_y": 16,
+    "shared_iota_logL": -24.252969689017338,
+    "shared_iota_mc_variance": 0.03839011220180665,
+    "shared_minus_independent": -0.11016099780087885,
+    "tau_zero_is_neginf": true
+  },
+  "schema": "darksirens-lensing-l0c-selection-reference-1",
+  "selection": {
+    "combined_correction": {
+      "delta": -1.2381828708843434,
+      "with_pair": -5.086845924178854,
+      "without_pair": -3.8486630532945103
+    },
+    "counts": {
+      "both": 106,
+      "exactly_one": 59,
+      "loaded_pair_kept": 106,
+      "loaded_single_kept": 59,
+      "minus_only": 0,
+      "n_draw": 300,
+      "none": 135,
+      "plus_only": 59
+    },
+    "pair_selection": {
+      "Neff": 9.336650923921662,
+      "alt_cosmo_argument_delta": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "log_mu": -10.393679636707375,
+      "log_sigma2": -23.021306887896742,
+      "manual_delta": 0.0,
+      "manual_log_mu": -10.393679636707375,
+      "tag_half_Neff_delta": 0.0,
+      "tag_half_log_mu": -11.08682681726732,
+      "tag_half_log_mu_delta": -0.6931471805599454,
+      "tag_half_log_sigma2_delta": -1.3862943611198943,
+      "tau_zero_log_mu_is_neginf": true
+    },
+    "single_selection": {
+      "Neff": 18.14702555666866,
+      "alt_cosmo_argument_delta": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "log_mu": -9.985850690106737,
+      "log_sigma2": -22.870208046319068,
+      "manual_delta": 0.0,
+      "manual_log_mu": -9.985850690106737,
+      "tau_zero_log_mu_is_neginf": true
+    }
+  },
+  "selection_cosmology_contract": "pre-rendered detection subsets; fixed campaign cosmology required"
+}
