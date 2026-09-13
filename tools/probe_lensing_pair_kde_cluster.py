@@ -195,10 +195,15 @@ def _cluster_probe(evi_np, evj_np, kde_i, kde_j):
         mup, mum, logpy, log_wy, kde_j,
         cosmo, survey, pop, catalog, sis, _toy_log_p_pop, _toy_volume_prior,
     )
+    # Branch B assigns event j to mu_+ and event i to mu_-. Because event j
+    # becomes the DRIVING event, the low-level branch function again receives
+    # (mu_i=mu_plus, mu_j=mu_minus). Passing (mu_minus, mu_plus) here would
+    # reverse the physical assignment a second time and is not the mature
+    # cluster_log_likelihood_pair convention.
     intb = _pair_branch_log_integrand(
         evj["m1det"], evj["q"], evj["dL"], evj["chieff"],
         evj["prior_wt"], evj["valid"], evj["pixels"],
-        mum, mup, logpy, log_wy, kde_i,
+        mup, mum, logpy, log_wy, kde_i,
         cosmo, survey, pop, catalog, sis, _toy_log_p_pop, _toy_volume_prior,
     )
     na = jnp.sum((evi["valid"] & (evi["prior_wt"] > 0)).astype(jnp.float64))
