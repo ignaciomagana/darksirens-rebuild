@@ -108,7 +108,10 @@ jobs:
           assert f['single']['max_abs_threshold_error'] < 2e-13
           assert f['single']['pdet_tiny_distance'] == 1.0
           assert f['single']['pdet_huge_distance'] == 0.0
-          assert f['single']['logmiss_tiny_is_neginf'] is True
+          # For a finite positive dL the threshold remains strictly positive.
+          # P_det can round to 1 while the tiny nonzero miss CDF still has a
+          # finite logarithm; -inf is reserved for an exactly zero CDF.
+          assert f['single']['logmiss_tiny_is_neginf'] is False
           assert abs(f['theta_geometry']['optimal_theta'] - 4.0) < 2e-14
 
           p = f['pairs']
