@@ -1,0 +1,137 @@
+name: lensing-l0d-reference
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/probe_lensing_data_partitions.py'
+      - 'references/lensing_l0d_data_partition_legacy_reference.json'
+      - '.github/workflows/lensing-l0d-reference.yml'
+
+jobs:
+  legacy-reference:
+    runs-on: ubuntu-24.04
+    env:
+      JAX_PLATFORMS: cpu
+      JAX_ENABLE_X64: 'true'
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      NUMEXPR_NUM_THREADS: '1'
+    steps:
+      - name: Checkout rebuild control repo
+        uses: actions/checkout@v4
+        with:
+          path: rebuild
+
+      - name: Checkout pinned legacy oracle
+        uses: actions/checkout@v4
+        with:
+          repository: ignaciomagana/darksirens
+          ref: c042527238bd71421b792936bc48c3b815b90d6d
+          path: legacy
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Verify pinned legacy SHA
+        run: |
+          test "$(git -C legacy rev-parse HEAD)" = "c042527238bd71421b792936bc48c3b815b90d6d"
+
+      - name: Install pinned numerical environment
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install \
+            'numpy==1.26.4' 'scipy==1.12.0' 'h5py==3.12.1' \
+            'jax==0.4.34' 'jaxlib==0.4.34'
+
+      - name: Run pinned legacy data/partition probe twice
+        env:
+          PYTHONPATH: ${{ github.workspace }}/legacy
+        run: |
+          python rebuild/tools/probe_lensing_data_partitions.py --output rebuild/lensing_l0d.generated1.json > /tmp/l0d-1.log
+          python rebuild/tools/probe_lensing_data_partitions.py --output rebuild/lensing_l0d.generated2.json > /tmp/l0d-2.log
+
+      - name: Assert repeated-process parity and L0D contract pins
+        run: |
+          python - <<'PY'
+          import json, math
+          from pathlib import Path
+
+          one=json.loads(Path('rebuild/lensing_l0d.generated1.json').read_text())
+          two=json.loads(Path('rebuild/lensing_l0d.generated2.json').read_text())
+          assert one == two
+          assert one['schema']=='darksirens-lensing-l0d-data-partition-reference-1'
+          assert one['legacy_sha']=='c042527238bd71421b792936bc48c3b815b90d6d'
+
+          h=one['hdf5']
+          assert h['disk_contract']['attrs']['n_draw_sources']==10
+          assert h['disk_contract']['attrs']['pair_tag_dataset']=='p_tag_per_source'
+          assert h['pair_view']['n_kept']==1
+          assert h['pair_view']['source_id_kept']==[0]
+          assert h['pair_view']['n_draw_sources']==10.0
+          assert h['single_view']['n_kept']==2
+          assert h['single_view']['m1_src']==[30.0,40.0]
+          assert h['single_view']['image_is_plus']==[True,False]
+          assert h['single_view']['n_draw_sources']==10.0
+          assert h['orientation']['missing_attr_default']=='independent'
+          assert h['orientation']['single_loader_missing_attr']=='independent'
+          assert h['orientation']['explicit_attr']=='shared_iota'
+          assert h['orientation']['single_loader_explicit_attr']=='shared_iota'
+          assert h['normalization_alias']=={
+              'pair_n_draw_sources':10.0,'single_n_draw_sources':10.0}
+          assert h['writer_guards']['destination_preserved'] is True
+          assert 'non-positive' in h['writer_guards']['atomic_error']['message']
+          assert 'smaller than' in h['writer_guards']['low_ndraw_error']['message']
+          assert 'p_tag_per_source must be in [0, 1]' in h['writer_guards']['bad_ptag_error']['message']
+          assert h['fc_pdet_attrs']=={'fc_mc_bar':1.22,'fc_r0':1500.0,'fc_rho_thr':8.0}
+
+          p=one['partitions']
+          assert p['n_events']==6
+          assert p['components']==[
+              {'event_indices':[0,1,2],'candidate_edge_indices':[0,1]},
+              {'event_indices':[3,4],'candidate_edge_indices':[2]},
+              {'event_indices':[5],'candidate_edge_indices':[]},
+          ]
+          assert [x['n_partitions'] for x in p['component_summaries']]==[3,2,1]
+          assert p['total_product_partitions']==6
+          assert len(p['global_states'])==6
+          assert len(p['componentwise_states'])==6
+          assert p['global_componentwise_same_matching_set'] is True
+          assert math.isclose(p['global_log_z_prior'],p['componentwise_log_z_prior'],rel_tol=1e-14,abs_tol=1e-14)
+          assert p['global_states'][0]['n_pairs']==0
+          assert p['global_states'][0]['singleton_indices']==[0,1,2,3,4,5]
+          assert p['raw_pairs'][0]['i']==0 and p['raw_pairs'][0]['j']==1
+          assert p['effective_pairs'][0]['log_prior_odds'] > p['raw_pairs'][0]['log_prior_odds']
+          assert 'already folded' in p['errors']['folded_mark_double_count']['message']
+          assert 'duplicate unordered candidate pair' in p['errors']['duplicate_unordered_pair']['message']
+          assert 'define both delta_t_obs and sigma_delta_t' in p['errors']['incomplete_time_marks']['message']
+          assert 'max_partitions=2' in p['errors']['max_partition_cap']['message']
+          print('Lensing L0D data/partition structure PASS')
+          PY
+
+      - name: Compare committed golden when present
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          generated=json.loads(Path('rebuild/lensing_l0d.generated1.json').read_text())
+          golden=Path('rebuild/references/lensing_l0d_data_partition_legacy_reference.json')
+          if golden.exists():
+              assert generated == json.loads(golden.read_text())
+              print('Lensing L0D committed golden comparison PASS')
+          else:
+              print('Lensing L0D bootstrap run: no committed golden yet')
+          PY
+
+      - name: Print regenerated reference
+        run: cat rebuild/lensing_l0d.generated1.json
+
+      - name: Upload regenerated reference
+        uses: actions/upload-artifact@v4
+        with:
+          name: lensing-l0d-data-partition-legacy-reference
+          path: rebuild/lensing_l0d.generated1.json
+          if-no-files-found: error
