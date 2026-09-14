@@ -124,3 +124,40 @@ darksirens-lensing  43c450742b733d7b8d938116021e8ca52a31226e
 
 No reconstruction item is currently active. New work belongs in a new
 post-reconstruction phase with its own scientific reference and acceptance gate.
+
+## Post-reconstruction Phase 12 — first production consumer
+
+Historical reconstruction freeze remains unchanged. The active Phase 12 consumer uses the separately accepted post-reconstruction core pin `8b9dc64629cf11838a9fc1de233e46b91082caf7`.
+
+- [x] Phase 12 production-analysis contract recorded
+- [x] exact four-package consumer manifest established
+- [x] Phase 12A generic `CompletionCurves -> IncompleteCatalogPriorState` composition contract recorded
+- [x] Phase 12A core implementation accepted on full historical/scientific CI matrix
+- [x] Phase 12A post-merge core integrity gate passed
+- [x] consumer repinned to accepted Phase 12A core
+- [x] fixed-population DESI target implemented with sampler coordinates `(H0, M0hat, sigma_M)`
+- [x] fixed GWTC-5 population and fixed DESI count calibration retained
+- [x] legacy DESI Gaussian magnitude-selection fit and independent prior semantics retained
+- [x] hard PE+selection MC-reliability gate retained
+- [x] P12.4 consumer contract CI passed before merge
+- [x] P12.4 consumer post-merge CI passed
+- [x] fail-closed P12.1 -> P12.4 execution chain implemented
+- [x] execution-chain exact-head CI passed
+- [x] execution-chain post-merge CI passed
+- [x] deployment/runbook and stage ledger contract recorded
+- [ ] regenerate P12.1 under the active Phase 12 core pin on the authorized production environment
+- [ ] rebuild/fingerprint standardized DESI input if needed
+- [ ] regenerate and accept P12.2 pre-inference diagnostics
+- [ ] regenerate and accept P12.3 fixed-population spectral-siren baseline
+- [ ] execute P12.4 fixed-population DESI inference
+- [ ] freeze numerical JSON/NPZ products and run provenance
+- [ ] produce production plots only from accepted frozen numerical products
+- [ ] run fixed-population robustness matrix before any headline interpretation
+
+Authoritative post-reconstruction records:
+
+```text
+phases/12A_completion_curve_composition_acceptance.md
+phases/12_fixed_population_desi_implementation.md
+phases/12_fixed_population_execution_chain.md
+```
