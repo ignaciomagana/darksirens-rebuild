@@ -2,7 +2,7 @@
 """Freeze one full fixed-theta strong-lensing partition oracle for L8.
 
 This is intentionally an end-to-end *legacy* probe, not another primitive
-fixture.  It is derived from the mature ``tests/test_lensing_terms_once.py``
+fixture. It is derived from the mature ``tests/test_lensing_terms_once.py``
 configuration at the pinned legacy SHA, but enumerates every compatible
 matching and records the normalized exact-partition marginal likelihood.
 """
@@ -37,6 +37,7 @@ N_EVENTS = 8
 N_SAMP = 60
 N_SEL = 300
 N_DRAW = 1000.0
+A_TAU = 5.0e-4
 EDGES = ((0, 3), (6, 0), (2, 5))
 LOG_PRIOR_ODDS = (math.log(1.2), math.log(0.8), math.log(2.0))
 
@@ -121,7 +122,7 @@ def _fixture():
         catalog=catalog,
         lensed=lensed,
         pair_kdes=stack_pair_kdes(kdes),
-        sis=make_sis_lens_params(A_tau=0.3, n_tau=0.0, T0_seconds=1.0),
+        sis=make_sis_lens_params(A_tau=A_TAU, n_tau=0.0, T0_seconds=1.0),
     )
 
 
@@ -192,9 +193,6 @@ def main():
 
     fx = _fixture()
 
-    # Mature once-per-proposal row layout.  Its total is not a physical
-    # partition because candidate edges overlap; only the per-row terms are
-    # consumed below, exactly as the legacy marginalize_exact path does.
     terms = _master(
         fx,
         np.arange(N_EVENTS, dtype=np.int32),
@@ -214,7 +212,7 @@ def main():
         logl = _f(diag["logL_total"])
         priors.append(log_prior)
         numerators.append(log_prior + logl)
-        row = {
+        partitions.append({
             "edge_indices": list(subset),
             "singleton_indices": list(singletons),
             "pair_indices": [list(p) for p in pairs],
@@ -229,8 +227,7 @@ def main():
             "singleton_variance_sum": _f(diag["singleton_variance_sum"]),
             "pair_variance_sum": _f(diag["pair_variance_sum"]),
             "pe_variance_sum": _f(diag["pe_variance_sum"]),
-        }
-        partitions.append(row)
+        })
 
     log_z_prior = float(logsumexp(priors))
     logl_marg = float(logsumexp(numerators) - log_z_prior)
@@ -246,7 +243,7 @@ def main():
             "n_draw_unlensed": N_DRAW,
             "n_draw_lensed": 3000,
             "cosmology": [67.74, 0.3075, -1.0, 0.0],
-            "sis": {"A_tau": 0.3, "n_tau": 0.0, "T0_seconds": 1.0},
+            "sis": {"A_tau": A_TAU, "n_tau": 0.0, "T0_seconds": 1.0},
             "edges": [list(e) for e in EDGES],
             "log_prior_odds": list(LOG_PRIOR_ODDS),
             "y_nodes_pair": 8,
