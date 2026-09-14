@@ -14,7 +14,7 @@ Control contract:
 repository:  ignaciomagana/darksirens-rebuild
 contract PR: #3
 contract merge: 90bf40ae90a534020d69f51aa9b44ec381d80e00
-file: phases/12A_completion_curve_composition_contract.md
+file: phases/12A_completion_curve_composition.md
 ```
 
 The contract allowed exactly one scientific-library change:
