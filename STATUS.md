@@ -12,37 +12,39 @@ The legacy repository remained read-only throughout reconstruction. Numerical
 behavior was frozen with deterministic reference probes before companion
 production ports were accepted.
 
-## Current state
+## Reconstruction state
 
-**RECONSTRUCTION COMPLETE / FOUR-REPOSITORY ECOSYSTEM FROZEN**
+**RECONSTRUCTION COMPLETE / PHASES 08–11 FROZEN**
+
+The historical reconstruction freeze is unchanged:
 
 ```text
 darksirens-core
-  main: af2488b0ccb48c65e63cffcae306a8a4a4bfeb66
-  tree: 0608b75ff5c142bfba0fc15a4fad79e0fee1fa74
-  phase: 08 — COMPLETE / FROZEN
+  reconstruction freeze: af2488b0ccb48c65e63cffcae306a8a4a4bfeb66
+  tree:                  0608b75ff5c142bfba0fc15a4fad79e0fee1fa74
+  phase:                 08 — COMPLETE / FROZEN
 
 darksirens-surveys
-  main: f027aef02d342041ce7259cdbf47fe689e6462f2
-  phase: 09 — COMPLETE / FROZEN
+  main:                  f027aef02d342041ce7259cdbf47fe689e6462f2
+  phase:                 09 — COMPLETE / FROZEN
 
 darksirens-lss
-  main: 3429bb2f420239bc731cc9e73e50bf5351181c14
-  phase: 10 — COMPLETE / FROZEN
+  main:                  3429bb2f420239bc731cc9e73e50bf5351181c14
+  phase:                 10 — COMPLETE / FROZEN
 
 darksirens-lensing
-  main: 43c450742b733d7b8d938116021e8ca52a31226e
-  tree: 9d79f113d5bf216c90beb13947d190c7da5bb9ca
-  phase: 11 — COMPLETE / FROZEN
+  main:                  43c450742b733d7b8d938116021e8ca52a31226e
+  tree:                  9d79f113d5bf216c90beb13947d190c7da5bb9ca
+  phase:                 11 — COMPLETE / FROZEN
 ```
 
-There is no active reconstruction production slice. New scientific development
-should start as a post-reconstruction phase rather than modifying an accepted
-slice without a new reference/acceptance contract.
+No reconstruction production slice is active. Post-reconstruction science is
+tracked separately and may use explicitly accepted extensions of the frozen
+core without rewriting the Phase-08 reconstruction record.
 
 ## Dependency ownership
 
-The final ownership direction is intentionally one-way:
+The ownership direction remains one-way:
 
 ```text
 surveys  -> core contracts
@@ -61,109 +63,7 @@ selection machinery, common runtime records, parameter plans, and sampler
 execution. Companion repositories own only their domain-specific data adapters,
 state, likelihood extensions, selection extensions, and composition seams.
 
-## Phase 08 — core
-
-Status: **ACCEPTED / FROZEN**
-
-```text
-final main:             af2488b0ccb48c65e63cffcae306a8a4a4bfeb66
-final tree:             0608b75ff5c142bfba0fc15a4fad79e0fee1fa74
-Phase-8 PR:             #7
-post-merge integrity:   34642213518 / 103404444142 — SUCCESS
-record:                 phases/08_phase_integration.md
-```
-
-The frozen core includes the reconstructed foundation, population models,
-spectral and catalog siren likelihoods, selection machinery, inference and
-checkpointing, public specifications/loaders, host-density extension seam, and
-final clean packaging/API surface. The final accepted broad result was 534
-passed and 1 skipped; the merged Phase-8 tree is byte-identical to the accepted
-branch tree.
-
-## Phase 09 — surveys
-
-Status: **ACCEPTED / FROZEN**
-
-```text
-final main: f027aef02d342041ce7259cdbf47fe689e6462f2
-record:     phases/09S6_final_surveys_freeze.md
-integration: phases/09_phase_integration.md
-```
-
-The frozen surveys companion owns generic catalog construction, pixel/depth
-maps, magnitude-selection fitting, native DESI/Legacy adapters, host-property
-preparation/validation, and the clean installed-core consumer integration.
-It does not own GW likelihood, LSS, or lensing runtime physics.
-
-## Phase 10 — LSS
-
-Status: **ACCEPTED / FROZEN**
-
-```text
-final main: 3429bb2f420239bc731cc9e73e50bf5351181c14
-record:     phases/10L8_final_lss_freeze.md
-```
-
-The frozen LSS companion closes Q_LSS/missing-count behavior, row/pixel
-ordering, ensemble and multitracer likelihoods, latent-field basis/count
-likelihoods and normalization, provenance guards, and full fixed-theta
-core+LSS parity. It has no runtime dependency on surveys.
-
-## Phase 11 — lensing
-
-Status: **ACCEPTED / FROZEN**
-
-```text
-L1-L6 accepted base:       44ba42ce16a9b8cff803787e3f95f2e3439ad0ff
-L7 partition target merge: 90f5af30b21a94578cdcc17b3abd0261cbaca7be
-L8 final PR:               #7
-L8 cleaned head:           47de69eb0af88f9b5624f413edbc4514faa0eeaa
-final merge/main:          43c450742b733d7b8d938116021e8ca52a31226e
-final tree:                9d79f113d5bf216c90beb13947d190c7da5bb9ca
-```
-
-Final L8 acceptance provenance:
-
-```text
-legacy full-stack oracle:
-  run/job:      34801979805 / 103846292519 — SUCCESS
-  artifact ID:  10331633680
-  ZIP SHA256:   0799a503b0f5a0df53fa3b6fd2be91e88d2a5bce9840eec831d35719bc09c8e1
-
-exact frozen-core wheel:
-  artifact ID:  10294880218
-  wheel SHA256: 4a0d72072f3abd97edc71b9f1086ec50f4fba1de397a7db3c332775eaf970273
-
-exact-core L8 acceptance:
-  run/job:      34803362718 / 103850299537 — SUCCESS
-
-cleaned PR permanent CI:
-  run/job:      34803511407 / 103850725790 — SUCCESS
-
-post-merge main CI:
-  run/job:      34803573222 / 103850905904 — SUCCESS
-
-final record:
-  phases/11L8_full_parity_freeze.md
-```
-
-Phase 11 freezes weak-lensing PDF/quadrature and spectral composition, SIS and
-Finn-Chernoff primitives, pair KDE/evidence, both-detected and exactly-one
-selection channels with shared-campaign covariance, campaign I/O and provenance,
-exact graph-match partitions, and the full partition-marginalized lensing
-`InferenceTarget`.
-
-The mature lensed injection campaign contains detection membership rendered at
-a fixed campaign cosmology. The reconstructed target therefore fails closed for
-variable-cosmology use; a future cosmology-dependent strong-lensing analysis
-requires a new detection rendering/emulator rather than silently reusing those
-flags. The frozen L4 pair surface is also explicitly unmarked in arrival time;
-time-marked edges fail closed until a marked likelihood is implemented.
-
-## Final acceptance ledger
-
-The detailed phase records, not historical unchecked checklist items, are the
-authoritative scientific provenance. The final freeze points are:
+## Reconstruction acceptance ledger
 
 ```text
 08 core:     phases/08_phase_integration.md
@@ -172,25 +72,43 @@ authoritative scientific provenance. The final freeze points are:
 11 lensing:  phases/11L8_full_parity_freeze.md
 ```
 
-The reference-generating control files remain in this repository and the legacy
-oracle remains pinned at `c042527238bd71421b792936bc48c3b815b90d6d`.
+Final Phase-11 lensing acceptance remained:
+
+```text
+final merge/main:          43c450742b733d7b8d938116021e8ca52a31226e
+final tree:                9d79f113d5bf216c90beb13947d190c7da5bb9ca
+exact-core L8 acceptance:  34803362718 / 103850299537 — SUCCESS
+post-merge main CI:        34803573222 / 103850905904 — SUCCESS
+record:                    phases/11L8_full_parity_freeze.md
+```
+
+The mature lensed injection campaign still contains detection membership
+rendered at a fixed campaign cosmology. Variable-cosmology strong-lensing work
+therefore remains fail-closed until a cosmology-dependent detection rendering or
+emulator is implemented. The frozen L4 pair likelihood also remains unmarked in
+arrival time.
 
 ## Post-reconstruction Phase 12 — first production consumer
 
-Status: **IMPLEMENTATION ACCEPTED / PRODUCTION NUMERICAL RUN PENDING**
+Status: **PHASE 12B IMPLEMENTATION ACCEPTED / HILDAFS NUMERICAL RUN READY**
 
-The historical reconstruction freeze above remains authoritative for Phases 08–11. Phase 12 is a separately accepted post-reconstruction extension and consumer; it does not rewrite the reconstruction freeze.
+**No new H0 result is accepted yet.**
 
-Active Phase 12 pins:
+Phase 12 began with a generic composition extension (12A), then a final pre-run
+audit found that the first P12.4 consumer did not implement the intended DESI
+footprint or field sky-weighting convention. Numerical execution was blocked
+before an H0 run. Phase 12B corrects and supersedes that pre-correction target.
+
+### Active Phase-12 package pins
 
 ```text
-darksirens-core     8b9dc64629cf11838a9fc1de233e46b91082caf7
+darksirens-core     bb4812dc2bf49fe7f4412ba797621b668ccc26a5
 darksirens-surveys  f027aef02d342041ce7259cdbf47fe689e6462f2
 darksirens-lss      3429bb2f420239bc731cc9e73e50bf5351181c14
 darksirens-lensing  43c450742b733d7b8d938116021e8ca52a31226e
 ```
 
-Phase 12A composition-only core extension:
+Phase 12A remains historical accepted provenance:
 
 ```text
 record:     phases/12A_completion_curve_composition_acceptance.md
@@ -198,15 +116,82 @@ core merge: 8b9dc64629cf11838a9fc1de233e46b91082caf7
 post-merge: 34807249732 / 103861422867 — SUCCESS
 ```
 
-First production consumer:
+### Phase 12B accepted core
 
 ```text
-repository:      ignaciomagana/desi_darksirens_selection
-P12.4 merge:     35bb591718a83e302bfa37356071917f241b841d
-chain merge:     1870466391e930e9b90f92adf97723a89f30b2c3
-chain tree:      101fa5001c1e3d5d7084802979750074dd844dac
-post-merge CI:   34808164659 / 103864028184 — SUCCESS
-control record:  phases/12_fixed_population_execution_chain.md
+core PR:              #9
+accepted PR head:     efaf98d611549c028948a459f1d65487ddd4f744
+merge/main:           bb4812dc2bf49fe7f4412ba797621b668ccc26a5
+tree:                 ff29b5b67029889e27a25dd4b6c33d59d264d3d4
+Phase-8 regression:   34872949605 — SUCCESS
+Phase-5 legacy parity:34872949824 — SUCCESS
+post-merge integrity: 34873970805 — SUCCESS
 ```
 
-The accepted chain is P12.1 frozen-environment verification → optional standardized DESI rebuild/fingerprint → P12.2 diagnostics → P12.3 fixed-population spectral baseline → P12.4 fixed-population DESI inference. It stops on the first failed gate. No new H0 result is accepted yet; old P12.1/P12.2/P12.3 products produced before the Phase 12A core repin are stale and must be regenerated on Hildafs under the exact active Phase 12 pins.
+The Phase-12B core addition is generic and additive: per-row survey-fraction
+magnitude-selection composition and a separate field incomplete-catalog
+host-density numerator. The reconstructed conditional path was not modified.
+
+### Phase 12B accepted consumer
+
+```text
+repository:            ignaciomagana/desi_darksirens_selection
+pre-correction lockout merge:
+  c42ddfed9bad8dbc0702eec957470dd6d7b71a46
+corrected PR:          #8
+final accepted head:   ebe6f1308b87183b05c25fb2af168e0069e263a4
+final-head CI:         34894171602 / 104143891610 — SUCCESS
+merge/main:            2668ae7e2eb9325910e1a8bec9b7228003cb4942
+tree:                  6297fce9eee6679ebaed10bb3a081d46aaace9bc
+post-merge CI:         34894224773 / 104144072068 — SUCCESS
+control record:        phases/12B_field_footprint_acceptance.md
+```
+
+The accepted DESI target now uses:
+
+```text
+catalog sky weighting: field
+per-row completeness:  C_p(z) = f_p Cbar(z)
+off-footprint rule:    f_p = 0 -> dN_miss = dN_exp
+event policy:          full 259-event sample; no DESI-support cut
+Q/LSS correction:      off
+```
+
+The footprint map is an explicit input and is loaded/degraded through the frozen
+surveys seam. Off-footprint PE and injection samples remain in the analysis;
+they are not cut. Occupied catalog pixels marked uncovered fail closed.
+
+The repository execution marker admits this corrected chain for execution only;
+it does not certify a posterior.
+
+### Active production chain
+
+```text
+P12.1 frozen environment
+  -> standardized DESI input + footprint fingerprint
+  -> P12.2 pre-inference diagnostics
+  -> P12.2b footprint diagnostics
+  -> P12.3 fixed-population spectral-siren baseline
+  -> P12.4 fixed-population DESI field inference
+```
+
+Every stage fails closed. Direct P12.4 invocation independently rechecks the
+Phase-12B marker, exact package pins, live footprint SHA256, P12.2b provenance,
+P12.3 package provenance, and the hard PE+selection Monte-Carlo reliability
+gate.
+
+### Next admissible action
+
+Run the chain on Hildafs from consumer main
+`2668ae7e2eb9325910e1a8bec9b7228003cb4942`, using the exact package pins above
+and the site-neutral Slurm/runbook already in the consumer repository.
+
+After the run:
+
+1. freeze P12.1/P12.2/P12.2b/P12.3/P12.4 numerical provenance;
+2. accept or reject the P12.4 posterior based on the hard diagnostics;
+3. only then produce plots and begin the fixed-population robustness matrix.
+
+The legacy footprint-map caveat remains explicit: Phase 12B preserves the
+mature `masked_frac` product and does not claim that its source-count-based
+construction is an unbiased geometric area estimator.
