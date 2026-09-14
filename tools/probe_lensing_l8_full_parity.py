@@ -157,6 +157,7 @@ def _master(fx, singleton_indices, pair_indices, *, pair_batch_size=0):
         pair_batch_size=pair_batch_size,
         y_nodes_pair=8,
         singleton_lensing=0,
+        selection_neff_soft_guard=True,
         max_likelihood_variance=1e6,
     )
 
@@ -249,6 +250,7 @@ def main():
             "y_nodes_pair": 8,
             "singleton_lensing": "off",
             "weak_lensing": "disabled",
+            "selection_neff_soft_guard": True,
         },
         "once_terms": {
             "per_event_logL": _flist(terms["per_event_logL"]),
