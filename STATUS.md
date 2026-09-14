@@ -174,3 +174,39 @@ authoritative scientific provenance. The final freeze points are:
 
 The reference-generating control files remain in this repository and the legacy
 oracle remains pinned at `c042527238bd71421b792936bc48c3b815b90d6d`.
+
+## Post-reconstruction Phase 12 — first production consumer
+
+Status: **IMPLEMENTATION ACCEPTED / PRODUCTION NUMERICAL RUN PENDING**
+
+The historical reconstruction freeze above remains authoritative for Phases 08–11. Phase 12 is a separately accepted post-reconstruction extension and consumer; it does not rewrite the reconstruction freeze.
+
+Active Phase 12 pins:
+
+```text
+darksirens-core     8b9dc64629cf11838a9fc1de233e46b91082caf7
+darksirens-surveys  f027aef02d342041ce7259cdbf47fe689e6462f2
+darksirens-lss      3429bb2f420239bc731cc9e73e50bf5351181c14
+darksirens-lensing  43c450742b733d7b8d938116021e8ca52a31226e
+```
+
+Phase 12A composition-only core extension:
+
+```text
+record:     phases/12A_completion_curve_composition_acceptance.md
+core merge: 8b9dc64629cf11838a9fc1de233e46b91082caf7
+post-merge: 34807249732 / 103861422867 — SUCCESS
+```
+
+First production consumer:
+
+```text
+repository:      ignaciomagana/desi_darksirens_selection
+P12.4 merge:     35bb591718a83e302bfa37356071917f241b841d
+chain merge:     1870466391e930e9b90f92adf97723a89f30b2c3
+chain tree:      101fa5001c1e3d5d7084802979750074dd844dac
+post-merge CI:   34808164659 / 103864028184 — SUCCESS
+control record:  phases/12_fixed_population_execution_chain.md
+```
+
+The accepted chain is P12.1 frozen-environment verification → optional standardized DESI rebuild/fingerprint → P12.2 diagnostics → P12.3 fixed-population spectral baseline → P12.4 fixed-population DESI inference. It stops on the first failed gate. No new H0 result is accepted yet; old P12.1/P12.2/P12.3 products produced before the Phase 12A core repin are stale and must be regenerated on Hildafs under the exact active Phase 12 pins.
