@@ -180,6 +180,22 @@ Phase-12B marker, exact package pins, live footprint SHA256, P12.2b provenance,
 P12.3 package provenance, and the hard PE+selection Monte-Carlo reliability
 gate.
 
+### Phase 12C — core review follow-up (PROPOSED, not accepted)
+
+```text
+contract record:  phases/12C_core_review_followup_contract.md
+core PRs merged:  #10 (4c0e960), #16 (8bb1fc2)
+core PRs open:    #12, #13, #14, #15 (stacked, merge in order)
+CI matrix:        PENDING (Actions blocked on account billing since 2026-09-18)
+production pin:   unchanged, bb4812dc2bf49fe7f4412ba797621b668ccc26a5
+```
+
+Guards and independent anchors from the adversarial parity review, plus three
+deliberate numerics changes (complete-catalog empty-row default back to the
+frozen `zero`; GP z- and m1-conditional normalisers corrected; healpy-exact
+pixelisation). The DESI P12.4 fixed-population target is untouched by the
+numerics changes; the pin moves only on acceptance.
+
 ### Next admissible action
 
 Run the chain on Hildafs from consumer main
