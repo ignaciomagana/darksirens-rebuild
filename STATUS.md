@@ -186,7 +186,7 @@ gate.
 contract record:  phases/12C_core_review_followup_contract.md
 core PRs merged:  #10 (4c0e960), #16 (8bb1fc2)
 core PRs open:    #12, #13, #14, #15 (stacked, merge in order)
-CI matrix:        PENDING (Actions blocked on account billing since 2026-09-18)
+CI matrix:        complete and green on every open head (see the record)
 production pin:   unchanged, bb4812dc2bf49fe7f4412ba797621b668ccc26a5
 ```
 

@@ -78,7 +78,8 @@ PR #14  Review 5/6: healpy-exact ang2pix_ring, angular anchors, real sampler bac
         head:  f5e070c71fbd104b92db64e0a4302962af88988e   tree: 571bafc328354790d23bacc8af133c2b97218eed
 
 PR #15  Review 6/6: document the post-freeze seams and the review follow-up
-        head:  9a87ffb0f8b5e20761f1cb7545931142b754b737   tree: fcba6cf5177064afb6e0628a7c66028f916d1917
+        head:  2f89874f2824b1c150d6e24e8d67b32872d91f26   tree: 18b3bf93ad506fb289e080160cbb20cbb03d58d0
+        (code-final head 9a87ffb0f8b5e20761f1cb7545931142b754b737; the last commit records the CI matrix below and changes no code)
 ```
 
 The tree at the head of #15 is the candidate post-12C core.
@@ -161,29 +162,76 @@ scipy 1.12.0, h5py 3.12.1, astropy 6.1.4, healpy 1.17.3, dynesty 2.1.4, numpyro
 0.17.0, tinyns 3f9e1b2, tinygp 0.3.0), every optional backend installed:
 
 ```text
-tree fcba6cf5 (head of #15):  714 passed, 1 skipped (golden regen guard)
+tree fcba6cf5 (code-final head of #15):  714 passed, 1 skipped (golden regen guard)
 main before the stack:        543 passed, 1 skipped
 ```
 
 Each stack level was also verified alone (touched modules plus the CI lint) on
 its own tree before the PRs were opened.
 
-### Exact-head CI matrix — PENDING
+### Exact-head CI matrix
 
-GitHub Actions has refused to start any job in `ignaciomagana/darksirens-core`
-since 2026-09-18 08:51 UTC:
+GitHub Actions was blocked on account billing between 2026-09-18 08:51 and
+09:05 UTC; every affected run was re-run after the repository was made public.
+Every PR-triggered workflow completed successfully on every head below (34 to
+36 workflows per head, zero failures). Load-bearing runs:
 
 ```text
-The job was not started because recent account payments have failed or your
-spending limit needs to be increased.
+main after #10 (4c0e960)  reference-integrity          35326494368  SUCCESS
+main after #16 (8bb1fc2)  reference-integrity          35326699909  SUCCESS
+
+#12 head b7304ad          reference-integrity          35327466047  SUCCESS
+                          phase2-foundation            35327466015  SUCCESS
+                          phase3-population            35327465998  SUCCESS
+                          phase4-spectral-likelihood   35327465851  SUCCESS
+                          phase5-catalog-dark-bright   35327465922  SUCCESS
+                          phase7-regression            35327465987  SUCCESS
+                          phase8-regression            35327466013  SUCCESS
+                          phase8b-inference-target     35327465899  SUCCESS
+                          phase8c-host-density         35327465914  SUCCESS
+
+#13 head 2c8e646          reference-integrity          35327467856  SUCCESS
+                          phase2-foundation            35327467858  SUCCESS
+                          phase3-population            35327467822  SUCCESS
+                          phase4-spectral-likelihood   35327467787  SUCCESS
+                          phase5-catalog-dark-bright   35327467821  SUCCESS
+                          phase7-regression            35327467881  SUCCESS
+                          phase8-regression            35327467785  SUCCESS
+                          phase8b-inference-target     35327467855  SUCCESS
+                          phase8c-host-density         35327467783  SUCCESS
+
+#14 head f5e070c          reference-integrity          35327467253  SUCCESS
+                          phase2-foundation            35327467533  SUCCESS
+                          phase3-population            35327467255  SUCCESS
+                          phase4-spectral-likelihood   35327467158  SUCCESS
+                          phase5-catalog-dark-bright   35327467103  SUCCESS
+                          phase7c3-healpix-geometry    35327467109  SUCCESS
+                          phase7-regression            35327467039  SUCCESS
+                          phase8-regression            35327467040  SUCCESS  714 passed, 1 skipped
+                          phase8b-inference-target     35327467047  SUCCESS
+                          phase8c-host-density         35327467172  SUCCESS
+                          real-backends                35327467082  SUCCESS
+
+#15 head 9a87ffb          reference-integrity          35327953070  SUCCESS
+                          phase2-foundation            35327952962  SUCCESS
+                          phase3-population            35327952933  SUCCESS
+                          phase4-spectral-likelihood   35327952991  SUCCESS
+                          phase5-catalog-dark-bright   35327952955  SUCCESS
+                          phase7c3-healpix-geometry    35327952939  SUCCESS
+                          phase7-regression            35327952966  SUCCESS
+                          phase8-regression            35327952967  SUCCESS  714 passed, 1 skipped
+                          phase8b-inference-target     35327953246  SUCCESS
+                          phase8c-host-density         35327953033  SUCCESS
+                          real-backends                35327953066  SUCCESS  75 passed, 0 skipped
 ```
 
-This also affects `reference-integrity` on the already-merged `main` heads
-`4c0e960` and `8bb1fc2`. The exact-head matrix for #12 through #15 (including
-the new `real-backends` workflow, which installs the pinned Dynesty, NumPyro,
-Matplotlib and healpy stack and fails on any skip) must be recorded here once
-billing is restored and the workflows rerun. Until then this record cannot
-advance to acceptance.
+The Phase-5 workflow's pinned-legacy parity comparisons (catalog kernel,
+ordinary completeness, ordinary dark siren, marked host, catalog selection)
+and the widened Phase-4 spectral gate passed on every head, so the frozen
+conditional catalog path and the spectral likelihood remain parity-exact
+after the stack; the `real-backends` job ran the end-to-end TinyNS, Dynesty
+and NumPyro tests, the real Dynesty checkpoint round-trip and the healpy
+parity suite with no skip.
 
 ## Pin decision
 
@@ -191,11 +239,11 @@ The Phase-12B production pin `bb4812dc...` stays active. The DESI P12.4 target
 uses a fixed parametric population, which no numerics change above touches, but
 the production consumer must not move to the post-12C core until:
 
-1. the exact-head CI matrix above is green and recorded;
-2. #12 through #15 are merged in order and their merge SHAs and trees recorded;
-3. the Phase-5 legacy parity workflow and the widened Phase-4 spectral gate are
+1. #12 through #15 are merged in order and their merge SHAs and trees recorded
+   (the exact-head matrix above is complete and green);
+2. the Phase-5 legacy parity workflow and the widened Phase-4 spectral gate are
    green on the merged head;
-4. this record is promoted to an acceptance record with a new core pin.
+3. this record is promoted to an acceptance record with a new core pin.
 
 ## Deferred on purpose
 
@@ -210,5 +258,5 @@ the production consumer must not move to the post-12C core until:
 ## Verdict
 
 **Not accepted.** This is the package-change contract for the review
-follow-up. Acceptance requires the CI matrix, the ordered merges and the
-recorded SHAs listed under the pin decision.
+follow-up. The exact-head CI matrix is complete and green; acceptance requires
+the ordered merges and the recorded merge SHAs listed under the pin decision.
