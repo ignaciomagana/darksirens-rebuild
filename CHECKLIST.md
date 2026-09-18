@@ -186,6 +186,7 @@ consumer main       2668ae7e2eb9325910e1a8bec9b7228003cb4942
 
 ### Numerical production — next work
 
+- [ ] adopt the Phase-12C core pin 8bf2bec5 in the consumer (consumer PR, contract CI)
 - [ ] run P12.1 on Hildafs under the exact active package pins
 - [ ] resolve/fingerprint the live `mth_map_nside128.h5` footprint product
 - [ ] rebuild/fingerprint standardized DESI input if needed
@@ -208,4 +209,6 @@ phases/12_fixed_population_desi_implementation.md
 phases/12_fixed_population_execution_chain.md          # historical pre-correction chain
 phases/12B_field_footprint_correction.md
 phases/12B_field_footprint_acceptance.md
+phases/12C_core_review_followup_contract.md
+phases/12C_core_review_followup_acceptance.md
 ```

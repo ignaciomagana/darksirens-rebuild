@@ -90,7 +90,7 @@ arrival time.
 
 ## Post-reconstruction Phase 12 — first production consumer
 
-Status: **PHASE 12B IMPLEMENTATION ACCEPTED / HILDAFS NUMERICAL RUN READY**
+Status: **PHASE 12C CORE ACCEPTED / CONSUMER PIN UPDATE PENDING / HILDAFS NUMERICAL RUN READY AFTER THAT**
 
 **No new H0 result is accepted yet.**
 
@@ -102,7 +102,7 @@ before an H0 run. Phase 12B corrects and supersedes that pre-correction target.
 ### Active Phase-12 package pins
 
 ```text
-darksirens-core     bb4812dc2bf49fe7f4412ba797621b668ccc26a5
+darksirens-core     8bf2bec53ff7b557c6b930d4044008cb72008f61   (Phase 12C; consumer still on bb4812dc until it adopts the pin)
 darksirens-surveys  f027aef02d342041ce7259cdbf47fe689e6462f2
 darksirens-lss      3429bb2f420239bc731cc9e73e50bf5351181c14
 darksirens-lensing  43c450742b733d7b8d938116021e8ca52a31226e
@@ -179,6 +179,25 @@ Every stage fails closed. Direct P12.4 invocation independently rechecks the
 Phase-12B marker, exact package pins, live footprint SHA256, P12.2b provenance,
 P12.3 package provenance, and the hard PE+selection Monte-Carlo reliability
 gate.
+
+### Phase 12C — core review follow-up (ACCEPTED / MERGED)
+
+```text
+contract record:    phases/12C_core_review_followup_contract.md
+acceptance record:  phases/12C_core_review_followup_acceptance.md
+core PRs merged:    #10, #16, #12, #13, #14, #15 (in order, squash)
+merge/main:         8bf2bec53ff7b557c6b930d4044008cb72008f61
+tree:               18b3bf93ad506fb289e080160cbb20cbb03d58d0
+exact-head matrix:  green on every accepted head (34-36 workflows each)
+Phase-8 regression: 714 passed, 1 skipped; real-backends: 75 passed, 0 skipped
+```
+
+Guards and independent anchors from the adversarial parity review, plus three
+deliberate numerics changes (complete-catalog empty-row default back to the
+frozen `zero`; GP z- and m1-conditional normalisers corrected; healpy-exact
+pixelisation). The DESI P12.4 fixed-population target is untouched by the
+numerics changes. The consumer must adopt the new core pin (a consumer PR under
+its contract CI) and regenerate P12.1-P12.3 provenance before P12.4 runs.
 
 ### Next admissible action
 
