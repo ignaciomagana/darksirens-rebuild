@@ -109,13 +109,32 @@ def specs():
     return out
 
 
+def retry_diagjit_specs():
+    """O1 as-shipped on R2 with --diag-mode jit: the O1 kernel fits R2 and completes the timed
+    loop, but the harness's EAGER diagnostic pass of an as-shipped record then runs out of
+    device memory (stage diagnostics). Same kernel, same timed loop; only the untimed
+    diagnostics use the jitted diagnostic function of the whole-mode records."""
+    out = []
+    for sp in specs():
+        if sp["fixture"] == "R2" and sp["flags"]["gate4_arm"] == "o1" and sp["jit"] == "asis":
+            sp = json.loads(json.dumps(sp))
+            sp["record_id"] += "_diagjit"
+            sp["extra_args"] += ["--diag-mode", "jit"]
+            sp["flags"]["retry_of"] = sp["record_id"][:-len("_diagjit")]
+            sp["flags"]["diag_mode"] = "jit (non-default; eager diagnostics OOM after the timed loop)"
+            out.append(sp)
+    return out
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--out", required=True)
     ap.add_argument("--coords-dir", default=None,
                     help="copy each cell's reference coordinate file here as <plan>__<tag>.json")
+    ap.add_argument("--retry-diagjit", action="store_true",
+                    help="write only the R2 O1 as-shipped --diag-mode jit retry specs")
     a = ap.parse_args(argv)
-    sp = specs()
+    sp = retry_diagjit_specs() if a.retry_diagjit else specs()
     with open(a.out, "w") as f:
         json.dump(sp, f, indent=1)
     if a.coords_dir:
