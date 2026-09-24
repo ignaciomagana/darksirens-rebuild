@@ -1765,6 +1765,20 @@ def main(argv=None):
             record["aot_policy"] = (f"could not disable the persistent cache ({type(exc).__name__}: "
                                     f"{exc}); an aot entry with compile_counter_delta.compiles == 0 "
                                     "was served from it")
+        # JAX drops frames under the stdlib directory from op metadata; its prefix also
+        # covers site-packages, so a pip-installed package (the legacy env) would get no
+        # source lines in its HLO. Register the imported package as user code for this
+        # pass (location metadata only; the timed section and the trace are already done).
+        try:
+            from jax._src import source_info_util as _siu
+
+            pkg_dir = os.path.dirname(os.path.abspath(pkg.__file__))
+            _siu.register_inclusion(pkg_dir)
+            record["aot_source_info"] = (f"jax source_info_util.register_inclusion({pkg_dir!r}) "
+                                         "before the AOT pass: HLO op metadata names the "
+                                         "package's own source lines (metadata only)")
+        except Exception as exc:  # pragma: no cover
+            record["aot_source_info"] = f"register_inclusion failed: {type(exc).__name__}: {exc}"
         hlo_dir = os.path.abspath(a.out) + ".hlo"
         for nm in ORDER:
             e = comp_rec[nm]

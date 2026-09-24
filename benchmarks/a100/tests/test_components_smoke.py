@@ -425,4 +425,7 @@ def test_dark_parity(dark):
 def test_dark_trace_numerics_unchanged(dark):
     t = json.load(open(dark["comps"]["legacy"]))["trace"]
     assert t["numerics_unchanged"] and t["whole_bitwise_under_trace"] and t["all_parsed"]
-    assert t["components"]["i_whole"]["summary"]["hlo_annotation"]["top_ops_matched"] >= 1
+    ha = t["components"]["i_whole"]["summary"]["hlo_annotation"]
+    assert ha["top_ops_matched"] >= 1
+    # the legacy package lives in site-packages: its own files, not the harness, must carry the time
+    assert ha["by_dominant_file"][0]["file"].startswith("darksirens/"), ha["by_dominant_file"][:3]
