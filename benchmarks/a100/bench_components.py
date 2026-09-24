@@ -352,6 +352,17 @@ def _block_arg(v: str) -> str:
     return str(n)
 
 
+def _needs(selected):
+    """Which precomputed inputs the selected components consume (None = all)."""
+    if selected is None:
+        return {"A": True, "S": True, "W": True}
+    s = set(selected)
+    return {"A": bool(s & {"b_population", "c_pop_norm", "g_prior_eval", "g_prior_eval_unrouted"}),
+            "S": bool(s & {"w_weights", "g_prior_eval", "g_prior_eval_unrouted", "d_pe_reduce",
+                           "e_sel_reduce"}),
+            "W": bool(s & {"d_pe_reduce", "e_sel_reduce"})}
+
+
 class FirstCall:
     """Wraps a component kernel; records the first invocation (compile + run)."""
 
@@ -625,22 +636,30 @@ class CoreComponents:
     def state_args(self, state):
         return state
 
-    def build_calls(self, coords, fc):
-        """Return {component: call(k)} plus the precomputed per-coordinate inputs."""
+    def build_calls(self, coords, fc, needs=None):
+        """Return {component: call(k)} plus the precomputed per-coordinate inputs.
+
+        ``needs`` (the selected components, None = all): only the inputs those components
+        consume are precomputed (a subset run on a large fixture must not hold every
+        coordinate's selection weights and prior states on the device)."""
         jnp = self.jnp
         pe, sel = self.gw_pe, self.gw_sel
         cat, cache = self.catalog, self.cache
         n = coords.shape[0]
         th = lambda k: jnp.asarray(coords[k])  # noqa: E731  (as the main harness: inside the call)
+        nd = _needs(needs)
         A, S, W, Dd, PV = {}, {}, {}, {}, {}
         for k in range(n):
-            A[k] = fc["a_cosmology"](th(k), pe.dL, sel.dL)
-            if self.dark:
+            if nd["A"]:
+                A[k] = fc["a_cosmology"](th(k), pe.dL, sel.dL)
+            if self.dark and nd["S"]:
                 S[k] = fc["fh_prior_state"](th(k), cat, cache)
-            W[k] = fc["w_weights"](th(k), pe, sel, cat, S.get(k))
-            Dd[k] = fc["d_pe_reduce"](W[k]["ldw_pe"], pe.valid, pe.prior_wt)
-            PV[k] = jnp.sum(Dd[k]["event_vars"])
-        M1 = {k: (pe.m1det / (1.0 + A[k]["z_pe"]), sel.m1det / (1.0 + A[k]["z_sel"])) for k in range(n)}
+            if nd["W"]:
+                W[k] = fc["w_weights"](th(k), pe, sel, cat, S.get(k))
+                Dd[k] = fc["d_pe_reduce"](W[k]["ldw_pe"], pe.valid, pe.prior_wt)
+                PV[k] = jnp.sum(Dd[k]["event_vars"])
+        M1 = ({k: (pe.m1det / (1.0 + A[k]["z_pe"]), sel.m1det / (1.0 + A[k]["z_sel"])) for k in range(n)}
+              if nd["A"] else {})
         calls = {
             "a_cosmology": lambda k: fc["a_cosmology"](th(k), pe.dL, sel.dL),
             "b_population": lambda k: fc["b_population"](th(k), pe, sel, A[k]["z_pe"], A[k]["z_sel"]),
@@ -661,22 +680,24 @@ class CoreComponents:
         else:
             calls["g_prior_eval"] = lambda k: fc["g_prior_eval"](th(k), A[k]["z_pe"], A[k]["z_sel"])
         # component (args for jaxpr / AOT evidence at coordinate 0)
-        args0 = {
-            "a_cosmology": ((th(0), pe.dL, sel.dL), {}),
-            "b_population": ((th(0), pe, sel, A[0]["z_pe"], A[0]["z_sel"]), {}),
-            "c_pop_norm": ((th(0), M1[0][0], M1[0][1]), {}),
-            "w_weights": ((th(0), pe, sel, cat, S.get(0)), {}),
-            "d_pe_reduce": ((W[0]["ldw_pe"], pe.valid, pe.prior_wt), {}),
-            "e_sel_reduce": ((W[0]["ldw_sel"], sel.valid, sel.prior_wt, PV[0]), {}),
-        }
+        args0 = {"a_cosmology": ((th(0), pe.dL, sel.dL), {})}
+        if nd["A"]:
+            args0["b_population"] = ((th(0), pe, sel, A[0]["z_pe"], A[0]["z_sel"]), {})
+            args0["c_pop_norm"] = ((th(0), M1[0][0], M1[0][1]), {})
+        if nd["S"] or not self.dark:
+            args0["w_weights"] = ((th(0), pe, sel, cat, S.get(0)), {})
+        if nd["W"]:
+            args0["d_pe_reduce"] = ((W[0]["ldw_pe"], pe.valid, pe.prior_wt), {})
+            args0["e_sel_reduce"] = ((W[0]["ldw_sel"], sel.valid, sel.prior_wt, PV[0]), {})
         if self.dark:
             args0.update({
                 "f_kernel_state": ((th(0), cat), {}),
                 "h_completion": ((th(0), cat, cache), {}),
                 "fh_prior_state": ((th(0), cat, cache), {}),
-                "g_prior_eval": ((A[0]["z_pe"], pe.pixels, A[0]["z_sel"], sel.pixels, S[0], cat), {}),
             })
-        else:
+            if nd["A"] and nd["S"]:
+                args0["g_prior_eval"] = ((A[0]["z_pe"], pe.pixels, A[0]["z_sel"], sel.pixels, S[0], cat), {})
+        elif nd["A"]:
             args0["g_prior_eval"] = ((th(0), A[0]["z_pe"], A[0]["z_sel"]), {})
         self._keep = (A, S, W, Dd, PV, M1)
         return calls, args0
@@ -978,27 +999,34 @@ class LegacyComponents:
         f[self.sel_order] = x
         return f
 
-    def build_calls(self, coords, fc):
+    def build_calls(self, coords, fc, needs=None):
         jnp = self.jnp
         pe, sel, em_pe, em_sel = self.gw_pe, self.gw_sel, self.em_pe, self.em_sel
         rt_pe, rt_sel = self.rt_pe, self.rt_sel
         n = coords.shape[0]
         th = lambda k: jnp.asarray(coords[k])  # noqa: E731
+        nd = _needs(needs)
+        if not self.dark:  # spectral prior state = the a grid
+            nd["A"] = nd["A"] or nd["S"]
         A, S, W, Dd, PV = {}, {}, {}, {}, {}
         for k in range(n):
-            A[k] = fc["a_cosmology"](th(k), pe.dL, sel.dL)
-            if self.dark:
-                st = fc["fh_prior_state"](th(k), em_pe)
-                S[k] = (st, st)  # one shared state (share_prior_state_by_catalog)
-                if not self.share0:
-                    S[k] = (st, fc["fh_prior_state"](th(k), em_sel))
-            else:
-                st = self._SpectralPriorState(log_pvol=A[k]["log_pvol"])
-                S[k] = (st, st)
-            W[k] = fc["w_weights"](th(k), pe, sel, em_pe, em_sel, S[k][0], S[k][1], rt_pe, rt_sel)
-            Dd[k] = fc["d_pe_reduce"](W[k]["ldw_pe"], pe.valid, pe.prior_wt)
-            PV[k] = jnp.sum(Dd[k]["event_vars"])
-        M1 = {k: (pe.m1det / (1.0 + A[k]["z_pe"]), sel.m1det / (1.0 + A[k]["z_sel"])) for k in range(n)}
+            if nd["A"]:
+                A[k] = fc["a_cosmology"](th(k), pe.dL, sel.dL)
+            if nd["S"]:
+                if self.dark:
+                    st = fc["fh_prior_state"](th(k), em_pe)
+                    S[k] = (st, st)  # one shared state (share_prior_state_by_catalog)
+                    if not self.share0:
+                        S[k] = (st, fc["fh_prior_state"](th(k), em_sel))
+                else:
+                    st = self._SpectralPriorState(log_pvol=A[k]["log_pvol"])
+                    S[k] = (st, st)
+            if nd["W"]:
+                W[k] = fc["w_weights"](th(k), pe, sel, em_pe, em_sel, S[k][0], S[k][1], rt_pe, rt_sel)
+                Dd[k] = fc["d_pe_reduce"](W[k]["ldw_pe"], pe.valid, pe.prior_wt)
+                PV[k] = jnp.sum(Dd[k]["event_vars"])
+        M1 = ({k: (pe.m1det / (1.0 + A[k]["z_pe"]), sel.m1det / (1.0 + A[k]["z_sel"])) for k in range(n)}
+              if nd["A"] else {})
         calls = {
             "a_cosmology": lambda k: fc["a_cosmology"](th(k), pe.dL, sel.dL),
             "b_population": lambda k: fc["b_population"](th(k), pe, sel, A[k]["z_pe"], A[k]["z_sel"]),
@@ -1007,14 +1035,15 @@ class LegacyComponents:
             "d_pe_reduce": lambda k: fc["d_pe_reduce"](W[k]["ldw_pe"], pe.valid, pe.prior_wt),
             "e_sel_reduce": lambda k: fc["e_sel_reduce"](W[k]["ldw_sel"], sel.valid, sel.prior_wt, PV[k]),
         }
-        args0 = {
-            "a_cosmology": ((th(0), pe.dL, sel.dL), {}),
-            "b_population": ((th(0), pe, sel, A[0]["z_pe"], A[0]["z_sel"]), {}),
-            "c_pop_norm": ((th(0), M1[0][0], M1[0][1]), {}),
-            "w_weights": ((th(0), pe, sel, em_pe, em_sel, S[0][0], S[0][1], rt_pe, rt_sel), {}),
-            "d_pe_reduce": ((W[0]["ldw_pe"], pe.valid, pe.prior_wt), {}),
-            "e_sel_reduce": ((W[0]["ldw_sel"], sel.valid, sel.prior_wt, PV[0]), {}),
-        }
+        args0 = {"a_cosmology": ((th(0), pe.dL, sel.dL), {})}
+        if nd["A"]:
+            args0["b_population"] = ((th(0), pe, sel, A[0]["z_pe"], A[0]["z_sel"]), {})
+            args0["c_pop_norm"] = ((th(0), M1[0][0], M1[0][1]), {})
+        if nd["S"]:
+            args0["w_weights"] = ((th(0), pe, sel, em_pe, em_sel, S[0][0], S[0][1], rt_pe, rt_sel), {})
+        if nd["W"]:
+            args0["d_pe_reduce"] = ((W[0]["ldw_pe"], pe.valid, pe.prior_wt), {})
+            args0["e_sel_reduce"] = ((W[0]["ldw_sel"], sel.valid, sel.prior_wt, PV[0]), {})
         if self.norm_available:
             calls["c_pop_norm"] = lambda k: fc["c_pop_norm"](th(k), M1[k][0], M1[k][1])
         if self.dark:
@@ -1030,16 +1059,19 @@ class LegacyComponents:
                 "f_kernel_state": ((th(0), em_pe), {}),
                 "h_completion": ((th(0), em_pe), {}),
                 "fh_prior_state": ((th(0), em_pe), {}),
-                "g_prior_eval": (gargs(0), {}),
             })
+            if nd["A"] and nd["S"]:
+                args0["g_prior_eval"] = (gargs(0), {})
             if "g_prior_eval_unrouted" in fc:
                 calls["g_prior_eval_unrouted"] = lambda k: fc["g_prior_eval_unrouted"](*gargs(k))
-                args0["g_prior_eval_unrouted"] = (gargs(0), {})
+                if nd["A"] and nd["S"]:
+                    args0["g_prior_eval_unrouted"] = (gargs(0), {})
         else:
             gargs = lambda k: (th(k), A[k]["z_pe"], pe.pixels, A[k]["z_sel"], sel.pixels,  # noqa: E731
                                S[k][0], S[k][1], em_pe, em_sel)
             calls["g_prior_eval"] = lambda k: fc["g_prior_eval"](*gargs(k))
-            args0["g_prior_eval"] = (gargs(0), {})
+            if nd["A"] and nd["S"]:
+                args0["g_prior_eval"] = (gargs(0), {})
         self._keep = (A, S, W, Dd, PV, M1)
         return calls, args0
 
@@ -1577,7 +1609,7 @@ def main(argv=None):
     bc.partial_stage("input precompute")
     fc = {name: FirstCall(fn, counter, jax, context) for name, fn in comps.fns.items()}
     t0 = time.perf_counter()
-    calls, args0 = comps.build_calls(coords, fc)
+    calls, args0 = comps.build_calls(coords, fc, needs=selected)
     jax.block_until_ready(comps._keep)
     t_precompute = time.perf_counter() - t0
     context["phase"] = "timing"
