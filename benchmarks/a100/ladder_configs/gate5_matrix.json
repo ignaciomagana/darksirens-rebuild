@@ -1,0 +1,226 @@
+{
+ "schema": "darksirens-infer-ladder-matrix/1",
+ "purpose": "Gate 5 run list (prepared by G5-prep; NOT run). One GPU job at a time through $ROOT/bin/gpu_run.sh; cold XLA cache per record.",
+ "root": "/media/volume/tbs/darksirens_benchmark",
+ "pe": "/media/volume/tbs/darksirens_benchmark/data/gwcat/exports/A_pe_chieff_bbh259_n4096_v20.h5",
+ "sel": "/media/volume/tbs/darksirens_benchmark/data/gwcat/exports/A_sel_chieffref_o3o4ab_v20.h5",
+ "settings": "settings_gate5.json",
+ "env_scripts": {
+  "legacy": "$ROOT/envs/env_legacy.sh",
+  "core": "$ROOT/envs/env_core.sh"
+ },
+ "command_template": "$ROOT/bin/gpu_run.sh OUT/{name}.smi.csv bash -c \"source {env}; cd OUT; python $ROOT/repos/darksirens-rebuild/benchmarks/a100/infer_ladder.py --impl {impl} --rung {rung} --sampler {sampler} --pe {pe} --sel {sel} --nlive 1000 --dlogz 0.1 --seed 20260924 --max-samples 0 --guard {guard} --max-variance {max_variance} --out OUT/{name} --device gpu --cache-dir $ROOT/xla_cache/runs/{name} --cache-mode cold --smi-log OUT/{name}.smi.csv --label G5_{name}\"",
+ "primary_sampler": "tinyns",
+ "runs": [
+  {
+   "name": "legacy_r1_tinyns",
+   "impl": "legacy",
+   "rung": "1",
+   "sampler": "tinyns",
+   "guard": "soft",
+   "max_variance": 1.0
+  },
+  {
+   "name": "core_r1_tinyns",
+   "impl": "core",
+   "rung": "1",
+   "sampler": "tinyns",
+   "guard": "soft",
+   "max_variance": 1.0
+  },
+  {
+   "name": "legacy_r1_dynesty",
+   "impl": "legacy",
+   "rung": "1",
+   "sampler": "dynesty",
+   "guard": "soft",
+   "max_variance": 1.0
+  },
+  {
+   "name": "core_r1_dynesty",
+   "impl": "core",
+   "rung": "1",
+   "sampler": "dynesty",
+   "guard": "soft",
+   "max_variance": 1.0
+  },
+  {
+   "name": "legacy_r2_tinyns",
+   "impl": "legacy",
+   "rung": "2",
+   "sampler": "tinyns",
+   "guard": "soft",
+   "max_variance": 1.0
+  },
+  {
+   "name": "core_r2_tinyns",
+   "impl": "core",
+   "rung": "2",
+   "sampler": "tinyns",
+   "guard": "soft",
+   "max_variance": 1.0
+  },
+  {
+   "name": "legacy_r2_dynesty",
+   "impl": "legacy",
+   "rung": "2",
+   "sampler": "dynesty",
+   "guard": "soft",
+   "max_variance": 1.0
+  },
+  {
+   "name": "core_r2_dynesty",
+   "impl": "core",
+   "rung": "2",
+   "sampler": "dynesty",
+   "guard": "soft",
+   "max_variance": 1.0
+  },
+  {
+   "name": "legacy_r3_tinyns",
+   "impl": "legacy",
+   "rung": "3",
+   "sampler": "tinyns",
+   "guard": "soft",
+   "max_variance": 1.0
+  },
+  {
+   "name": "core_r3_tinyns",
+   "impl": "core",
+   "rung": "3",
+   "sampler": "tinyns",
+   "guard": "soft",
+   "max_variance": 1.0
+  },
+  {
+   "name": "legacy_r3_dynesty",
+   "impl": "legacy",
+   "rung": "3",
+   "sampler": "dynesty",
+   "guard": "soft",
+   "max_variance": 1.0
+  },
+  {
+   "name": "core_r3_dynesty",
+   "impl": "core",
+   "rung": "3",
+   "sampler": "dynesty",
+   "guard": "soft",
+   "max_variance": 1.0
+  },
+  {
+   "name": "legacy_r4_tinyns",
+   "impl": "legacy",
+   "rung": "4",
+   "sampler": "tinyns",
+   "guard": "soft",
+   "max_variance": 1.0
+  },
+  {
+   "name": "core_r4_tinyns",
+   "impl": "core",
+   "rung": "4",
+   "sampler": "tinyns",
+   "guard": "soft",
+   "max_variance": 1.0
+  },
+  {
+   "name": "legacy_r4_dynesty",
+   "impl": "legacy",
+   "rung": "4",
+   "sampler": "dynesty",
+   "guard": "soft",
+   "max_variance": 1.0
+  },
+  {
+   "name": "core_r4_dynesty",
+   "impl": "core",
+   "rung": "4",
+   "sampler": "dynesty",
+   "guard": "soft",
+   "max_variance": 1.0
+  },
+  {
+   "name": "legacy_r5_tinyns",
+   "impl": "legacy",
+   "rung": "5",
+   "sampler": "tinyns",
+   "guard": "soft",
+   "max_variance": 1.0
+  },
+  {
+   "name": "core_r5_tinyns",
+   "impl": "core",
+   "rung": "5",
+   "sampler": "tinyns",
+   "guard": "soft",
+   "max_variance": 1.0
+  },
+  {
+   "name": "legacy_r5_dynesty",
+   "impl": "legacy",
+   "rung": "5",
+   "sampler": "dynesty",
+   "guard": "soft",
+   "max_variance": 1.0
+  },
+  {
+   "name": "core_r5_dynesty",
+   "impl": "core",
+   "rung": "5",
+   "sampler": "dynesty",
+   "guard": "soft",
+   "max_variance": 1.0
+  },
+  {
+   "name": "legacy_r5b_tinyns",
+   "impl": "legacy",
+   "rung": "5b",
+   "sampler": "tinyns",
+   "guard": "soft",
+   "max_variance": 1.0
+  },
+  {
+   "name": "core_r5b_tinyns",
+   "impl": "core",
+   "rung": "5b",
+   "sampler": "tinyns",
+   "guard": "soft",
+   "max_variance": 1.0
+  },
+  {
+   "name": "legacy_r5b_dynesty",
+   "impl": "legacy",
+   "rung": "5b",
+   "sampler": "dynesty",
+   "guard": "soft",
+   "max_variance": 1.0
+  },
+  {
+   "name": "core_r5b_dynesty",
+   "impl": "core",
+   "rung": "5b",
+   "sampler": "dynesty",
+   "guard": "soft",
+   "max_variance": 1.0
+  },
+  {
+   "name": "legacy_r1_tinyns_hardguard",
+   "impl": "legacy",
+   "rung": "1",
+   "sampler": "tinyns",
+   "guard": "hard",
+   "max_variance": 1.0,
+   "expect": "status sampler_error with sampler_error.preflight_abort (every prior draw -inf: at the GWTC-5 centre N_eff 12,819.5 < threshold 78,639.9, gate2_run.md section 6)"
+  },
+  {
+   "name": "core_r1_tinyns_hardguard",
+   "impl": "core",
+   "rung": "1",
+   "sampler": "tinyns",
+   "guard": "hard",
+   "max_variance": 1.0,
+   "expect": "status sampler_error with sampler_error.preflight_abort (every prior draw -inf: at the GWTC-5 centre N_eff 12,819.5 < threshold 78,639.9, gate2_run.md section 6)"
+  }
+ ]
+}

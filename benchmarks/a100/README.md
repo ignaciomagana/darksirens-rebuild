@@ -542,3 +542,92 @@ whole: the whole jit fuses and CSEs across components, so they need not agree.
   DIR --hlo FILE [--record REC]` and `trace_tools.py main --hlo FILE` do the same for any
   trace whose module that HLO is (the op names of the main harness's whole kernel and the
   components runner's `i_whole` agree).
+
+## Gate 5 inference ladder (`infer_ladder.py`, `compare_posteriors.py`)
+
+Real-data spectral-siren nested sampling on Product A
+(`A_pe_chieff_bbh259_n4096_v20.h5` + `A_sel_chieffref_o3o4ab_v20.h5`), one run of one
+implementation per process. The rungs are Fable's (`ladder_configs/rungs.json`); one
+population model throughout, the one that carries the shared GWTC-5 preset
+(`gwtc5_fiducial_bpl2peaks`), except rung 5b (the Gate 1 kernel model `powerlaw+peak`).
+
+| rung | sampled | fixed | legacy (beyond the common flags) | core |
+|---|---|---|---|---|
+| 1 | H0 [20, 140] | population = GWTC-5 preset; Om0, w0, wa | `--fix_population true --population_fiducials legacy --fix_de true --prior_overrides '{"H0":[20,140]}' --fixed_parameter_values '{"Om0":0.3075}'` | `Cosmology(H0=(20,140))`, `Population(m, fixed="gwtc5")` |
+| 2 | 17 population | H0 67.74, Om0, w0, wa | `--fix_cosmology true` | `Cosmology(H0=67.74)`, `Population(m)` |
+| 3 | first 3 population | H0 and the other 14 at the preset | `--fix_cosmology true --fixed_parameter_values '{14 labels: preset}'` | `InferenceTarget` over rung 2's plan with the 14 inserted |
+| 4 | H0 + first 3 population | the other 14 at the preset; Om0, w0, wa | `--fix_de true --prior_overrides H0 --fixed_parameter_values '{Om0, 14 labels}'` | `InferenceTarget` over rung 5's plan with the 14 inserted |
+| 5 | H0 + 17 population | Om0, w0, wa | `--fix_de true --prior_overrides H0 --fixed_parameter_values '{"Om0":0.3075}'` | `Cosmology(H0=(20,140))`, `Population(m)` |
+| 5b | H0 + 12 `powerlaw+peak` | Om0, w0, wa | as 5 with `--pop_model powerlaw+peak` | as 5 with `Population("powerlaw+peak")` |
+
+Every run passes the same settings to both codes (`ladder_configs/settings_gate5.json`;
+the driver records each code's resolved values under `settings.resolved`):
+`nlive`, `dlogz`, `seed`, `max_samples` (0 = no cap, so dlogz is the only stopping rule),
+TinyNS preset `recommended` (`jax_block_size` 32), preflight on, prior-transform dispatch
+`auto`, progress printing on, checkpointing off (legacy `--checkpoint_interval off
+--resume off`; core `checkpoint_interval_seconds=0.0`), single-pass selection and PE
+blocks, and the selection guard (`--guard soft|hard`, `--max-variance`).
+
+How each code is driven:
+
+* legacy: the `darksirens_inference` CLI's phase functions in `main()`'s order, with the
+  exact argument vector stored in `invocation.argv`; `_save_outputs` (samples.npy,
+  results.hdf5, corner plot) is not run, the driver writes its own posterior file.
+* core: `ds.model` + `ds.load_events` / `ds.load_injections` + `bind_analysis` (what
+  `ds.infer` binds for an ordinary analysis), then `ds.infer(ds.InferenceTarget(...))`,
+  the same `_execute_target` path; rungs 3 and 4 need the target form because
+  `ds.Population` is either fully fixed or fully sampled. `invocation` holds the
+  expression and, for rungs 1, 2, 5 and 5b, the one-line ordinary `ds.infer` equivalent.
+
+Instrumentation (observation only): the likelihood handed to the sampler is wrapped by a
+counter (eager / traced calls per phase); `tinyns.NestedSampler.run` receives a
+`callback` (callback_interval 1: every outer iteration, i.e. every JAX block of 32
+iterations with the recommended preset) and dynesty's `run_nested` a `print_func`;
+a monitor thread samples `memory_stats()` (GPU) and the host RSS; XLA compile requests,
+compilations and their seconds are counted per phase (build, first call, sampling).
+`--describe` stops after the plan assertions and the first call.
+
+```bash
+# one run (CPU)
+JAX_PLATFORMS=cpu $CORE_PY infer_ladder.py --impl core --rung 5 --sampler tinyns \
+    --pe PE.h5 --sel SEL.h5 --nlive 1000 --dlogz 0.1 --seed 20260924 --guard soft \
+    --max-variance 1.0 --max-samples 0 --out OUT/core_r5_tinyns --device cpu \
+    --cache-dir CACHE/core_r5_tinyns --cache-mode cold
+# on the A100 (one GPU job at a time, through the campaign lock and sampler)
+$ROOT/bin/gpu_run.sh RUN.smi.csv bash -c "source $ROOT/envs/env_core.sh; cd RUNDIR; \
+    python infer_ladder.py --impl core ... --device gpu --smi-log RUN.smi.csv"
+# posterior / evidence / progress comparison (integration check, never parity)
+python compare_posteriors.py OUT/legacy_r5_tinyns OUT/core_r5_tinyns --out cmp.json --md cmp.md
+```
+
+Outputs per run directory: `record.json` (schema `darksirens-infer-ladder/1`: the
+fixed-theta records' provenance fields `harness`, `package`, `env`, `device`, `inputs`,
+`xla_cache`, plus `sampler_backends` (tinyns / dynesty versions, digests, pip
+`direct_url`), `rung`, `settings.{requested,resolved}`, `invocation`, `plan` (the
+implementation's labels, bounds, kinds, joint constraints and the decoded full vector at
+the rung centre, asserted against the rung), `first_call`, `timing` (import, config,
+load, build, first call, sampling with sub-events, main loop, post), `compile`,
+`likelihood_calls` (`n_like_evals`: every eager call for dynesty; preflight calls +
+TinyNS `ncall` for tinyns), `progress` (+ steady-state iterations / evaluations /
+-log X per second), `result` (logZ, logZerr, n_samples, n_dead, Kish ESS of the dead
+points, TinyNS diagnostics), `seeds`, `memory`), `progress.csv` (iteration, log-volume,
+logZ, remaining dlogz, cumulative calls, wall time), `posterior.npz` (`samples`,
+`labels`, sanitized `columns`, `dead_logl`, `dead_logwt`, `logZ`, `logZerr`),
+`memory.csv`, `run.log`, and `legacy_run/` (legacy's own run directory with
+settings.json and run_fingerprint.json). Exit 0 ok / described, 2 usage, 3 plan
+mismatch, 4 build error, 5 sampler error (the record's `sampler_error.preflight_abort`
+flags the nested-sampler preflight abort that the hard guard triggers when every prior
+draw is -inf).
+
+`compare_posteriors.py A B` refuses runs that differ in rung, plan, inputs or any matched
+setting (`--cross-sampler` lets the sampler differ). It reports per-parameter means,
+stds, 16/50/84 % quantiles, the mean difference in units of the posterior std and of the
+combined Monte-Carlo error (Kish ESS of the dead points), two-sample KS D (approximate
+p-value with the ESS as effective sizes), logZ agreement in units of the combined quoted
+error, the rung-centre first-call values, and performance: evaluations per second,
+steady-state iterations and -log X per second, time to reach common -log X levels, ESS
+per second, peak memory.
+
+`tests/test_ladder_smoke.py` (CPU): rung and argument-vector unit checks, `--describe`
+of all six rungs in both codes (plans and decoded centres identical), rung 1 with tinyns
+and dynesty in both codes, the comparator, and the preflight-abort path.
