@@ -5,7 +5,7 @@
         --plans spectral_H0,spectral_pop,spectral_joint_small,spectral_full \\
         --seed 20260924 --n 8 --outdir DIR --tag T [--device cpu] \\
         [--sel-batch none] [--pe-block none] [--n-calls 20] [--parallel 1] \\
-        [--wrap "/path/gpu_run.sh {smi}"] [--cold-cache-root DIR]
+        [--wrap "/path/gpu_run.sh {smi}"] [--cold-cache-root DIR] [--catalog CAT.h5]
 
 For every plan: make_coords.py, then bench_fixed_theta.py for legacy (factory
 kernel), core --jit whole and core --jit asis, then compare_records.py for
@@ -64,6 +64,8 @@ def main(argv=None):
     ap.add_argument("--util-window-s", type=float, default=0.0)
     ap.add_argument("--cold-cache-root", default=None,
                     help="per-run empty JAX_COMPILATION_CACHE_DIR under this root")
+    ap.add_argument("--catalog", default=None,
+                    help="pixelated galaxy catalog, passed to the dark_* plans only")
     a = ap.parse_args(argv)
 
     os.makedirs(a.outdir, exist_ok=True)
@@ -95,6 +97,8 @@ def main(argv=None):
                    "--jit", jit, "--sel-batch", a.sel_batch, "--pe-block", a.pe_block,
                    "--seed", str(a.seed), "--label", name, "--device", a.device,
                    "--util-window-s", str(a.util_window_s)]
+            if a.catalog and plan.startswith("dark_"):
+                cmd += ["--catalog", a.catalog]
             if a.cold_cache_root:
                 cmd += ["--cache-dir", os.path.join(os.path.abspath(a.cold_cache_root), name),
                         "--cache-mode", "cold"]

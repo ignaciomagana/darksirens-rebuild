@@ -15,6 +15,14 @@ bit patterns), input files (sha256), physical dims, selection-guard mode or
 Block sizes may differ (that is how the batched paths are checked against the
 single pass); both sides' values are in the summary. Exit 1 when the comparison ran but parity (at the given
 tolerances), mask equality or repeat consistency failed; 0 otherwise.
+
+Dark-siren records (``plan.universe == "dark"``) additionally compare the
+catalog-side fields (per-event catalog-host / missing-host branch evidences,
+branch log_mu, sum of N_miss), the per-row arrays (log N_obs, log Z, N_miss, f,
+log depth mass) and per-sample log p(z|row) arrays of the records'
+``.catalog.npz`` sidecars (same tolerance), the empty-row sets (exact), and the
+catalog structure (rows, widths, pixel sets, galaxy tables, sample-to-row maps:
+exact). Records built on different catalog files are refused.
 """
 
 from __future__ import annotations
@@ -28,6 +36,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import bench_common as bc  # noqa: E402
+import dark_diag  # noqa: E402
 
 SCALAR_FIELDS = (
     "total_logL",
@@ -45,6 +54,135 @@ MASK_KEYS = ("pe_structural", "pe_support", "pe_final", "sel_structural", "sel_s
              "sel_final")
 DIM_KEYS = ("n_events", "nsamp", "n_pe_samples", "n_injections", "ndraw")
 LIKELIHOOD_SETTINGS = ("max_likelihood_variance", "selection_neff_soft_guard")
+#: Catalog structure both implementations must build identically (exact).
+CATALOG_STRUCTURE_KEYS = (
+    "nside", "npix", "apix_hex", "z_depth", "n_rows", "n_max", "n_galaxies_full_catalog",
+    "n_pixels_occupied_full_catalog", "n_galaxies_rows", "n_rows_occupied", "n_rows_empty",
+    "max_ngals_row", "union_pixels_sha256", "row_ngals_sha256", "real_zgals_sha256",
+    "real_dzgals_sha256", "real_wgals_sha256", "pe_samples_on_empty_rows",
+    "pe_samples_on_empty_rows_per_event", "sel_samples_on_empty_rows", "pe_sample_rows_sha256",
+    "sel_sample_rows_file_order_sha256",
+)
+NPZ_FLOAT_KEYS = tuple(f"rows_{k}" for k in dark_diag.ROW_KEYS) + ("pe_log_prior", "sel_log_prior")
+#: Reported but never part of a verdict: f = 1 - N_miss/N_exp is a diagnostic in
+#: both codes (no likelihood input) and cancels catastrophically on rows whose
+#: catalog is nearly empty (f ~ 1e-6), so one ulp of N_miss reads as ~1e-10 there.
+NPZ_INFORMATIONAL_KEYS = ("rows_f",)
+
+
+def _is_dark(rec):
+    return rec["plan"].get("universe", "spectral") == "dark"
+
+
+def compare_arrays(a, b, rtol, atol):
+    """compare_values on float64 arrays (bitwise = identical bit patterns, NaN == NaN)."""
+    a = np.asarray(a, dtype=np.float64).ravel()
+    b = np.asarray(b, dtype=np.float64).ravel()
+    if a.shape != b.shape:
+        return {"error": f"shape {a.shape} vs {b.shape}", "pass": False, "bitwise": False}
+    both_nan = np.isnan(a) & np.isnan(b)
+    bitwise_mask = (a.view(np.int64) == b.view(np.int64)) | both_nan
+    both_fin = np.isfinite(a) & np.isfinite(b)
+    same_inf = np.isinf(a) & np.isinf(b) & (np.sign(a) == np.sign(b))
+    nonfinite_mismatch = ~(both_fin | both_nan | same_inf)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        d = np.where(both_fin, np.abs(a - b), 0.0)
+        rel = np.where(both_fin & (a != 0), d / np.abs(a),
+                       np.where(both_fin & (a == 0) & (b != 0), np.inf, 0.0))
+    ok = both_nan | same_inf | (a == b) | (both_fin & (d <= atol + rtol * np.abs(a)))
+    ok &= ~nonfinite_mismatch
+    worst = int(np.argmax(rel)) if rel.size else None
+    return {
+        "n": int(a.size),
+        "n_finite_both": int(both_fin.sum()),
+        "n_nonfinite_matched": int((both_nan | same_inf).sum()),
+        "n_nonfinite_mismatch": int(nonfinite_mismatch.sum()),
+        "bitwise": bool(bitwise_mask.all()),
+        "n_bit_different": int((~bitwise_mask).sum()),
+        "max_abs": float(d.max()) if d.size else 0.0,
+        "max_rel": float(rel.max()) if rel.size else 0.0,
+        "worst_index": worst,
+        "worst_values": (None if worst is None else [float(a[worst]), float(b[worst])]),
+        "pass": bool(ok.all()),
+        "n_fail": int((~ok).sum()),
+    }
+
+
+def _load_npz(rec):
+    info = rec.get("catalog_arrays")
+    if not info:
+        return None, "record has no catalog_arrays"
+    base = os.path.dirname(os.path.abspath(rec.get("_path") or "."))
+    path = os.path.join(base, info["file"])
+    if not os.path.isfile(path):
+        return None, f"missing {path}"
+    if bc.sha256_file(path) != info["sha256"]:
+        return None, f"sha256 of {path} differs from the record"
+    with np.load(path) as z:
+        return {k: z[k] for k in z.files}, None
+
+
+def _catalog_hexes(rec, field):
+    out = []
+    for pc in rec["values"]["per_coord"]:
+        e = pc["catalog"][field]
+        out.extend(e["hex"] if isinstance(e["hex"], list) else [e["hex"]])
+    return out
+
+
+def _catalog_per_coord_hexes(rec, field):
+    res = []
+    for pc in rec["values"]["per_coord"]:
+        e = pc["catalog"][field]
+        res.append(e["hex"] if isinstance(e["hex"], list) else [e["hex"]])
+    return res
+
+
+def compare_catalog(A, B, rtol, atol):
+    """Catalog-side parity block of two dark-siren records."""
+    out = {"fields": {}, "arrays": {}, "structure": {}, "notes": []}
+    for f in dark_diag.CATALOG_SCALAR_FIELDS + dark_diag.CATALOG_ARRAY_FIELDS:
+        res = compare_values(_catalog_hexes(A, f), _catalog_hexes(B, f), rtol, atol)
+        res["max_rel_per_coord"] = [compare_values(x, y, rtol, atol)["max_rel"] for x, y in
+                                    zip(_catalog_per_coord_hexes(A, f), _catalog_per_coord_hexes(B, f))]
+        out["fields"][f"catalog.{f}"] = res
+    ca, cb = A["dims"].get("catalog") or {}, B["dims"].get("catalog") or {}
+    struct_ok = True
+    for k in CATALOG_STRUCTURE_KEYS:
+        eq = ca.get(k) == cb.get(k)
+        out["structure"][k] = {"equal": eq, "A": ca.get(k), "B": cb.get(k)} if not eq else True
+        struct_ok &= eq
+    out["structure_equal"] = bool(struct_ok)
+    za, ea = _load_npz(A)
+    zb, eb = _load_npz(B)
+    if za is None or zb is None:
+        out["notes"].append(f"catalog arrays not compared: A: {ea}; B: {eb}")
+        out["arrays_compared"] = False
+        empty_ok = all(pa["catalog"]["row_empty_sha256_u8"] == pb["catalog"]["row_empty_sha256_u8"]
+                       for pa, pb in zip(A["values"]["per_coord"], B["values"]["per_coord"]))
+    else:
+        out["arrays_compared"] = True
+        for k in NPZ_FLOAT_KEYS:
+            res = compare_arrays(za[k], zb[k], rtol, atol)
+            if za[k].ndim == 2 and za[k].shape == zb[k].shape:
+                res["max_rel_per_coord"] = [compare_arrays(x, y, rtol, atol)["max_rel"]
+                                            for x, y in zip(za[k], zb[k])]
+            if k in NPZ_INFORMATIONAL_KEYS:
+                res["informational"] = True
+                res["note"] = ("diagnostic only (1 - N_miss/N_exp; no likelihood input in either "
+                               "code); cancellation-prone: judge by max_abs, not max_rel")
+            out["arrays"][k] = res
+        empty_ok = bool(za["rows_row_empty"].shape == zb["rows_row_empty"].shape
+                        and np.array_equal(za["rows_row_empty"], zb["rows_row_empty"]))
+    out["row_empty_equal"] = bool(empty_ok)
+    out["pass"] = bool(struct_ok and empty_ok
+                       and all(v["pass"] for v in out["fields"].values())
+                       and all(v["pass"] for v in out["arrays"].values()
+                               if not v.get("informational")))
+    out["values_pass"] = bool(all(v["pass"] for v in out["fields"].values())
+                              and all(v["pass"] for v in out["arrays"].values()
+                                      if not v.get("informational")))
+    return out
 
 
 def _hexes(rec, field):
@@ -106,6 +244,13 @@ def refusal_reasons(A, B):
     for k in ("name", "population_model", "sampled", "full_order"):
         if pa.get(k) != pb.get(k):
             r.append(f"plan.{k}: {pa.get(k)} vs {pb.get(k)}")
+    if pa.get("universe", "spectral") != pb.get("universe", "spectral"):
+        r.append(f"plan.universe: {pa.get('universe', 'spectral')} vs {pb.get('universe', 'spectral')}")
+    if _is_dark(A) and _is_dark(B):
+        cat_a = (A["inputs"].get("catalog") or {}).get("sha256")
+        cat_b = (B["inputs"].get("catalog") or {}).get("sha256")
+        if cat_a is None or cat_a != cat_b:
+            r.append(f"input catalog sha256 differs: {cat_a} vs {cat_b}")
     fa = {k: bc.fhex(v) for k, v in pa["fixed"].items()}
     fb = {k: bc.fhex(v) for k, v in pb["fixed"].items()}
     if fa != fb:
@@ -196,6 +341,19 @@ def compare(A, B, rtol, atol):
     summary["fields"] = fields
     summary["max_rel_by_field"] = {f: v["max_rel"] for f, v in fields.items()}
     summary["bitwise_by_field"] = {f: v["bitwise"] for f, v in fields.items()}
+    catalog = None
+    if _is_dark(A):
+        # Catalog-side values are reported under their own verdict (same
+        # tolerance) so the gate fields above keep the campaign's definition;
+        # the catalog STRUCTURE and empty-row sets are support decisions and
+        # enter the mask verdict (exact).
+        catalog = compare_catalog(A, B, rtol, atol)
+        cfields = dict(catalog["fields"])
+        cfields.update({f"catalog_arrays.{k}": v for k, v in catalog["arrays"].items()})
+        summary["catalog_fields"] = cfields
+        summary["catalog_max_rel_by_field"] = {f: v["max_rel"] for f, v in cfields.items()}
+        summary["catalog_bitwise_by_field"] = {f: v["bitwise"] for f, v in cfields.items()}
+        summary["catalog"] = {k: v for k, v in catalog.items() if k not in ("fields", "arrays")}
 
     mask_rows = []
     masks_equal = True
@@ -218,12 +376,15 @@ def compare(A, B, rtol, atol):
         and rec.get("mask_order", {}).get("sel_dL_equals_file") is True
         for rec in (A, B))
     masks_equal = bool(masks_equal and order_ok)
+    if catalog is not None:
+        masks_equal = bool(masks_equal and catalog["row_empty_equal"] and catalog["structure_equal"])
     summary["masks"] = {"all_equal": masks_equal, "order_verified_both": bool(order_ok),
                         "per_coord": mask_rows,
                         "note": "mask equality = identical length, count and sha256 of the "
                                 "uint8 mask in FILE order (each record verifies its order "
                                 "against the HDF5 dL datasets); guard verdict and finiteness "
-                                "of the total must also agree"}
+                                "of the total must also agree; dark records: also the empty-row "
+                                "sets per coordinate and the catalog structure"}
 
     summary["repeat_consistency"] = {
         "A": {"bitwise": A["repeat_consistency"]["bitwise"],
@@ -280,6 +441,10 @@ def compare(A, B, rtol, atol):
         "repeat_consistent_both": bool(repeat_ok),
         "overall_pass": bool(parity and repeat_ok),
     }
+    if catalog is not None:
+        summary["verdict"]["catalog_values_pass"] = catalog["values_pass"]
+        summary["verdict"]["catalog_bitwise_all"] = bool(all(
+            v["bitwise"] for v in summary["catalog_fields"].values() if not v.get("informational")))
     return summary
 
 
@@ -313,6 +478,22 @@ def to_markdown(s):
     for f, r in s["fields"].items():
         L.append(f"| {f} | {r['n']} | {r['bitwise']} | {r['n_bit_different']} | "
                  f"{r['max_abs']:.3e} | {r['max_rel']:.3e} | {r['pass']} |")
+    if s.get("catalog"):
+        c = s["catalog"]
+        L.append("")
+        L.append(f"Catalog: structure_equal={c['structure_equal']}, "
+                 f"row_empty_equal={c['row_empty_equal']}, arrays_compared={c['arrays_compared']}, "
+                 f"catalog values pass={c['values_pass']}")
+        bad = [k for k, v in c["structure"].items() if v is not True]
+        if bad:
+            L.append("Catalog structure differs in: " + ", ".join(bad))
+        L.append("")
+        L.append("| catalog field | n | bitwise | n bit-different | max abs | max rel | pass |")
+        L.append("|---|---|---|---|---|---|---|")
+        for f, r in s["catalog_fields"].items():
+            tag = " (informational)" if r.get("informational") else ""
+            L.append(f"| {f}{tag} | {r['n']} | {r['bitwise']} | {r['n_bit_different']} | "
+                     f"{r['max_abs']:.3e} | {r['max_rel']:.3e} | {r['pass']} |")
     t = s["timing"]
     L.append("")
     if t.get("comparability_issues"):
@@ -352,10 +533,16 @@ def main(argv=None):
         return 2
     v = s["verdict"]
     worst = max(s["max_rel_by_field"].items(), key=lambda kv: kv[1])
+    extra = ""
+    if "catalog_values_pass" in v:
+        cw = max(((f, r["max_rel"]) for f, r in s["catalog_fields"].items()
+                  if not r.get("informational")), key=lambda kv: kv[1])
+        extra = (f" catalog_values_pass={v['catalog_values_pass']} catalog worst "
+                 f"{cw[0]}:{cw[1]:.3e}")
     print(f"{s['A']['label']} vs {s['B']['label']} plan={s['plan']}: parity_pass={v['parity_pass']} "
           f"bitwise_all={v['bitwise_all_fields']} masks_equal={v['masks_equal']} "
-          f"repeat_ok={v['repeat_consistent_both']} worst max_rel={worst[0]}:{worst[1]:.3e} "
-          f"warm A/B={s['timing']['warm_median_s']['ratio_A_over_B']}")
+          f"repeat_ok={v['repeat_consistent_both']} worst max_rel={worst[0]}:{worst[1]:.3e}"
+          f"{extra} warm A/B={s['timing']['warm_median_s']['ratio_A_over_B']}")
     return 0 if v["overall_pass"] else 1
 
 

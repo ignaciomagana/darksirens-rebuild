@@ -6,7 +6,13 @@
         --n-calls 20 --warmup 3 --jit whole|asis --sel-batch N|none|default \\
         --pe-block N|none|default --seed S --label L [--device gpu|cpu] \\
         [--mask-chunk 131072] [--smi-log PATH] [--util-window-s 0] \\
-        [--cache-dir DIR --cache-mode cold|warm|env]
+        [--cache-dir DIR --cache-mode cold|warm|env] \\
+        [--catalog CAT.h5] [--survey-fixed-override JSON [--allow-out-of-prior-fixed-survey]]
+
+Dark-siren plans (``dark_*``) need ``--catalog``; the fixture's
+``galaxy_density.json`` sidecar must pass ``dark_fixture.preflight`` (log10n0
+inside both implementations' priors, the plan's survey fiducial, the sidecar's
+bytes) or the run is refused (exit 2) before JAX is imported.
 
 One process evaluates ONE implementation (both install as ``darksirens``) and
 writes ONE record JSON (schema in README.md). Order of work:
@@ -89,6 +95,15 @@ def parse_args(argv=None):
     ap.add_argument("--cache-dir", default=None,
                     help="set JAX_COMPILATION_CACHE_DIR to DIR before JAX is imported "
                          "(overrides the env script's value); recorded in xla_cache")
+    ap.add_argument("--catalog", default=None,
+                    help="pixelated galaxy catalog (catalog_pixelated_nside_N.h5) for dark_* plans")
+    ap.add_argument("--survey-fixed-override", default=None,
+                    help="JSON {label: value} replacing FIXED survey values of a dark plan whose "
+                         "survey block is fixed (fixed-coordinate checks only, e.g. the PR-6a "
+                         "density {\"log10n0\": -4.301029995663981})")
+    ap.add_argument("--allow-out-of-prior-fixed-survey", action="store_true",
+                    help="accept a --survey-fixed-override log10n0 outside the log10n0 prior of "
+                         "either implementation (fixed coordinate only; recorded as a gap)")
     ap.add_argument("--cache-mode", choices=("cold", "warm", "env"), default="env",
                     help="cold: DIR must be absent or empty (created), so the first call is a "
                          "true compile; warm: DIR must already hold entries (a persistent-cache "
@@ -139,9 +154,7 @@ def check_plan_structure(adapter, plan) -> list:
     bounds = dict(plan["sampled_bounds"])
     for n in expected_labels:
         if n not in bounds:
-            bounds[n] = ([plan["H0_bounds"][0], plan["H0_bounds"][1]] if n == "H0" else
-                         [plan["population_lower"][plan["population_labels"].index(n)],
-                          plan["population_upper"][plan["population_labels"].index(n)]])
+            bounds[n] = plans.label_bounds(plan, n)
     exp_lo = [bounds[n][0] for n in expected_labels]
     exp_hi = [bounds[n][1] for n in expected_labels]
     if _hex_list(v["lower"]) != _hex_list(exp_lo):
@@ -151,10 +164,18 @@ def check_plan_structure(adapter, plan) -> list:
     kinds = dict(plan["sampled_prior_kinds"])
     for n in expected_labels:
         if n not in kinds:
-            kinds[n] = plan["population_prior_kinds"][plan["population_labels"].index(n)]
+            kinds[n] = plans.label_kind(plan, n)
     exp_k = _kinds_norm([kinds[n] for n in expected_labels])
     if v.get("prior_kinds") and _kinds_norm(v["prior_kinds"]) != exp_k:
         errs.append(f"prior kinds {v['prior_kinds']} != {exp_k}")
+    if plans.is_dark(plan):
+        # Fixed survey values must be the plan's, in whichever form each side carries them.
+        fixed_survey = {n: plan["fixed"][n] for n in plan["survey_labels"] if n in plan["fixed"]}
+        got = (v.get("fixed_parameter_values") if adapter.impl == "legacy"
+               else (v.get("fixed_inserted") or {}))
+        for n, want in fixed_survey.items():
+            if n not in got or bc.fhex(got[n]) != bc.fhex(want):
+                errs.append(f"{adapter.impl} fixed survey {n}={got.get(n)!r} != plan {want!r}")
     if adapter.impl == "legacy":
         if _hex_list(v["pop_params_fid"]) != _hex_list(plan["population_fiducials"]):
             errs.append(f"legacy pop_params_fid {v['pop_params_fid']} != plan fiducials")
@@ -190,6 +211,22 @@ def check_registry(adapter, plan) -> tuple[list, dict]:
     for key, name in (("H0_FID", "H0"), ("OM0_FID", "Om0"), ("W0_FID", "w0"), ("WA_FID", "wa")):
         if bc.fhex(r[key]) != bc.fhex(plan["fiducials"][name]):
             errs.append(f"{key}={r[key]} != plan {name} fiducial {plan['fiducials'][name]}")
+    if plans.is_dark(plan):
+        sv = r.get("survey") or {}
+        for n in plan["survey_labels"]:
+            want = list(plans.SURVEY_BOUNDS[n])
+            got = (sv.get("bounds") or {}).get(n)
+            if got is None or _hex_list(got) != _hex_list(want):
+                errs.append(f"{adapter.impl} survey prior bounds {n} {got} != plans {want}")
+        lo, hi, _src = plans.LOG10N0_PRIOR[adapter.impl]
+        got = (sv.get("bounds") or {}).get("log10n0")
+        if got is None or _hex_list(got) != _hex_list([lo, hi]):
+            errs.append(f"{adapter.impl} log10n0 prior {got} != plans.LOG10N0_PRIOR {[lo, hi]}")
+        for n in ("delta", "sigma_kde"):
+            got = (sv.get("defaults") or {}).get(n)
+            if got is None or bc.fhex(got) != bc.fhex(plans.SURVEY_FIDUCIALS[n]):
+                errs.append(f"{adapter.impl} shared default {n}={got} != plans.SURVEY_FIDUCIALS "
+                            f"{plans.SURVEY_FIDUCIALS[n]}")
     return errs, r
 
 
@@ -200,10 +237,16 @@ def _checkpoint(mem, tag):
     raise KeyError(f"memory checkpoint {tag!r} missing")
 
 
-def expected_full_vector(plan, names, row):
+def expected_full_vector(plan, names, row, pow10=None):
+    """The full parameter vector the kernel must see; for a dark plan the
+    log10n0 slot is reported as n0 = 10**log10n0, spelled as both decoders do."""
     vals = dict(plan["fixed"])
     vals.update(dict(zip(names, row)))
-    return [vals[n] for n in plan["full_order"]]
+    out = [vals[n] for n in plan["full_order"]]
+    if plans.is_dark(plan):
+        i = plan["full_order"].index("log10n0")
+        out[i] = pow10(out[i])
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -221,7 +264,47 @@ def main(argv=None):
             return 2
         os.environ["JAX_PLATFORMS"] = "cpu"
 
-    plan = plans.resolve_plan(a.plan)
+    override = None
+    if a.survey_fixed_override:
+        import json as _json
+
+        override = _json.loads(a.survey_fixed_override)
+    try:
+        plan = plans.resolve_plan(a.plan, survey_fixed_override=override)
+    except ValueError as exc:
+        print(f"plan: {exc}", file=sys.stderr)
+        return 2
+    dark = plans.is_dark(plan)
+    fixture_preflight = None
+    override_gap = None
+    if dark:
+        import dark_fixture
+
+        if not a.catalog or not os.path.isfile(a.catalog):
+            print(f"plan {a.plan} is a dark-siren plan and needs --catalog (got {a.catalog!r})",
+                  file=sys.stderr)
+            return 2
+        try:
+            fixture_preflight = dark_fixture.preflight(a.catalog, a.pe, a.sel, plan)
+        except dark_fixture.FixturePreflightError as exc:
+            print(f"FIXTURE PREFLIGHT REFUSED: {exc}", file=sys.stderr)
+            return 2
+        if override and "log10n0" in override:
+            x = float(override["log10n0"])
+            outside = [k for k, (lo, hi, _s) in plans.LOG10N0_PRIOR.items() if not lo <= x <= hi]
+            if outside and not a.allow_out_of_prior_fixed_survey:
+                print(f"--survey-fixed-override log10n0={x!r} is outside the log10n0 prior of "
+                      f"{outside}; pass --allow-out-of-prior-fixed-survey for a fixed-coordinate "
+                      "check", file=sys.stderr)
+                return 2
+            if outside:
+                override_gap = (f"fixed-coordinate survey override log10n0={x!r} lies outside the "
+                                f"log10n0 prior of {outside}: parity at a pinned coordinate only, "
+                                "never a sampled run")
+    elif a.catalog or override:
+        print(f"plan {a.plan} is catalog-free: --catalog / --survey-fixed-override refused",
+              file=sys.stderr)
+        return 2
     coords_doc = bc.read_json(a.coords)
     if coords_doc.get("plan") != a.plan:
         print(f"coords file is for plan {coords_doc.get('plan')!r}, not {a.plan!r}", file=sys.stderr)
@@ -306,6 +389,16 @@ def main(argv=None):
         "plan": plan,
         "gaps": [],
     }
+    if dark:
+        import dark_fixture
+
+        record["inputs"]["catalog"] = dict(dark_fixture.catalog_summary(a.catalog),
+                                           path=os.path.abspath(a.catalog),
+                                           bytes=os.path.getsize(a.catalog),
+                                           sha256=bc.sha256_file(a.catalog))
+        record["fixture_preflight"] = fixture_preflight
+        if override_gap:
+            record["gaps"].append(override_gap)
     record["harness"]["git"].pop("known_digest_match", None)
 
     mem = [bc.memory_checkpoint("after_import")]
@@ -313,9 +406,10 @@ def main(argv=None):
     os.makedirs(out_dir, exist_ok=True)
     save_dir = os.path.abspath(a.out) + ".legacy_save"
     adapter_cls = impl.LegacyAdapter if a.impl == "legacy" else impl.CoreAdapter
+    adapter_kw = {"catalog_path": os.path.abspath(a.catalog)} if dark else {}
     adapter = adapter_cls(plan, os.path.abspath(a.pe), os.path.abspath(a.sel),
                           sel_batch=a.sel_batch, pe_block=a.pe_block, jit_mode=a.jit,
-                          seed=a.seed, save_dir=save_dir, counter=counter)
+                          seed=a.seed, save_dir=save_dir, counter=counter, **adapter_kw)
 
     # ---- load + build ------------------------------------------------------
     clock.mark("build_start")
@@ -462,6 +556,9 @@ def main(argv=None):
     timed_hex = {k: [bc.fhex(np.asarray(x)) for x in vals] for k, vals in per_call_values.items()}
     timed_consistent = all(len(set(h)) <= 1 for h in timed_hex.values())
     per_coord = []
+    cat_rows_all, cat_pe_all, cat_sel_all = [], [], []
+    if dark:
+        import dark_diag
     n = dims["n_events"]
     maxvar = float(record["config"]["max_likelihood_variance"])
     plan_value_errors = []
@@ -485,10 +582,23 @@ def main(argv=None):
         dt = float(d["diag_total_logL"])
         rel = (abs(dt - total) / abs(total)) if (np.isfinite(total) and total != 0) else (
             0.0 if (dt == total or (np.isnan(dt) and np.isnan(total))) else float("inf"))
-        (pe_s, pe_sup, pe_fin), (se_s, se_sup, se_fin) = adapter.masks(row, a.mask_chunk)
+        cat_summary = None
+        if dark:
+            pe_t, sel_t = adapter.sample_terms(row, a.mask_chunk)
+            rows_t = adapter.catalog_rows(row)
+            pe_s, pe_sup, pe_fin = pe_t["structural"], pe_t["support"], pe_t["final"]
+            se_s, se_sup, se_fin = sel_t["structural"], sel_t["support"], sel_t["final"]
+            cat_summary = dark_diag.coord_summary(pe_t, sel_t, rows_t, n, dims["nsamp"],
+                                                  dims["ndraw"])
+            cat_rows_all.append(rows_t)
+            cat_pe_all.append({"log_prior": pe_t["log_prior"]})
+            cat_sel_all.append({"log_prior": sel_t["log_prior"]})
+        else:
+            (pe_s, pe_sup, pe_fin), (se_s, se_sup, se_fin) = adapter.masks(row, a.mask_chunk)
         per_event_counts = pe_fin.reshape(n, dims["nsamp"]).sum(axis=1).astype(int).tolist()
         decoded = adapter.decode(row)
-        expected = expected_full_vector(plan, coords_doc["names"], row)
+        expected = expected_full_vector(plan, coords_doc["names"], row,
+                                        pow10=getattr(adapter, "pow10", None))
         if _hex_list(decoded) != _hex_list(expected):
             plan_value_errors.append(f"coord {i}: decoded {decoded} != expected {expected}")
         per_coord.append({
@@ -517,10 +627,26 @@ def main(argv=None):
                 "sel_support": bc.mask_entry(se_sup),
                 "sel_final": bc.mask_entry(se_fin),
             },
-            "decoded_full": {"names": plan["full_order"], "hex": _hex_list(decoded)},
+            "decoded_full": {"names": plan.get("decoded_order", plan["full_order"]),
+                             "hex": _hex_list(decoded)},
             "timed_values_hex": timed_hex[i],
         })
+        if cat_summary is not None:
+            per_coord[-1]["catalog"] = cat_summary
     mem.append(bc.memory_checkpoint("after_diagnostics"))
+    if dark:
+        npz_path = os.path.abspath(a.out) + ".catalog.npz"
+        arrays = dark_diag.stack_npz(cat_rows_all, cat_pe_all, cat_sel_all)
+        np.savez_compressed(npz_path, **arrays)
+        record["catalog_arrays"] = {
+            "file": os.path.basename(npz_path),
+            "sha256": bc.sha256_file(npz_path),
+            "arrays": {k: {"shape": list(v.shape), "dtype": v.dtype.str} for k, v in arrays.items()},
+            "note": ("per coordinate: per-row (union compact rows) log_Nobs, log_Z, N_miss, f, "
+                     "log_depth_mass, row_empty; per-sample log p(z|row) of the PE samples and "
+                     "the injections in FILE order; loaded by compare_records.py from the "
+                     "record's directory"),
+        }
 
     # ---- masks are reported in FILE order: prove it against the HDF5 datasets --
     import h5py
@@ -557,6 +683,8 @@ def main(argv=None):
         for mk in A["masks"]:
             if A["masks"][mk] != B["masks"][mk]:
                 mismatches.append(f"mask {mk} differs between coord {i} and {j}")
+        if "catalog" in A and A["catalog"] != B["catalog"]:
+            mismatches.append(f"catalog-side diagnostics differ between coord {i} and {j}")
         if set(A["timed_values_hex"]) | set(B["timed_values_hex"]) != {A["total_logL"]["hex"]}:
             mismatches.append(f"timed-loop values of coords {i}/{j} not all bit-identical")
     record["repeat_consistency"] = {
@@ -565,7 +693,7 @@ def main(argv=None):
         "mismatches": mismatches,
         "timed_loop_bitwise_consistent": timed_consistent,
         "fields_checked": list(fields) + ["event_log_evidence", "event_mc_variance", "masks",
-                                          "timed_values"],
+                                          "timed_values"] + (["catalog"] if dark else []),
     }
 
     # ---- registry / decoder assertions (untimed, JAX ops allowed) -------------
