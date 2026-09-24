@@ -10,7 +10,12 @@ SPEC is a JSON list of record specs::
      "pe_block": "default|none|N", "plan": ..., "pe": PATH, "sel": PATH,
      "pe_label": ..., "sel_label": ..., "n_calls": 20, "warmup": 3, "util_window_s": 10,
      "cache": "cold" | {"warm_from": RECORD_ID}, "compare_to": [RECORD_ID, ...],
-     "flags": {...}}
+     "flags": {...},
+     # optional (Gate 2 / M5):
+     "catalog": CAT.h5,            # dark-siren plans: passed as --catalog
+     "extra_args": [ARG, ...],     # appended to the bench_fixed_theta.py command line
+     "coords_tag": TAG, "coords_args": [ARG, ...]}   # coordinates OUT/coords/<plan>__<TAG>.json
+                                                     # made with make_coords.py ... ARGS
 
 For every entry, strictly one at a time:
 
@@ -127,12 +132,14 @@ def classify(rc, rec_path, stderr_path):
     return f"error_rc{rc}", rec
 
 
-def ensure_coords(outdir, plan, seed, n, py):
-    path = os.path.join(outdir, "coords", f"{plan}.json")
+def ensure_coords(outdir, plan, seed, n, py, tag=None, extra=None):
+    name = f"{plan}__{tag}.json" if tag else f"{plan}.json"
+    path = os.path.join(outdir, "coords", name)
     if not os.path.isfile(path):
         os.makedirs(os.path.dirname(path), exist_ok=True)
         r = subprocess.run([py, os.path.join(HERE, "make_coords.py"), "--plan", plan, "--seed",
-                            str(seed), "--n", str(n), "--out", path], capture_output=True, text=True,
+                            str(seed), "--n", str(n), "--out", path] + list(extra or []),
+                           capture_output=True, text=True,
                            env=dict(os.environ, JAX_PLATFORMS="cpu", PYTHONDONTWRITEBYTECODE="1"))
         if r.returncode != 0:
             raise SystemExit(f"make_coords failed for {plan}: {r.stderr}")
@@ -159,6 +166,7 @@ def main(argv=None):
     ap.add_argument("--driver-python", default=ENV_PY["core"])
     ap.add_argument("--seed", type=int, default=20260924)
     ap.add_argument("--n", type=int, default=8)
+    ap.add_argument("--gate", default="gate1", help="gate label written into the manifest entries")
     ap.add_argument("--only", default=None)
     ap.add_argument("--resume", action="store_true", help="skip records already in the index with rc 0")
     ap.add_argument("--dry-run", action="store_true")
@@ -187,7 +195,8 @@ def main(argv=None):
             print(f"[skip] {rid} (already ok)", flush=True)
             continue
         plan = sp["plan"]
-        coords = ensure_coords(out, plan, a.seed, a.n, a.driver_python)
+        coords = ensure_coords(out, plan, a.seed, a.n, a.driver_python, sp.get("coords_tag"),
+                               sp.get("coords_args"))
         rec = os.path.join(out, "records", rid + ".json")
         smi = os.path.join(out, "smi", rid + ".smi.csv")
         so, se = (os.path.join(out, "logs", rid + ext) for ext in (".stdout", ".stderr"))
@@ -207,13 +216,16 @@ def main(argv=None):
                  "--seed", str(a.seed), "--label", rid, "--device", "gpu",
                  "--util-window-s", str(sp.get("util_window_s", 10)), "--smi-log", smi,
                  "--cache-dir", cdir, "--cache-mode", mode]
+        if sp.get("catalog"):
+            bench += ["--catalog", sp["catalog"]]
+        bench += [str(x) for x in (sp.get("extra_args") or [])]
         inner = (f"source {shlex.quote(ENV_SCRIPTS[sp['env']])} && cd {shlex.quote(HERE)} && "
                  f"exec {' '.join(shlex.quote(x) for x in bench)}")
         cmd = [a.gpu_run, smi, "bash", "-c", inner]
         if a.dry_run:
             print(rid, " ".join(shlex.quote(c) for c in cmd))
             continue
-        for p in (sp["pe"], sp["sel"]):
+        for p in (sp["pe"], sp["sel"]) + ((sp["catalog"],) if sp.get("catalog") else ()):
             if p not in input_sha:
                 input_sha[p] = sha256_file(p)
         if not warm:
@@ -250,13 +262,14 @@ def main(argv=None):
         index["harness"] = harness
         write_json_atomic(index_path, index)
         manifest_append(a.manifest, {
-            "record_id": rid, "gate": "gate1", "matrix": sp.get("matrix"),
+            "record_id": rid, "gate": a.gate, "matrix": sp.get("matrix"),
             "command_line": cmd, "env": sp["env"], "env_script": ENV_SCRIPTS[sp["env"]],
             "package_sha": PKG_SHA[sp["env"]],
             "package_git_sha_recorded": ((recd or {}).get("package") or {}).get("git_sha")
             or (((recd or {}).get("package") or {}).get("known_digest_match") or {}).get("sha"),
             "harness": harness,
-            "inputs": {sp["pe"]: input_sha[sp["pe"]], sp["sel"]: input_sha[sp["sel"]]},
+            "inputs": {p: input_sha[p] for p in
+                       (sp["pe"], sp["sel"]) + ((sp["catalog"],) if sp.get("catalog") else ())},
             "cache_dir": cdir, "cache_mode": mode,
             "outputs": {"record": rec, "stdout": so, "stderr": se, "smi": smi,
                         "summaries": [c.get("summary") for c in entry["compares"].values()]},
