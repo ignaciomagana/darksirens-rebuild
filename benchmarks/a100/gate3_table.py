@@ -30,7 +30,7 @@ COLUMNS = g2.COLUMNS + ["guard_mode", "guard_cap", "n_calls", "n_coords", "finit
 COMP_COLUMNS = ["record", "impl", "fixture", "plan", "component", "available", "kind",
                 "warm_median_s", "compile_s", "first_call_s", "timed_loop_compiles",
                 "parity_1e12", "criterion", "max_rel", "worst_key", "catvals_max_abs",
-                "share_of_whole", "status"]
+                "share_of_whole", "share_ref", "status"]
 
 
 def _load(p):
@@ -90,8 +90,16 @@ def component_rows(entries, ids):
         comps = rec["components"]
         whole = ((comps.get("i_whole") or {}).get("timing") or {}).get("warm") or {}
         wm = whole.get("median_s")
+        whole_src = "i_whole of this record"
+        if wm is None:  # split record: the whole-kernel median of its main record, if ok
+            mr = _load(sp.get("main_record", "").replace("@OUT", os.path.dirname(os.path.dirname(e["record"]))))
+            if mr is not None and mr.get("status") == "ok":
+                wm = mr["timing"]["warm"]["median_s"]
+                whole_src = "main record warm median"
         for name in rec.get("component_order") or list(comps):
             c = comps[name]
+            if c.get("reason") == "not selected (--components)":
+                continue
             t = c.get("timing") or {}
             warm = t.get("warm") or {}
             cr = crow.get(name) or {}
@@ -104,7 +112,8 @@ def component_rows(entries, ids):
                 parity_1e12=cr.get("parity_1e12"), criterion=cr.get("criterion"),
                 max_rel=cr.get("max_rel"), worst_key=cr.get("worst_key"),
                 catvals_max_abs=cr.get("catvals_max_abs"),
-                share_of_whole=(med / wm if (med is not None and wm) else None)))
+                share_of_whole=(med / wm if (med is not None and wm) else None),
+                share_ref=whole_src if wm else None))
     return rows
 
 
