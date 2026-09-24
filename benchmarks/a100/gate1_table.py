@@ -60,7 +60,7 @@ def parity_of(summary_path):
         par = "fail"
     return {"parity": par, "failing_fields": failing, "masks_equal": masks,
             "repeat_consistent_both": v["repeat_consistent_both"], "max_rel": mrel[worst],
-            "worst_field": worst, "bitwise": v["bitwise_all_fields"],
+            "worst_field": worst if mrel[worst] > 0 else "", "bitwise": v["bitwise_all_fields"],
             "mcvar_only": failing == ["event_mc_variance"],
             "fails": {k: {"max_rel": fields[k]["max_rel"], "max_abs": fields[k]["max_abs"],
                           "n_fail": fields[k].get("n_fail"),
