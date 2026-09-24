@@ -70,9 +70,17 @@ class CoreAdapter:
     impl = IMPL
 
     def __init__(self, plan, pe_path, sel_path, *, sel_batch, pe_block, jit_mode, seed,
-                 save_dir, counter, catalog_path=None, guard=None, max_variance=None):
+                 save_dir, counter, catalog_path=None, guard=None, max_variance=None,
+                 diag_mode="default"):
         if jit_mode not in ("whole", "asis"):
             raise ValueError("--jit must be whole or asis")
+        if diag_mode not in ("default", "jit"):
+            raise ValueError("--diag-mode must be default or jit")
+        # default: diagnostics eager in asis mode, jitted in whole mode. jit: the untimed
+        # diagnostics use the jitted diagnostic function in BOTH modes (the timed kernel is
+        # unchanged); for as-shipped records whose eager diagnostic pass does not fit.
+        self.diag_mode = diag_mode
+        self._diag_eager = jit_mode == "asis" and diag_mode == "default"
         self.plan = plan
         self.pe_path = pe_path
         self.sel_path = sel_path
@@ -233,6 +241,7 @@ class CoreAdapter:
             "kernel": kernel,
             "kernel_note": note,
             "jit_mode_requested": self.jit_mode,
+            "diag_mode": self.diag_mode,
             "jit_mode_effective": kernel,
             "sel_batch_size": {"requested": self.requested_blocks["sel_batch_size"],
                                "resolved": b.sel_batch_size},
@@ -511,8 +520,11 @@ class CoreAdapter:
                          + ("dark_siren_log_likelihood" if dark else "spectral_siren_log_likelihood")
                          + "(..., return_diagnostics=True) with BoundAnalysis.__call__'s arguments"),
             "decoder": "darksirens.runtime_binding._decode_theta (private)",
-            "execution": ("eager (same as the as-shipped kernel)" if self.jit_mode == "asis"
-                          else "jit via core threads_distance_table (tables as arguments)"),
+            "execution": ("eager (same as the as-shipped kernel)" if self._diag_eager
+                          else "jit via core threads_distance_table (tables as arguments)"
+                          + (" [--diag-mode jit: NON-DEFAULT for an as-shipped record; the timed "
+                             "kernel is unchanged]" if self.jit_mode == "asis" else "")),
+            "diag_mode": self.diag_mode,
             "masks": ("rebuilt with core log_sample_weight + "
                       + ("build_incomplete_catalog_prior_state / "
                          "eval_incomplete_catalog_prior_state_vmap" if dark
@@ -589,7 +601,7 @@ class CoreAdapter:
         theta = jnp.asarray(coord_np)
         b = self.bound
         extra = (b.catalog, b.observed_density_cache) if self.dark else ()
-        if self.jit_mode == "asis":
+        if self._diag_eager:
             d = self._diag_impl(theta, b.gw_pe, b.gw_selection, *extra)
         else:
             d = self._diag_jit(theta, b.gw_pe, b.gw_selection, *extra)

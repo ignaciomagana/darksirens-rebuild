@@ -130,6 +130,10 @@ def parse_args(argv=None):
                     help="if any warm-up call takes longer than S seconds, run --slow-n-calls "
                          "timed calls instead of --n-calls (recorded in config)")
     ap.add_argument("--slow-n-calls", type=int, default=5)
+    ap.add_argument("--diag-mode", choices=("default", "jit"), default="default",
+                    help="core only: default = untimed diagnostics eager in asis mode and jitted "
+                         "in whole mode; jit = jitted diagnostics in both modes (the timed kernel "
+                         "is unchanged; recorded as non-default in config.diag_mode)")
     ap.add_argument("--catalog-npz", choices=("write", "digest"), default="write",
                     help="dark plans: write the per-row / per-sample catalog sidecar .npz "
                          "(default) or record only each array's shape and sha256 (digest; "
@@ -504,6 +508,11 @@ def main(argv=None):
     adapter_kw = {"catalog_path": os.path.abspath(a.catalog)} if dark else {}
     if a.impl == "legacy" and a.row_chunk is not None:
         adapter_kw["row_chunk"] = a.row_chunk
+    if a.impl == "legacy" and a.diag_mode != "default":
+        print("--diag-mode is a core option (legacy diagnostics are always jitted)", file=sys.stderr)
+        return 2
+    if a.impl == "core":
+        adapter_kw["diag_mode"] = a.diag_mode
     adapter = adapter_cls(plan, os.path.abspath(a.pe), os.path.abspath(a.sel),
                           sel_batch=a.sel_batch, pe_block=a.pe_block, jit_mode=a.jit,
                           seed=a.seed, save_dir=save_dir, counter=counter,
