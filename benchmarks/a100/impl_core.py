@@ -128,7 +128,7 @@ class CoreAdapter:
         t1 = time.perf_counter()
         events = ds.load_events(self.pe_path, fit_columns=fit_columns)
         injections = ds.load_injections(self.sel_path, fit_columns=fit_columns)
-        t2 = time.perf_counter() + t_cat
+        t2 = time.perf_counter()
         bound = bind_analysis(
             analysis, events=events, injections=injections,
             selection_neff_soft_guard=False,
@@ -198,8 +198,10 @@ class CoreAdapter:
             return b(embed_(theta))
 
         self._whole = whole
-        self.timing.update(t_config_s=t1 - t0, t_load_s=t2 - t1, t_build_s=t3 - t2,
-                           t_model_s=t1 - t0, t_bind_s=t3 - t2)
+        # t_load = catalog + PE + selection reads (the catalog is read before the model
+        # is configured because ds.model takes the loaded store); t_build = bind only.
+        self.timing.update(t_config_s=t1 - t0, t_load_s=(t2 - t1) + t_cat, t_build_s=t3 - t2,
+                           t_model_s=t1 - t0, t_bind_s=t3 - t2, t_catalog_load_s=t_cat)
         self._build_diag_fns()
         self._jax, self._jnp = jax, jnp
 
