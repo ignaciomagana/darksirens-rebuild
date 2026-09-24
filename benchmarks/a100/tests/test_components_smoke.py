@@ -170,6 +170,30 @@ def test_hlo_source_map(tmp_path):
     assert a["by_dominant_file"][0] == {"file": "darksirens/catalog/redshift.py", "self_s": 3.0,
                                          "share": pytest.approx(3.0 / 4.5)}
     assert summ["top_ops"][0]["hlo_sources"][0] == ("darksirens/catalog/redshift.py:120", 2)
+    # result shape and the axis the op works on (named from a record's dims)
+    labels = trace_tools.dim_labels_from_dims({"n_pe_samples": 4, "n_injections": 7,
+                                               "catalog": {"n_rows": 3}})
+    assert labels == {4: "PE samples", 7: "injections", 3: "catalog rows"}
+    summ = {"top_ops": [{"name": "multiply_exponential_fusion.clone", "rank": 1, "category": "c",
+                         "kind": "fusion", "count": 1, "self_s": 3.0, "share": 0.86, "mean_us": 3e6}],
+            "all_ops_self_s": {"multiply_exponential_fusion.clone": 3.0, "other.2": 0.5}}
+    trace_tools.annotate_with_hlo(summ, str(h), dim_labels=labels)
+    top = summ["top_ops"][0]
+    assert top["hlo_shape"] == "f64[4]{0}" and top["hlo_max_lead_dim"] == 4 and top["hlo_axis"] == "PE samples"
+    dims = {r["dim"]: r["self_s"] for r in summ["hlo_annotation"]["by_max_lead_dim"]}
+    assert dims == {"4 (PE samples)": 3.0, "unmatched": 0.5}
+    assert "f64[4] (PE samples)" in trace_tools.summary_markdown(
+        dict(summ, **{k: v for k, v in _dummy_summary().items() if k not in summ}))
+
+
+def _dummy_summary():
+    return {"trace_file": "t", "mode": "cpu", "op_source": "x", "n_op_events": 1, "n_op_threads": 1,
+            "op_names": 1, "windows": {"source": "w", "n": 1, "total_s": 1.0, "busy_s": 1.0, "idle_s": 0.0,
+                                       "idle_fraction": 0.0, "mean_window_s": 1.0, "mean_busy_s": 1.0,
+                                       "dispatch_latency_mean_s": 0.0, "tail_mean_s": 0.0},
+            "device_time": {"busy_union_s": 1.0, "op_self_total_s": 1.0, "mean_concurrency": 1.0},
+            "gaps": {"count": 0, "gt_10us": 0, "gt_100us": 0, "gt_1ms": 0, "total_s": 0.0},
+            "by_kind": {}}
 
 
 def test_compare_arrays_semantics():

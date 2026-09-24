@@ -314,12 +314,16 @@ def summary_markdown(s, title=None):
              f"{_f(d['op_self_total_s'])} s, mean concurrency {_f(d['mean_concurrency'])}",
              f"* gaps: {s['gaps']['count']} (> 10 us: {s['gaps']['gt_10us']}, > 100 us: "
              f"{s['gaps']['gt_100us']}, > 1 ms: {s['gaps']['gt_1ms']}), total {_f(s['gaps']['total_s'])} s",
-             "", "| rank | op | category | kind | count | self s | share | mean us | fused source lines (HLO) |",
-             "|---|---|---|---|---|---|---|---|---|"]
+             "", "| rank | op | category | kind | count | self s | share | mean us | HLO shape (axis) | "
+             "fused source lines (HLO) |",
+             "|---|---|---|---|---|---|---|---|---|---|"]
     for r in s["top_ops"]:
         srcs = ", ".join(f"{a} x{b}" for a, b in (r.get("hlo_sources") or []))
+        shp = (r.get("hlo_shape") or "").split("{")[0]
+        if r.get("hlo_axis"):
+            shp += f" ({r['hlo_axis']})"
         lines.append(f"| {r['rank']} | `{r['name']}` | {r['category']} | {r['kind']} | {r['count']} | "
-                     f"{_f(r['self_s'])} | {_f(r['share'])} | {_f(r['mean_us'])} | {srcs} |")
+                     f"{_f(r['self_s'])} | {_f(r['share'])} | {_f(r['mean_us'])} | {shp} | {srcs} |")
     ha = s.get("hlo_annotation")
     if ha:
         lines += ["", f"Dominant-source attribution ({ha['note']}; {ha['top_ops_matched']}/{ha['top_ops']} "
@@ -327,6 +331,12 @@ def summary_markdown(s, title=None):
                   "| file | self s | share |", "|---|---|---|"]
         for r in ha["by_dominant_file"]:
             lines.append(f"| {r['file']} | {_f(r['self_s'])} | {_f(r['share'])} |")
+        if ha.get("by_max_lead_dim"):
+            lines += ["", "Self time by the largest leading dimension among each op's result and "
+                      "operands (heuristic; the axis the op works on):", "",
+                      "| leading dim | self s | share |", "|---|---|---|"]
+            for r in ha["by_max_lead_dim"]:
+                lines.append(f"| {r['dim']} | {_f(r['self_s'])} | {_f(r['share'])} |")
     lines += ["", "| kind | count | self s | share |", "|---|---|---|---|"]
     for k, v in s["by_kind"].items():
         lines.append(f"| {k} | {v['count']} | {_f(v['self_s'])} | {_f(v['share'])} |")
@@ -356,8 +366,8 @@ def compact(summary, n=10):
                                                           "trace_file": summary["trace_file"]}
     if summary.get("hlo_annotation"):
         ha = summary["hlo_annotation"]
-        out["hlo_annotation"] = {k: ha[k] for k in ("hlo_file", "top_ops_matched", "top_ops",
-                                                    "by_dominant_file", "note")}
+        out["hlo_annotation"] = {k: ha.get(k) for k in ("hlo_file", "top_ops_matched", "top_ops",
+                                                        "by_dominant_file", "by_max_lead_dim", "note")}
     return out
 
 
@@ -370,6 +380,8 @@ _H_META = re.compile(r"metadata=\{([^}]*)\}")
 _H_OPN = re.compile(r'op_name="([^"]*)"')
 _H_SF = re.compile(r'source_file="([^"]*)"')
 _H_SL = re.compile(r"source_line=(\d+)")
+_H_SHAPE = re.compile(r"^(\([^)]*\)|\S+)")
+_H_ARR = re.compile(r"\b(?:pred|[suf]\d+|bf16|c64|c128)\[(\d*)")
 
 
 def _short_source(path):
@@ -404,7 +416,13 @@ def parse_hlo(text):
             meta = (on.group(1) if on else None, _short_source(sf.group(1)) if sf else None,
                     int(sl.group(1)) if sl else None)
         calls = _H_CALLS.findall(rest)
-        instrs[name] = {"comp": comp, "calls": calls, "meta": meta}
+        sm = _H_SHAPE.match(rest)
+        head = rest.split("metadata=")[0]
+        # leading dimensions of the result and operand arrays ("" = a scalar)
+        leads = [int(x) for x in _H_ARR.findall(head) if x]
+        instrs[name] = {"comp": comp, "calls": calls, "meta": meta,
+                        "shape": sm.group(1) if sm else None,
+                        "max_lead_dim": max(leads) if leads else None}
         comps[comp].append(name)
     return {"instrs": instrs, "comps": comps}
 
@@ -449,12 +467,42 @@ def op_sources(hmap, name, depth=3):
     return match, src, ops
 
 
-def annotate_with_hlo(summary, hlo_path, n_sources=3):
-    """Add the fused source lines / op names to each top op, and a dominant-source
-    time table (each op's self time goes to the file:line most of its instructions
-    carry: a heuristic, labelled as such)."""
+def dim_labels_from_dims(dims):
+    """{leading dimension: label} from a record's ``dims`` (PE samples, events,
+    injections, catalog rows); used to name the axis an op works on."""
+    if not dims:
+        return None
+    lab = {}
+    cat = dims.get("catalog") or {}
+    for key, name in (("n_pe_samples", "PE samples"), ("n_events", "events"),
+                      ("n_injections", "injections"), ("n_injections_padded", "injections"),
+                      ("n_rows", "catalog rows")):
+        v = dims.get(key, cat.get(key))
+        if isinstance(v, int) and v > 1:
+            lab.setdefault(v, [])
+            if name not in lab[v]:
+                lab[v].append(name)
+    return {k: " / ".join(v) for k, v in lab.items()}
+
+
+def _instr(hmap, name):
+    ins = hmap["instrs"].get(name)
+    if ins is None:
+        ins = hmap["instrs"].get(re.sub(r"(\.clone(\.\d+)?)+$", "", name))
+    return ins
+
+
+def annotate_with_hlo(summary, hlo_path, n_sources=3, dim_labels=None):
+    """Add the fused source lines / op names and the HLO result shape to each top op,
+    a dominant-source time table (each op's self time goes to the file:line most of
+    its instructions carry: a heuristic, labelled as such), and a table by the
+    largest leading dimension among the op's result and operands (PE samples vs
+    injections vs catalog rows when ``dim_labels`` names them; also a heuristic).
+    Shared helpers (interpolation, population, logsumexp) carry the same source
+    lines on the PE and the selection side; the shape tells the two apart."""
     with open(hlo_path) as f:
         hmap = parse_hlo(f.read())
+    dim_labels = {int(k): v for k, v in (dim_labels or {}).items()}
     matched = 0
     for r in summary["top_ops"]:
         kind_, src, ops = op_sources(hmap, r["name"])
@@ -463,6 +511,18 @@ def annotate_with_hlo(summary, hlo_path, n_sources=3):
             matched += 1
             r["hlo_sources"] = src.most_common(n_sources)
             r["hlo_op_names"] = ops.most_common(n_sources)
+            ins = _instr(hmap, r["name"])
+            r["hlo_shape"] = ins.get("shape")
+            r["hlo_max_lead_dim"] = ins.get("max_lead_dim")
+            if ins.get("max_lead_dim") in dim_labels:
+                r["hlo_axis"] = dim_labels[ins["max_lead_dim"]]
+    by_dim = {}
+    for name, self_s in summary.get("all_ops_self_s", {}).items():
+        ins = _instr(hmap, name)
+        d = None if ins is None else ins.get("max_lead_dim")
+        key = ("unmatched" if ins is None else "scalar" if d is None
+               else f"{d} ({dim_labels[d]})" if d in dim_labels else str(d))
+        by_dim[key] = by_dim.get(key, 0.0) + self_s
     by_src, by_file, unmatched = {}, {}, 0.0
     for name, self_s in summary.get("all_ops_self_s", {}).items():
         kind_, src, _ops = op_sources(hmap, name)
@@ -482,8 +542,13 @@ def annotate_with_hlo(summary, hlo_path, n_sources=3):
         "by_dominant_file": [{"file": k, "self_s": v, "share": v / tot if tot else None}
                              for k, v in sorted(by_file.items(), key=lambda kv: -kv[1])],
         "unmatched_self_s": unmatched,
+        "by_max_lead_dim": [{"dim": k, "self_s": v, "share": v / tot if tot else None}
+                            for k, v in sorted(by_dim.items(), key=lambda kv: -kv[1])[:12]],
+        "dim_labels": {str(k): v for k, v in dim_labels.items()},
         "note": ("heuristic: each op's self time is assigned to the source line most of its "
-                 "(fused) instructions carry in the optimized HLO metadata"),
+                 "(fused) instructions carry in the optimized HLO metadata; by_max_lead_dim "
+                 "assigns it to the largest leading dimension among the op's result and operand "
+                 "arrays (the axis the op works on)"),
     }
     return summary
 
@@ -577,10 +642,10 @@ def trace_components(trace_dir, names, calls, comps, comp_rec, whole_vals, n_coo
     return out
 
 
-def annotate_trace_entry(entry, hlo_path, top_n=25, title=None):
+def annotate_trace_entry(entry, hlo_path, top_n=25, title=None, dim_labels=None):
     """Re-parse a trace_components entry and annotate it with the kernel's HLO."""
     summ = summarize_trace_dir(entry["dir"], top_n=top_n)
-    annotate_with_hlo(summ, hlo_path)
+    annotate_with_hlo(summ, hlo_path, dim_labels=dim_labels)
     write_summary(summ, os.path.join(entry["dir"], "trace_summary.json"),
                   os.path.join(entry["dir"], "trace_summary.md"), title=title)
     entry["summary"] = compact(summ)
@@ -651,7 +716,7 @@ def run_main_traced(trace_dir, bench_args, top_n=25, hlo=None):
         try:
             summ = summarize_trace_dir(trace_dir, top_n=top_n)
             if hlo:
-                annotate_with_hlo(summ, hlo)
+                annotate_with_hlo(summ, hlo, dim_labels=dim_labels_from_dims(rec.get("dims")))
             write_summary(summ, os.path.join(trace_dir, "trace_summary.json"),
                           os.path.join(trace_dir, "trace_summary.md"),
                           title=f"{rec.get('implementation')} {rec.get('plan', {}).get('name')} timed loop")
@@ -737,10 +802,16 @@ def main(argv=None):
         ap.add_argument("--md", default=None)
         ap.add_argument("--hlo", default=None, help="optimized HLO text of the traced module "
                         "(bench_components.py writes <out>.hlo/<component>.hlo.txt)")
+        ap.add_argument("--record", default=None, help="a harness record of the traced run: its "
+                        "dims name the axes (PE samples, injections, catalog rows) with --hlo")
         x = ap.parse_args(rest)
         s = summarize_trace_dir(x.dir, top_n=x.top, annotation=x.annotation)
         if x.hlo:
-            annotate_with_hlo(s, x.hlo)
+            labels = None
+            if x.record:
+                with open(x.record) as f:
+                    labels = dim_labels_from_dims(json.load(f).get("dims"))
+            annotate_with_hlo(s, x.hlo, dim_labels=labels)
         write_summary(s, x.json, x.md)
         print(summary_markdown(s))
         return 0

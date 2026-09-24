@@ -521,5 +521,11 @@ whole: the whole jit fuses and CSEs across components, so they need not agree.
   table: for every top op, the `source_file:line` and `op_name` metadata of the HLO
   instructions it fuses (`hlo_sources`, `hlo_op_names`), plus a dominant-source table
   (each op's self time assigned to the source line most of its instructions carry: a
-  heuristic, labelled as such). `trace_tools.py parse DIR --hlo FILE` and
-  `trace_tools.py main --hlo FILE` do the same for any trace whose module that HLO is.
+  heuristic, labelled as such). Each top op also carries its HLO result shape and the
+  largest leading dimension among its result and operands, named from the record's dims
+  (PE samples, events, injections, catalog rows), with a self-time table by that axis:
+  shared helpers (interpolation, population, logsumexp) carry the same source lines on the
+  PE and the selection side, and the axis is what tells them apart. `trace_tools.py parse
+  DIR --hlo FILE [--record REC]` and `trace_tools.py main --hlo FILE` do the same for any
+  trace whose module that HLO is (the op names of the main harness's whole kernel and the
+  components runner's `i_whole` agree).

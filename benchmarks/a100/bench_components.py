@@ -1802,8 +1802,9 @@ def main(argv=None):
                 hp = ((comp_rec.get(nm) or {}).get("aot") or {}).get("optimized_hlo", {}).get("file")
                 if hp and entry.get("parse_ok"):
                     try:
-                        trace_tools.annotate_trace_entry(entry, hp, top_n=a.trace_top,
-                                                         title=f"{a.impl} {a.plan} {nm}")
+                        trace_tools.annotate_trace_entry(
+                            entry, hp, top_n=a.trace_top, title=f"{a.impl} {a.plan} {nm}",
+                            dim_labels=trace_tools.dim_labels_from_dims(record.get("dims")))
                         n_ann += 1
                     except Exception as exc:
                         entry["hlo_annotation_error"] = f"{type(exc).__name__}: {exc}"
