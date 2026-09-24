@@ -1677,6 +1677,23 @@ def main(argv=None):
         except Exception as exc:  # evidence must not kill the record
             e["jaxpr"] = {"error": f"{type(exc).__name__}: {exc}"}
     if not a.no_aot:
+        # The first calls compiled into the (cold) persistent cache; executables that took
+        # longer than jax_persistent_cache_min_compile_time_secs were written there, and an
+        # AOT compile after jax.clear_caches() would be served from it. Disable the cache
+        # for this pass (the timed section is over) so every AOT compile is a real one.
+        try:
+            from jax._src import compilation_cache as _cc
+
+            jax.config.update("jax_enable_compilation_cache", False)
+            _cc.reset_cache()
+            record["aot_policy"] = ("persistent compilation cache disabled for the AOT pass "
+                                    "(jax_enable_compilation_cache=False + "
+                                    "jax._src.compilation_cache.reset_cache()) after the timed "
+                                    "section: each aot.t_compile_s is a real XLA compile")
+        except Exception as exc:  # pragma: no cover
+            record["aot_policy"] = (f"could not disable the persistent cache ({type(exc).__name__}: "
+                                    f"{exc}); an aot entry with compile_counter_delta.compiles == 0 "
+                                    "was served from it")
         for nm in ORDER:
             e = comp_rec[nm]
             if not e.get("available") or nm not in comps.fns:
@@ -1850,8 +1867,13 @@ def compare(path_a, path_b, rtol=1e-12):
             row[f"warm_min_s_{side}"] = (t.get("warm") or {}).get("min_s")
             row[f"t_first_call_s_{side}"] = t.get("t_first_call_s")
             row[f"timed_loop_compiles_{side}"] = (t.get("timed_loop_compile") or {}).get("requests")
-            row[f"aot_compile_s_{side}"] = (e.get("aot") or {}).get("t_compile_s")
-            row[f"aot_trace_lower_s_{side}"] = (e.get("aot") or {}).get("t_trace_lower_s")
+            aot = e.get("aot") or {}
+            hit = (aot.get("compile_counter_delta") or {}).get("compiles") == 0
+            row[f"aot_compile_s_{side}"] = None if hit else aot.get("t_compile_s")
+            row[f"aot_trace_lower_s_{side}"] = aot.get("t_trace_lower_s")
+            row[f"aot_persistent_cache_hit_{side}"] = bool(hit) if aot else None
+            row[f"first_call_compiles_{side}"] = (t.get("first_call_compile") or {}).get("compiles")
+            row[f"first_call_context_{side}"] = t.get("first_call_context")
         ma, mb = row["warm_median_s_a"], row["warm_median_s_b"]
         row["ratio_b_over_a"] = (mb / ma) if (ma and mb) else None
         oa, ob = ea.get("outputs") or {}, eb.get("outputs") or {}
@@ -1889,7 +1911,8 @@ def compare(path_a, path_b, rtol=1e-12):
             keys[key] = {"class": cls, "coords_elementwise": elem, "digest_equal_all": digest_eq,
                          "pass_rel": ok_rel if elem else None, "pass_abs": ok_abs if elem else None,
                          "max_rel": bc.fval(rel_worst), "max_abs": bc.fval(abs_worst), "per_coord": per}
-            n_elem_min = elem if n_elem_min is None else min(n_elem_min, elem)
+            if cls in ("gate", "catvals"):
+                n_elem_min = elem if n_elem_min is None else min(n_elem_min, elem)
             if cls == "gate":
                 if elem == 0 or not ok_rel:
                     gate_pass = False
@@ -1914,6 +1937,9 @@ def compare(path_a, path_b, rtol=1e-12):
         row["info_max_rel"] = bc.fval(max((_num(v["max_rel"]) for v in keys.values()
                                            if v["class"] == "info"), default=0.0))
         row["coords_elementwise_min"] = n_elem_min
+        row["coords_elementwise_note"] = ("minimum over the gate/catvals outputs of the coordinates "
+                                          "compared element by element (arrays above "
+                                          "--big-array-elements only at --full-array-coords)")
         row["bitwise_all"] = all(v["digest_equal_all"] for v in keys.values())
         row["keys_missing_in_one"] = missing
         row["keys"] = keys
@@ -1946,6 +1972,7 @@ def compare(path_a, path_b, rtol=1e-12):
                               and A["config"].get("n_calls") == B["config"].get("n_calls")),
         "blocks": {s: {k: (r["config"].get(k) or {}).get("resolved") for k in ("sel_batch_size", "pe_event_block")}
                    for s, r in (("a", A), ("b", B))},
+        "aot_policy": {"a": A.get("aot_policy"), "b": B.get("aot_policy")},
     }
     return summary
 
@@ -1956,6 +1983,12 @@ def _ms(x):
 
 def _f2(x):
     return "" if x is None else f"{float(x):.2f}"
+
+
+def _aot(r, side):
+    if r.get(f"aot_persistent_cache_hit_{side}"):
+        return "cache hit"
+    return _f2(r.get(f"aot_compile_s_{side}"))
 
 
 def summary_markdown(s):
@@ -1979,8 +2012,7 @@ def summary_markdown(s):
             f"| {r['component']} | {par} | {crit} | {r.get('worst_key') or ''} | "
             f"{'' if r.get('max_rel') is None else r['max_rel']} | {_ms(r['warm_median_s_a'])} | "
             f"{_ms(r['warm_median_s_b'])} | {'' if ratio is None else f'{ratio:.2f}'} | "
-            f"{_f2(first_a)} | {_f2(first_b)} | {_f2(r.get('aot_compile_s_a'))} | "
-            f"{_f2(r.get('aot_compile_s_b'))} | "
+            f"{_f2(first_a)} | {_f2(first_b)} | {_aot(r, 'a')} | {_aot(r, 'b')} | "
             f"{'' if r.get('coords_elementwise_min') is None else r['coords_elementwise_min']} |")
     lines += ["", "Sum of component warm medians vs whole (informational):", ""]
     for side in ("a", "b"):
