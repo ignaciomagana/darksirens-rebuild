@@ -230,7 +230,9 @@ class LegacyAdapter:
         self.build_warnings = [
             {"category": w.category.__name__, "message": str(w.message),
              "filename": w.filename, "lineno": w.lineno} for w in caught
-            if "darksirens" in str(w.filename or "")]
+            # match the package directory, not any path containing the word (the campaign
+            # root /media/volume/tbs/darksirens_benchmark let matplotlib's warnings through)
+            if f"{os.sep}darksirens{os.sep}" in str(w.filename or "")]
         self.timing.update(t_config_s=t1 - t0, t_load_s=t2 - t1, t_build_s=t3 - t2)
         self.opts, self.data, self.pspace, self.likelihood = opts, data, pspace, likelihood
         self.fixed_parameter_values = dict(fixed)
