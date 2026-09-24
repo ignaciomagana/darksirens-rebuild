@@ -4,6 +4,7 @@
     python gate1_specs.py smoke --out smoke.json
     python gate1_specs.py autoblocks --out auto.json
     python gate1_specs.py matrices --sel-batch N --pe-block M --out gate1.json
+    python gate1_specs.py m5 --out m5.json      (supplement M5: GWTC-5-centred coordinates)
 
 record_id = <matrix>_<impl>_<jit>_<blocks>_<plan>_<pe_label>_<sel_label>, impl in
 {legacy, core, corepin}. Within each (input, plan) group the legacy records come first,
@@ -132,6 +133,25 @@ def m4(matched):
     return [Lw, Ww, Sm]
 
 
+#: Gate 1 supplement M5 (spectral, real data, finite totals): coordinates centred on
+#: H0 = 67.74 + the GWTC-5 fixed-population preset (make_coords.py --center gwtc5
+#: --spread 0.05; the preset is checked identical in both implementations first).
+M5_COORDS = {"coords_tag": "gwtc5c05", "coords_args": ["--center", "gwtc5", "--spread", "0.05"]}
+
+
+def m5():
+    out = []
+    for pe_label, sel_label in (("bbh259_n4096", "full"), ("bbh259_n1024", "stride10")):
+        pe, sel = f"{EXP}/{PE_A[pe_label]}", f"{EXP}/{SEL_A[sel_label]}"
+        for plan in ("spectral_H0_gwtc5", "spectral_full_gwtc5"):
+            a = dict(plan=plan, pe_label=pe_label, sel_label=sel_label, pe=pe, sel=sel, **M5_COORDS)
+            Ld = spec("M5", "legacy", "whole", "default", **a)
+            Wd = spec("M5", "core", "whole", "default", compare_to=[Ld["record_id"]], **a)
+            Sd = spec("M5", "core", "asis", "default", compare_to=[Ld["record_id"], Wd["record_id"]], **a)
+            out += [Ld, Wd, Sd]
+    return out
+
+
 def _matched(v):
     v = str(v).strip().lower()
     if v == "none":
@@ -144,7 +164,7 @@ def _matched(v):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("what", choices=("smoke", "autoblocks", "matrices"))
+    ap.add_argument("what", choices=("smoke", "autoblocks", "matrices", "m5"))
     # The matched blocks are what legacy's auto sizing resolves on the A100 for
     # 259 x 4096 x 1,067,946: an int, or 'none' when it resolves to a single pass
     # (legacy block_sizing.resolve_block_sizes returns (None, None) when the single
@@ -155,6 +175,8 @@ def main(argv=None):
     a = ap.parse_args(argv)
     if a.what == "smoke":
         specs = smoke()
+    elif a.what == "m5":
+        specs = m5()
     elif a.what == "autoblocks":
         pe, sel = f"{EXP}/{PE_A['bbh259_n4096']}", f"{EXP}/{SEL_A['full']}"
         specs = [spec("M1", "legacy", "whole", "default", "spectral_full", "bbh259_n4096", "full", pe, sel)]

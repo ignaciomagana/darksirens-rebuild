@@ -131,6 +131,68 @@ POPULATION_MODELS = {
         "prior_kinds": [["uniform", None, None]] * 13,
         "fiducials": [3.5, 5.0, 65.0, 0.038, 34.0, 5.5, 4.9, 1.1, 1.6, 4.5, 0.75, 0.9, 2.9],
     },
+    # GWTC-5 fiducial BPL+2G (Gate 1 supplement M5 only). Labels, bounds, kinds and the
+    # published-median preset vector are the registry entry both implementations ship
+    # (legacy darksirens/gw/populations/registry.py:460-492, parametric.py:623-670; core
+    # src/darksirens/population/registry.py:460-492); every record re-reads them from the
+    # implementation under test and asserts them bit for bit (check_registry).
+    "gwtc5_fiducial_bpl2peaks": {
+        "shared_beta": True,
+        "shared_spin": True,
+        "shared_gamma": True,
+        "labels": [
+            "$\\alpha_1$",
+            "$\\alpha_2$",
+            "$m_{\\rm break}$",
+            "$\\mu_1$",
+            "$\\sigma_1$",
+            "$\\mu_2$",
+            "$\\sigma_2$",
+            "$m_{1,{\\rm low}}$",
+            "$\\delta m_1$",
+            "$\\lambda_0$",
+            "$\\lambda_1$",
+            "$\\beta_q$",
+            "$m_{2,{\\rm low}}$",
+            "$\\delta m_2$",
+            "$\\mu_\\chi$",
+            "$\\sigma_\\chi$",
+            "$\\gamma$",
+        ],
+        "lower": [-4.0, -4.0, 20.0, 5.0, 0.0, 25.0, 0.0, 3.0, 0.0, 0.0, 0.0, -2.0, 3.0, 0.0,
+                  0.0, 0.005, -10.0],
+        "upper": [12.0, 12.0, 50.0, 20.0, 10.0, 60.0, 10.0, 10.0, 10.0, 1.0, 1.0, 7.0, 10.0,
+                  10.0, 1.0, 1.0, 10.0],
+        "prior_kinds": [["uniform", None, None]] * 17,
+        "fiducials": [1.4816, 5.4187, 37.451, 9.9109, 0.7841, 32.3273, 5.7263, 4.4856, 3.5302,
+                      0.4004, 0.5457, 1.0438, 3.4633, 4.8128, 0.0633, 0.3654, 2.5439],
+        # Joint conditions the model's log_p_pop enforces by rejection and that the
+        # samplers' prior transforms map out (legacy inference/prior.py:1382-1420
+        # resolve_joint_prior_constraints; model.constraint_groups). make_coords.py
+        # rejects box draws outside them; preset_check.py asserts both implementations
+        # declare exactly these groups.
+        "constraint_groups": [["simplex", ["$\\lambda_0$", "$\\lambda_1$"]],
+                              ["conditional_upper", ["$m_{2,{\\rm low}}$", "$m_{1,{\\rm low}}$"]]],
+    },
+}
+
+#: Fixed-population presets both implementations ship (Gate 1 supplement M5). A plan
+#: carrying ``population_preset`` fixes (or centres) its population at the preset's
+#: vector, which is the ``fiducials`` of ``population_model`` above; preset_check.py loads
+#: the preset from BOTH implementations and asserts every value identical to it.
+#: Spelling per implementation: legacy c042527 has no ``--fix_population gwtc5`` value
+#: (``--fix_population`` is a bool, ``--population_fiducials`` in {legacy, in_prior_v2});
+#: its GWTC-5 preset is the bespoke registry model's own vector, which
+#: ``--pop_model gwtc5_fiducial_bpl2peaks --fix_population true`` fixes for either
+#: fiducial set (registry.py:882-887 ``_CUSTOM_FIDUCIALS``). Core:
+#: ``ds.Population("gwtc5_fiducial_bpl2peaks", fixed="gwtc5")`` (src/darksirens/_specs.py:147-202).
+POPULATION_PRESETS = {
+    "gwtc5": {
+        "population_model": "gwtc5_fiducial_bpl2peaks",
+        "H0": 67.74,
+        "legacy_cli": ["--pop_model", "gwtc5_fiducial_bpl2peaks", "--fix_population", "true"],
+        "core_population_fixed": "gwtc5",
+    },
 }
 
 #: Survey (incomplete-catalog) block of the dark-siren plans, in plan order.
@@ -232,6 +294,24 @@ PLANS = {
         "sample_survey": "all",
         "target": "dark",
     },
+    # Gate 1 supplement M5 (spectral, real data, finite totals): the ordinary spectral_H0 /
+    # spectral_full layouts on the GWTC-5 BPL+2G model, centred on H0 = 67.74 plus the
+    # GWTC-5 fixed-population preset (make_coords.py --center gwtc5 --spread 0.05);
+    # spectral_H0_gwtc5 fixes the population AT the preset.
+    "spectral_H0_gwtc5": {
+        "population_model": "gwtc5_fiducial_bpl2peaks",
+        "population_preset": "gwtc5",
+        "sample_H0": True,
+        "sample_population": "none",
+        "target": "m5_gwtc5",
+    },
+    "spectral_full_gwtc5": {
+        "population_model": "gwtc5_fiducial_bpl2peaks",
+        "population_preset": "gwtc5",
+        "sample_H0": True,
+        "sample_population": "all",
+        "target": "m5_gwtc5",
+    },
 }
 
 ORDINARY_PLANS = tuple(k for k, v in PLANS.items() if v["target"] == "ordinary")
@@ -327,6 +407,14 @@ def resolve_plan(name: str, survey_fixed_override: dict | None = None) -> dict:
         "H0_fiducial": H0_FIDUCIAL,
         "fixed_cosmology": dict(FIXED_COSMOLOGY),
     }
+    if p.get("population_preset"):
+        pre = POPULATION_PRESETS[p["population_preset"]]
+        if pre["population_model"] != p["population_model"]:
+            raise ValueError(f"{name}: preset {p['population_preset']!r} belongs to "
+                             f"{pre['population_model']!r}, not {p['population_model']!r}")
+        out.update(population_preset=p["population_preset"],
+                   core_population_fixed=pre["core_population_fixed"],
+                   population_constraint_groups=pop.get("constraint_groups") or [])
     if dark:
         out.update({
             "universe": "dark",

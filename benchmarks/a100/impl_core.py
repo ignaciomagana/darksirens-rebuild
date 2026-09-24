@@ -98,7 +98,9 @@ class CoreAdapter:
         cosmology = ds.Cosmology(H0=h0, Om0=p["fixed_cosmology"]["Om0"],
                                  w0=p["fixed_cosmology"]["w0"], wa=p["fixed_cosmology"]["wa"])
         k = p["sample_population"]
-        fixed = True if k == "none" else None
+        # A plan with a population preset fixes it through core's public preset spelling
+        # (M5: ds.Population(..., fixed="gwtc5"), src/darksirens/_specs.py:147-202).
+        fixed = (p.get("core_population_fixed") or True) if k == "none" else None
         population = ds.Population(p["population_model"], fixed=fixed,
                                    shared_beta=p["shared_beta"], shared_spin=p["shared_spin"],
                                    shared_gamma=p["shared_gamma"])
