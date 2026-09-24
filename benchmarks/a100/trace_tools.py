@@ -748,8 +748,17 @@ def check_numerics(path_a, path_b):
     res = {"a": os.path.abspath(path_a), "b": os.path.abspath(path_b), "mismatches": [], "fields": []}
     if A.get("coords", {}).get("values_hex") != B.get("coords", {}).get("values_hex"):
         res["mismatches"].append("different coordinates")
+    if A.get("schema") != B.get("schema"):
+        res["mismatches"].append(f"different schemas: {A.get('schema')} vs {B.get('schema')}")
+        res["bitwise"] = False
+        return res
+    for tag, r in (("a", A), ("b", B)):
+        if r.get("status") != "ok":
+            res["mismatches"].append(f"record {tag} status={r.get('status')}")
     if str(A.get("schema", "")).startswith("darksirens-bench-fixed-theta"):
         pa, pb = A["values"]["per_coord"], B["values"]["per_coord"]
+        if len(pa) != len(pb):
+            res["mismatches"].append(f"different number of coordinates: {len(pa)} vs {len(pb)}")
         res["fields"] = list(_SCALAR) + list(_ARRAY) + ["timed_values_hex", "masks"]
         for i, (x, y) in enumerate(zip(pa, pb)):
             for f in _SCALAR + _ARRAY:
@@ -763,6 +772,8 @@ def check_numerics(path_a, path_b):
     else:  # components records: every output digest
         ca, cb = A["components"], B["components"]
         for nm, e in ca.items():
+            if bool(e.get("outputs")) != bool((cb.get(nm) or {}).get("outputs")):
+                res["mismatches"].append(f"{nm}: outputs in one record only")
             if not e.get("outputs") or not (cb.get(nm) or {}).get("outputs"):
                 continue
             for q, v in e["outputs"].items():

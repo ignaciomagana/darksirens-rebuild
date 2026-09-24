@@ -196,6 +196,21 @@ def _dummy_summary():
             "by_kind": {}}
 
 
+def test_check_numerics_refuses_mismatched_records(tmp_path):
+    ent = {f: {"hex": "0x1p0"} for f in trace_tools._SCALAR + trace_tools._ARRAY}
+    per = [dict(ent, timed_values_hex=["0x1p0"], masks={})]
+    base = {"schema": "darksirens-bench-fixed-theta/1", "status": "ok", "coords": {"values_hex": [["0x1p0"]]},
+            "values": {"per_coord": per}}
+    a, b, c = tmp_path / "a.json", tmp_path / "b.json", tmp_path / "c.json"
+    a.write_text(json.dumps(base))
+    b.write_text(json.dumps(dict(base, values={"per_coord": per + per})))
+    c.write_text(json.dumps(dict(base, schema=bcmp.RECORD_SCHEMA)))
+    assert trace_tools.check_numerics(str(a), str(a))["bitwise"] is True
+    r = trace_tools.check_numerics(str(a), str(b))
+    assert r["bitwise"] is False and any("number of coordinates" in m for m in r["mismatches"])
+    assert trace_tools.check_numerics(str(a), str(c))["bitwise"] is False
+
+
 def test_compare_arrays_semantics():
     a = np.array([1.0, -np.inf, np.nan, 0.0, 2.0])
     r = bcmp.compare_arrays(a, a.copy(), 1e-12)
