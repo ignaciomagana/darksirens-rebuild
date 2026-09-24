@@ -5,7 +5,7 @@
 
 SPEC is a JSON list of record specs::
 
-    {"record_id": ..., "matrix": "M1", "env": "legacy|core|core_pin", "impl": "legacy|core",
+    {"record_id": ..., "matrix": "M1", "env": "legacy|core|core_pin|core_o1", "impl": "legacy|core",
      "jit": "whole|asis", "blocks": "default|matched|none", "sel_batch": "default|none|N",
      "pe_block": "default|none|N", "plan": ..., "pe": PATH, "sel": PATH,
      "pe_label": ..., "sel_label": ..., "n_calls": 20, "warmup": 3, "util_window_s": 10,
@@ -60,12 +60,16 @@ import time
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = "/media/volume/tbs/darksirens_benchmark"
 ENV_SCRIPTS = {"legacy": f"{ROOT}/envs/env_legacy.sh", "core": f"{ROOT}/envs/env_core.sh",
-               "core_pin": f"{ROOT}/envs/env_core_pin.sh"}
+               "core_pin": f"{ROOT}/envs/env_core_pin.sh",
+               # Gate 4 experimental arm: darksirens-core perf/jit-bound-analysis (not merged)
+               "core_o1": f"{ROOT}/envs/env_core_o1.sh"}
 ENV_PY = {"legacy": f"{ROOT}/envs/env_legacy/bin/python", "core": f"{ROOT}/envs/env_core/bin/python",
-          "core_pin": f"{ROOT}/envs/env_core_pin/bin/python"}
+          "core_pin": f"{ROOT}/envs/env_core_pin/bin/python",
+          "core_o1": f"{ROOT}/envs/env_core_o1/bin/python"}
 PKG_SHA = {"legacy": "c042527238bd71421b792936bc48c3b815b90d6d",
            "core": "88004d96ddeee37c47abc1d2dfd1c6fc3c203dfd",
-           "core_pin": "8bf2bec53ff7b557c6b930d4044008cb72008f61"}
+           "core_pin": "8bf2bec53ff7b557c6b930d4044008cb72008f61",
+           "core_o1": "f825906278140b8bfd80a13007ddd0136db28d49"}
 OOM_RE = re.compile(r"RESOURCE_EXHAUSTED|[Oo]ut of memory|OOM|Failed to allocate|CUDA_ERROR_OUT_OF_MEMORY")
 
 
