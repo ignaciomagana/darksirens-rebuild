@@ -132,11 +132,25 @@ def m4(matched):
     return [Lw, Ww, Sm]
 
 
+def _matched(v):
+    v = str(v).strip().lower()
+    if v == "none":
+        return v
+    n = int(v)
+    if n < 1:
+        raise argparse.ArgumentTypeError("block size must be >= 1 or 'none'")
+    return n
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("what", choices=("smoke", "autoblocks", "matrices"))
-    ap.add_argument("--sel-batch", type=int)
-    ap.add_argument("--pe-block", type=int)
+    # The matched blocks are what legacy's auto sizing resolves on the A100 for
+    # 259 x 4096 x 1,067,946: an int, or 'none' when it resolves to a single pass
+    # (legacy block_sizing.resolve_block_sizes returns (None, None) when the single
+    # pass fits; 'none' = legacy --sel_batch_size/--pe_event_block off, core None).
+    ap.add_argument("--sel-batch", type=_matched)
+    ap.add_argument("--pe-block", type=_matched)
     ap.add_argument("--out", required=True)
     a = ap.parse_args(argv)
     if a.what == "smoke":
@@ -145,6 +159,8 @@ def main(argv=None):
         pe, sel = f"{EXP}/{PE_A['bbh259_n4096']}", f"{EXP}/{SEL_A['full']}"
         specs = [spec("M1", "legacy", "whole", "default", "spectral_full", "bbh259_n4096", "full", pe, sel)]
     else:
+        if a.sel_batch is None or a.pe_block is None:
+            ap.error("matrices needs --sel-batch and --pe-block (int or 'none')")
         matched = (a.sel_batch, a.pe_block)
         specs = m1(matched) + m2() + m3() + m4(matched)
     ids = [s["record_id"] for s in specs]
