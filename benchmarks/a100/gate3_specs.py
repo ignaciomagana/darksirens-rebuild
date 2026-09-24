@@ -169,16 +169,65 @@ def retry(sel_batch, pe_block, fixtures=("R2", "R3", "RC")):
     return out
 
 
+#: component names of bench_components.py (one process per component in a split run)
+SPLIT_COMPONENTS = ("a_cosmology", "b_population", "c_pop_norm", "w_weights", "d_pe_reduce",
+                    "e_sel_reduce", "f_kernel_state", "h_completion", "fh_prior_state",
+                    "g_prior_eval", "i_whole")
+
+
+def g3c_blocked(big_blocks=(4096, 6), big=("R2", "RC")):
+    """G3-C with the large fixtures at the explicit blocks their main records needed (OOM
+    policy): R1 at default blocks (main = G3A default record); R2 / RC at ``big_blocks``
+    (main = the G3A b<sel>x<pe> record); spectral as g3c."""
+    out = []
+    blk = f"b{big_blocks[0]}x{big_blocks[1]}"
+    for fx in ("R1",) + tuple(big):
+        for plan in ("dark_H0", "dark_full"):
+            pair = []
+            for env in ("legacy", "core"):
+                main = dspec("G3A", env, "whole", plan, fx)["record_id"]
+                C = dspec("G3C", env, "whole", plan, fx, tool="components", trace=True,
+                          main_record=f"@OUT/records/{main}.json")
+                if fx in big:
+                    C.update(blocks=blk, sel_batch=str(big_blocks[0]), pe_block=str(big_blocks[1]))
+                    C["record_id"] = C["record_id"].replace("_default_", f"_{blk}_")
+                    C["main_record"] = C["main_record"].replace("_default_", f"_{blk}_")
+                pair.append(C)
+            pair[1]["compare_to"] = [pair[0]["record_id"]]
+            out += pair
+    return out + [s for s in g3c() if not s.get("fixture")]
+
+
+def g3c_split(record_ids, specs):
+    """OOM policy for components: each component of the given (OOM) components records in
+    its own process (--components NAME); record id <id>__<component>; the core split of a
+    component is compared with the legacy split of the same component."""
+    by = {s["record_id"]: s for s in specs}
+    out = []
+    for rid in record_ids:
+        base = by[rid]
+        for comp in SPLIT_COMPONENTS:
+            s = dict(base, record_id=f"{rid}__{comp}", extra_args=["--components", comp],
+                     flags=dict(base.get("flags") or {}, split_of=rid, component=comp),
+                     compare_to=[f"{c}__{comp}" for c in base.get("compare_to") or []])
+            out.append(s)
+    return out
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("what", choices=("smoke", "m5b", "g3", "g3c", "retry"))
+    ap.add_argument("what", choices=("smoke", "m5b", "g3", "g3c", "retry", "g3c_blocked", "g3c_split"))
+    ap.add_argument("--split-ids", default=None, help="g3c_split: comma-separated components record ids")
     ap.add_argument("--out", required=True)
     ap.add_argument("--sel-batch", type=int, default=4096)
     ap.add_argument("--pe-block", type=int, default=6)
     ap.add_argument("--fixtures", default="R2,R3,RC")
     a = ap.parse_args(argv)
     specs = {"smoke": smoke, "m5b": m5b, "g3": lambda: g3a() + g3b(), "g3c": g3c,
-             "retry": lambda: retry(a.sel_batch, a.pe_block, tuple(a.fixtures.split(",")))}[a.what]()
+             "retry": lambda: retry(a.sel_batch, a.pe_block, tuple(a.fixtures.split(","))),
+             "g3c_blocked": lambda: g3c_blocked((a.sel_batch, a.pe_block)),
+             "g3c_split": lambda: g3c_split(a.split_ids.split(","),
+                                            g3c_blocked((a.sel_batch, a.pe_block)))}[a.what]()
     ids = [s["record_id"] for s in specs]
     assert len(ids) == len(set(ids)), "duplicate record ids"
     with open(a.out, "w") as f:
