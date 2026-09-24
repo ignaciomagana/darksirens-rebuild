@@ -167,6 +167,13 @@ def check_registry(adapter, plan) -> tuple[list, dict]:
     return errs, r
 
 
+def _checkpoint(mem, tag):
+    for m in mem:
+        if m["tag"] == tag:
+            return m
+    raise KeyError(f"memory checkpoint {tag!r} missing")
+
+
 def expected_full_vector(plan, names, row):
     vals = dict(plan["fixed"])
     vals.update(dict(zip(names, row)))
@@ -530,8 +537,19 @@ def main(argv=None):
             "xla_cache_dir": device.get("xla_cache_dir"),
         },
         "memory": mem,
-        "peak_device_bytes": max([m["device_peak_bytes_in_use"] or 0 for m in mem]) or None,
-        "peak_host_rss_bytes": max(m["host_maxrss_bytes"] for m in mem),
+        # Kernel-phase peaks: the process peak at the END of the timed loop. The
+        # counters are cumulative (ru_maxrss, memory_stats peak_bytes_in_use), so
+        # this includes the build, first call and warm-ups, but NOT the untimed
+        # jit-evidence / diagnostics / mask passes that follow, which allocate
+        # their own buffers and can exceed the kernel's own peak.
+        "peak_device_bytes": _checkpoint(mem, "after_timed_loop")["device_peak_bytes_in_use"],
+        "peak_host_rss_bytes": _checkpoint(mem, "after_timed_loop")["host_maxrss_bytes"],
+        "peak_device_bytes_all_phases": max([m["device_peak_bytes_in_use"] or 0 for m in mem]) or None,
+        "peak_host_rss_bytes_all_phases": max(m["host_maxrss_bytes"] for m in mem),
+        "peak_note": ("peak_device_bytes / peak_host_rss_bytes = process peak at the end of the "
+                      "timed loop (import + build + first call + warm-ups + timed loop); "
+                      "*_all_phases also covers the untimed jit evidence, diagnostics and "
+                      "mask passes"),
         "phase_clock": clock.stamps,
     }
     if a.n_calls < 20:

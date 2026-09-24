@@ -212,6 +212,15 @@ hooked as in `bench_likelihood_call.py:85-104`; a forced-recompile self-test in
 `peak_bytes_in_use` from `memory_stats()` on GPU, `None` on CPU), and wall-clock
 phase stamps (`phase_clock`) for joining the nvidia-smi log.
 
+Peak memory: `peak_device_bytes` and `peak_host_rss_bytes` are the process peaks at
+the END OF THE TIMED LOOP (the counters are cumulative, so they include the build,
+the first call and the warm-ups, but not the untimed passes that follow).
+`peak_device_bytes_all_phases` / `peak_host_rss_bytes_all_phases` also cover the jit
+evidence, the diagnostics and the per-sample mask passes, which allocate their own
+buffers and can exceed the kernel's peak (measured on CPU, core `asis` with
+`sel 4096 / pe 6`: 3846 MiB at the end of the timed loop, 5141 MiB after the
+diagnostics). Quote the kernel-phase value for the memory gate.
+
 With `JAX_COMPILATION_CACHE_DIR` set (the campaign env scripts set it), a first call
 can be served from the persistent cache: compare `compile.first_call.requests` with
 `compile.first_call.compiles`, and never compare first-call times across different
@@ -258,8 +267,9 @@ and the registry view), `diagnostics_provenance`, `gaps`, and for legacy `legacy
 * Core `--jit asis` with an explicit `--sel-batch N` and/or `--pe-block N` re-traces and
   re-compiles its `lax.scan` bodies on every call (measured on CPU, Product A first16 +
   stride100, `sel 4096 / pe 6`: 2 compile requests per call in the timed loop, 4.9 s
-  median per call against 26 ms for `--jit whole`, 5.4 GB peak RSS). Check
-  `timing.compile.timed_loop` before reading an eager timing.
+  median per call against 26 ms for `--jit whole`, 3846 MiB peak RSS at the end of the
+  timed loop against 623 MiB for `--jit whole`). Check `timing.compile.timed_loop`
+  before reading an eager timing.
 * The legacy selection sum runs over pixel-sorted injections and core's over file
   order, so `log_mu` / `n_eff` can differ in the last bits between the two while
   every mask is identical.

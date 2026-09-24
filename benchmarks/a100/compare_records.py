@@ -239,6 +239,10 @@ def compare(A, B, rtol, atol):
         "compile_first_call": {"A": ta["compile"]["first_call"], "B": tb["compile"]["first_call"]},
         "peak_device_bytes": {"A": ta.get("peak_device_bytes"), "B": tb.get("peak_device_bytes")},
         "peak_host_rss_bytes": {"A": ta.get("peak_host_rss_bytes"), "B": tb.get("peak_host_rss_bytes")},
+        "peak_device_bytes_all_phases": {"A": ta.get("peak_device_bytes_all_phases"),
+                                         "B": tb.get("peak_device_bytes_all_phases")},
+        "peak_host_rss_bytes_all_phases": {"A": ta.get("peak_host_rss_bytes_all_phases"),
+                                           "B": tb.get("peak_host_rss_bytes_all_phases")},
         "note": "ratio_A_over_B > 1 means B is faster",
     }
     parity = all(v["pass"] for v in fields.values()) and masks_equal
