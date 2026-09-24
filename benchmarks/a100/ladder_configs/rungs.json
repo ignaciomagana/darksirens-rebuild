@@ -1,0 +1,33 @@
+{
+ "schema": "darksirens-infer-ladder-rungs/1",
+ "owner": "Fable (orchestrator). Transcribed from the G5-prep task; do not change here without the orchestrator.",
+ "data": {
+  "product": "A (gwcat 2.0 chi_eff pair)",
+  "pe": "A_pe_chieff_bbh259_n4096_v20.h5",
+  "sel": "A_sel_chieffref_o3o4ab_v20.h5",
+  "remote_dir": "/media/volume/tbs/darksirens_benchmark/data/gwcat/exports",
+  "smoke_pe": "A_pe_chieff_first16_n1024_v20.h5",
+  "smoke_sel": "A_sel_chieffref_o3o4ab_v20_stride100.h5"
+ },
+ "population_model_note": "ONE population model throughout: the model that carries the shared GWTC-5 preset (legacy --pop_model gwtc5_fiducial_bpl2peaks, core ds.Population('gwtc5_fiducial_bpl2peaks', fixed='gwtc5' when fixed)); rung 5b alone uses powerlaw+peak, the Gate 1 kernel target model (plan spectral_full). Fixed population values are the GWTC-5 preset (plans.py POPULATION_MODELS['gwtc5_fiducial_bpl2peaks'].fiducials, asserted identical in both codes by preset_check.py). Fixed cosmology: H0 67.74, Om0 0.3075, w0 -1, wa 0 (plans.H0_FIDUCIAL, plans.FIXED_COSMOLOGY). Sampled H0: uniform [20, 140] (plans.H0_BOUNDS).",
+ "rungs": {
+  "1": {"title": "fixed population (GWTC-5 preset), cosmology only",
+        "population_model": "gwtc5_fiducial_bpl2peaks", "population_preset": "gwtc5",
+        "sample_H0": true, "sample_population": "none", "kernel_plan": "spectral_H0_gwtc5"},
+  "2": {"title": "fixed cosmology, population only",
+        "population_model": "gwtc5_fiducial_bpl2peaks", "population_preset": "gwtc5",
+        "sample_H0": false, "sample_population": "all", "kernel_plan": null},
+  "3": {"title": "reduced population block (H0 fixed, the first three population parameters)",
+        "population_model": "gwtc5_fiducial_bpl2peaks", "population_preset": "gwtc5",
+        "sample_H0": false, "sample_population": 3, "kernel_plan": null},
+  "4": {"title": "H0 + reduced population block",
+        "population_model": "gwtc5_fiducial_bpl2peaks", "population_preset": "gwtc5",
+        "sample_H0": true, "sample_population": 3, "kernel_plan": null},
+  "5": {"title": "H0 + full population",
+        "population_model": "gwtc5_fiducial_bpl2peaks", "population_preset": "gwtc5",
+        "sample_H0": true, "sample_population": "all", "kernel_plan": "spectral_full_gwtc5"},
+  "5b": {"title": "H0 + full population, powerlaw+peak (the Gate 1 kernel target model)",
+         "population_model": "powerlaw+peak", "population_preset": null,
+         "sample_H0": true, "sample_population": "all", "kernel_plan": "spectral_full"}
+ }
+}

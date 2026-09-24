@@ -1,0 +1,23 @@
+{
+ "schema": "darksirens-infer-ladder-settings/1",
+ "purpose": "Gate 5 production settings, IDENTICAL in both implementations (passed explicitly to each; infer_ladder.py records each code's resolved values).",
+ "nlive": 1000,
+ "dlogz": 0.1,
+ "seed": 20260924,
+ "max_samples": 0,
+ "max_samples_note": "0 = no call/iteration cap in both codes (stopping rule = dlogz only). Legacy CLI default is 1,000,000 (dynesty maxcall / tinyns maxiter, cli/inference.py:1735-1743); core default None (inference/public.py:23). Matched explicitly.",
+ "tinyns_preset": "recommended",
+ "sampler_preflight": "on",
+ "prior_transform_dispatch": "auto",
+ "show_progress": true,
+ "checkpointing": "off",
+ "sel_batch_size": "none",
+ "pe_event_block": "none",
+ "guard": "soft",
+ "max_likelihood_variance": 1.0,
+ "samplers": ["tinyns", "dynesty"],
+ "primary_sampler": "tinyns",
+ "extra_runs": [
+  {"rung": "1", "guard": "hard", "max_likelihood_variance": 1.0, "why": "document the default hard guard's -inf / preflight-abort behaviour (D-guard)"}
+ ]
+}

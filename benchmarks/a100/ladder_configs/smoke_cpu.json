@@ -1,0 +1,21 @@
+{
+ "schema": "darksirens-infer-ladder-settings/1",
+ "purpose": "G5-prep CPU smoke (JAX_PLATFORMS=cpu): consumability and record completeness only; wall times informational.",
+ "pe": "A_pe_chieff_first16_n1024_v20.h5",
+ "sel": "A_sel_chieffref_o3o4ab_v20_stride100.h5",
+ "rungs": ["1", "5"],
+ "samplers": ["tinyns", "dynesty"],
+ "nlive": 50,
+ "dlogz": 1.0,
+ "seed": 20260924,
+ "max_samples": 0,
+ "tinyns_preset": "recommended",
+ "sampler_preflight": "on",
+ "prior_transform_dispatch": "auto",
+ "show_progress": true,
+ "checkpointing": "off",
+ "sel_batch_size": "none",
+ "pe_event_block": "none",
+ "guard": "soft",
+ "max_likelihood_variance": 1.0
+}
