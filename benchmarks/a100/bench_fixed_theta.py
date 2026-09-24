@@ -7,7 +7,8 @@
         --pe-block N|none|default --seed S --label L [--device gpu|cpu] \\
         [--mask-chunk 131072] [--smi-log PATH] [--util-window-s 0] \\
         [--cache-dir DIR --cache-mode cold|warm|env] \\
-        [--catalog CAT.h5] [--survey-fixed-override JSON [--allow-out-of-prior-fixed-survey]]
+        [--catalog CAT.h5] [--survey-fixed-override JSON [--allow-out-of-prior-fixed-survey]] \\
+        [--guard default|hard|soft] [--max-variance X]
 
 Dark-siren plans (``dark_*``) need ``--catalog``; the fixture's
 ``galaxy_density.json`` sidecar must pass ``dark_fixture.preflight`` (log10n0
@@ -105,6 +106,7 @@ def parse_args(argv=None):
                     help="accept a --survey-fixed-override value outside its prior: log10n0 "
                          "outside the log10n0 prior of either implementation, delta / sigma_kde "
                          "outside plans.SURVEY_BOUNDS (fixed coordinate only; recorded as a gap)")
+    bc.add_guard_args(ap)
     ap.add_argument("--cache-mode", choices=("cold", "warm", "env"), default="env",
                     help="cold: DIR must be absent or empty (created), so the first call is a "
                          "true compile; warm: DIR must already hold entries (a persistent-cache "
@@ -420,7 +422,9 @@ def main(argv=None):
     adapter_kw = {"catalog_path": os.path.abspath(a.catalog)} if dark else {}
     adapter = adapter_cls(plan, os.path.abspath(a.pe), os.path.abspath(a.sel),
                           sel_batch=a.sel_batch, pe_block=a.pe_block, jit_mode=a.jit,
-                          seed=a.seed, save_dir=save_dir, counter=counter, **adapter_kw)
+                          seed=a.seed, save_dir=save_dir, counter=counter,
+                          guard=bc.guard_request(a)["mode"], max_variance=a.max_variance,
+                          **adapter_kw)
 
     # ---- load + build ------------------------------------------------------
     clock.mark("build_start")
@@ -458,6 +462,7 @@ def main(argv=None):
     record["config"] = adapter.config()
     record["config"].update(seed=a.seed, n_calls=a.n_calls, warmup=a.warmup, device=a.device,
                             mask_chunk=a.mask_chunk)
+    record["config"]["guard"] = bc.guard_record(bc.guard_request(a), record["config"])
     dims = adapter.dims()
     dims["T_obs_yr"] = record["inputs"]["sel"]["attrs"].get("T_obs_yr")
     dims["n_coords"] = int(n_coords)
@@ -629,6 +634,7 @@ def main(argv=None):
             "sigma2_lnL": bc.scalar_entry(sigma2),
             "guard_threshold": bc.scalar_entry(threshold),
             "guard_pass": bool(n_eff > threshold),
+            "guard_mode": record["config"]["guard"]["mode"],
             "masks": {
                 "pe_structural": bc.mask_entry(pe_s),
                 "pe_support": bc.mask_entry(pe_sup),

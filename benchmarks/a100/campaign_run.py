@@ -14,8 +14,14 @@ SPEC is a JSON list of record specs::
      # optional (Gate 2 / M5):
      "catalog": CAT.h5,            # dark-siren plans: passed as --catalog
      "extra_args": [ARG, ...],     # appended to the bench_fixed_theta.py command line
-     "coords_tag": TAG, "coords_args": [ARG, ...]}   # coordinates OUT/coords/<plan>__<TAG>.json
+     "coords_tag": TAG, "coords_args": [ARG, ...],   # coordinates OUT/coords/<plan>__<TAG>.json
                                                      # made with make_coords.py ... ARGS
+     # optional (Gate 3):
+     "guard": "hard|soft", "max_variance": X,        # --guard / --max-variance (both adapters)
+     "tool": "components",                           # bench_components.py instead of
+     "main_record": PATH, "trace": true}             # bench_fixed_theta.py (--main-record,
+                                                     # --trace OUT/traces/<id>); compare_to
+                                                     # then uses ``bench_components.py compare``
 
 For every entry, strictly one at a time:
 
@@ -146,12 +152,16 @@ def ensure_coords(outdir, plan, seed, n, py, tag=None, extra=None):
     return path
 
 
-def compare(py, a_rec, b_rec, out_json, out_md):
+def compare(py, a_rec, b_rec, out_json, out_md, components=False):
     env = dict(os.environ, JAX_PLATFORMS="cpu", PYTHONDONTWRITEBYTECODE="1")
     env.pop("PYTHONPATH", None)
-    r = subprocess.run([py, os.path.join(HERE, "compare_records.py"), a_rec, b_rec, "--rtol", "1e-12",
-                        "--atol", "0", "--out", out_json, "--md", out_md], capture_output=True,
-                       text=True, env=env)
+    if components:
+        cmd = [py, os.path.join(HERE, "bench_components.py"), "compare", a_rec, b_rec,
+               "--rtol", "1e-12", "--out", out_json, "--md", out_md]
+    else:
+        cmd = [py, os.path.join(HERE, "compare_records.py"), a_rec, b_rec, "--rtol", "1e-12",
+               "--atol", "0", "--out", out_json, "--md", out_md]
+    r = subprocess.run(cmd, capture_output=True, text=True, env=env)
     return {"rc": r.returncode, "summary": out_json, "md": out_md,
             "last_line": (r.stdout.strip().splitlines() or [""])[-1], "stderr_tail": r.stderr[-1500:]}
 
@@ -173,7 +183,7 @@ def main(argv=None):
     a = ap.parse_args(argv)
 
     out = os.path.abspath(a.outdir)
-    for sub in ("records", "summaries", "smi", "logs", "coords"):
+    for sub in ("records", "summaries", "smi", "logs", "coords", "traces"):
         os.makedirs(os.path.join(out, sub), exist_ok=True)
     with open(a.spec) as f:
         specs = json.load(f)
@@ -208,14 +218,26 @@ def main(argv=None):
         else:
             cdir = os.path.join(a.cache_root, rid)
             mode = "cold"
-        bench = ["python", os.path.join(HERE, "bench_fixed_theta.py"), "--impl", sp["impl"],
+        components = sp.get("tool") == "components"
+        tool = "bench_components.py" if components else "bench_fixed_theta.py"
+        bench = ["python", os.path.join(HERE, tool), "--impl", sp["impl"],
                  "--pe", sp["pe"], "--sel", sp["sel"], "--plan", plan, "--coords", coords,
                  "--out", rec, "--n-calls", str(sp.get("n_calls", 20)),
                  "--warmup", str(sp.get("warmup", 3)), "--jit", sp["jit"],
                  "--sel-batch", str(sp["sel_batch"]), "--pe-block", str(sp["pe_block"]),
                  "--seed", str(a.seed), "--label", rid, "--device", "gpu",
-                 "--util-window-s", str(sp.get("util_window_s", 10)), "--smi-log", smi,
                  "--cache-dir", cdir, "--cache-mode", mode]
+        if components:
+            if sp.get("main_record"):
+                bench += ["--main-record", sp["main_record"]]
+            if sp.get("trace"):
+                bench += ["--trace", os.path.join(out, "traces", rid), "--trace-drop-xplane"]
+        else:
+            bench += ["--util-window-s", str(sp.get("util_window_s", 10)), "--smi-log", smi]
+        if sp.get("guard"):
+            bench += ["--guard", str(sp["guard"])]
+        if sp.get("max_variance") is not None:
+            bench += ["--max-variance", repr(float(sp["max_variance"]))]
         if sp.get("catalog"):
             bench += ["--catalog", sp["catalog"]]
         bench += [str(x) for x in (sp.get("extra_args") or [])]
@@ -257,7 +279,8 @@ def main(argv=None):
                 continue
             entry["compares"][ref] = compare(a.driver_python, ref_rec, rec,
                                              os.path.join(out, "summaries", base + ".json"),
-                                             os.path.join(out, "summaries", base + ".md"))
+                                             os.path.join(out, "summaries", base + ".md"),
+                                             components=components)
         index["runs"][rid] = entry
         index["harness"] = harness
         write_json_atomic(index_path, index)

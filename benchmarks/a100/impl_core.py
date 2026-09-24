@@ -70,7 +70,7 @@ class CoreAdapter:
     impl = IMPL
 
     def __init__(self, plan, pe_path, sel_path, *, sel_batch, pe_block, jit_mode, seed,
-                 save_dir, counter, catalog_path=None):
+                 save_dir, counter, catalog_path=None, guard=None, max_variance=None):
         if jit_mode not in ("whole", "asis"):
             raise ValueError("--jit must be whole or asis")
         self.plan = plan
@@ -86,6 +86,10 @@ class CoreAdapter:
         self.sel_batch_req = _block_value(sel_batch)
         self.pe_block_req = _block_value(pe_block)
         self.seed = seed
+        if guard not in (None, "hard", "soft"):
+            raise ValueError(f"guard must be hard or soft, not {guard!r}")
+        self.guard = guard
+        self.max_variance = None if max_variance is None else float(max_variance)
         self.gaps = []
         self.timing = {}
 
@@ -131,10 +135,12 @@ class CoreAdapter:
         events = ds.load_events(self.pe_path, fit_columns=fit_columns)
         injections = ds.load_injections(self.sel_path, fit_columns=fit_columns)
         t2 = time.perf_counter()
+        guard_kw = {} if self.max_variance is None else {
+            "max_likelihood_variance": self.max_variance}
         bound = bind_analysis(
             analysis, events=events, injections=injections,
-            selection_neff_soft_guard=False,
-            sel_batch_size=self.sel_batch_req, pe_event_block=self.pe_block_req)
+            selection_neff_soft_guard=(self.guard == "soft"),
+            sel_batch_size=self.sel_batch_req, pe_event_block=self.pe_block_req, **guard_kw)
         t3 = time.perf_counter()
         self.analysis, self.events, self.injections, self.bound = analysis, events, injections, bound
         self.fit_columns = tuple(fit_columns)
@@ -239,9 +245,12 @@ class CoreAdapter:
             "population_fixed": self.analysis.population.fixed,
             "population_fiducial_set": self.analysis.population.fiducial_set,
             "plan_adapter": self.adapter_info,
-            "bind_call": ("bind_analysis(analysis, events, injections, selection_neff_soft_guard="
-                          "False, sel_batch_size, pe_event_block) with the default "
-                          "max_likelihood_variance (ds.infer with sampler='dynesty' binds the same)"),
+            "bind_call": (f"bind_analysis(analysis, events, injections, selection_neff_soft_guard="
+                          f"{self.guard == 'soft'}, sel_batch_size, pe_event_block"
+                          + (f", max_likelihood_variance={self.max_variance!r})"
+                             if self.max_variance is not None else
+                             ") with the default max_likelihood_variance")
+                          + " (defaults: ds.infer with sampler='dynesty' binds the same)"),
             "universe_model": "dark_sirens (IncompleteCatalogRedshift)" if self.dark else "spectral",
             "dark_settings": ({
                 "estimand": "conditional (the only one core implements, "

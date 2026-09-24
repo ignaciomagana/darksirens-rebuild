@@ -88,6 +88,19 @@ non-sampled parameters inserted at their fiducials by the harness
 use the hard selection guard and `max_likelihood_variance = 1.0` (their defaults
 for dynesty).
 
+Guard variants (`--guard default|hard|soft`, `--max-variance X`, in
+`bench_fixed_theta.py` and `bench_components.py`): `default` passes nothing (the
+defaults above). `hard` / `soft` pass legacy `--selection_neff_guard hard|soft` and
+core `bind_analysis(selection_neff_soft_guard=False|True)`; `--max-variance X` passes
+legacy `--max_likelihood_variance X` and core `bind_analysis(max_likelihood_variance=X)`.
+The record stores the resolved values in `config.max_likelihood_variance`,
+`config.selection_neff_soft_guard` and `config.guard` (`requested_mode`,
+`requested_max_variance`, `mode`, `cap`), and every per-coordinate entry carries
+`guard_mode`. `compare_records.py` (and `bench_components.py compare`, and the
+components `--main-record` check) refuse a pair whose resolved guard mode or cap
+differ. `campaign_run.py` spec keys: `guard`, `max_variance`; `tool: components`
+with `main_record` / `trace` runs `bench_components.py` under the same driver.
+
 ## Dark sirens (`dark_*` plans, `--catalog`)
 
 ### Fixtures

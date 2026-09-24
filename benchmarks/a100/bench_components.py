@@ -1288,6 +1288,7 @@ def parse_args(argv=None):
     ap.add_argument("--cache-dir", default=None)
     ap.add_argument("--cache-mode", choices=("cold", "warm", "env"), default="env")
     ap.add_argument("--survey-fixed-override", default=None)
+    bc.add_guard_args(ap)
     ap.add_argument("--allow-out-of-prior-fixed-survey", action="store_true")
     return ap.parse_args(argv)
 
@@ -1321,6 +1322,8 @@ def _check_main_record(main_path, record, whole_hex):
     chk["blocks"] = all((mc.get(k) or {}).get("resolved") == (rc.get(k) or {}).get("resolved")
                         for k in ("sel_batch_size", "pe_event_block"))
     chk["kernel"] = mc.get("kernel") == rc.get("kernel")
+    chk["guard"] = all(mc.get(k) is not None and mc.get(k) == rc.get(k)
+                       for k in ("max_likelihood_variance", "selection_neff_soft_guard"))
     main_status = m.get("status")
     chk["main_status_ok"] = main_status == "ok"
     per = (m.get("values") or {}).get("per_coord") or []
@@ -1517,7 +1520,9 @@ def main(argv=None):
     adapter_kw = {"catalog_path": os.path.abspath(a.catalog)} if dark else {}
     adapter = adapter_cls(plan, os.path.abspath(a.pe), os.path.abspath(a.sel),
                           sel_batch=a.sel_batch, pe_block=a.pe_block, jit_mode=a.jit,
-                          seed=seed, save_dir=save_dir, counter=counter, **adapter_kw)
+                          seed=seed, save_dir=save_dir, counter=counter,
+                          guard=bc.guard_request(a)["mode"], max_variance=a.max_variance,
+                          **adapter_kw)
     mem = [bc.memory_checkpoint("after_import")]
     snap = counter.snapshot()
     try:
@@ -1537,6 +1542,7 @@ def main(argv=None):
     record["config"] = adapter.config()
     record["config"].update(seed=seed, n_calls=a.n_calls, warmup=a.warmup, device=a.device,
                             full_array_coords=full_coords, big_array_elements=a.big_array_elements)
+    record["config"]["guard"] = bc.guard_record(bc.guard_request(a), record["config"])
     dims = adapter.dims()
     dims["n_coords"] = int(n_coords)
     record["dims"] = dims

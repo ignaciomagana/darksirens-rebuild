@@ -204,6 +204,66 @@ def test_likelihood_settings_are_the_dynesty_defaults(smoke, plan, impl, jit):
     assert cfg["selection_neff_soft_guard"] is False
 
 
+GUARD_VARIANTS = (("soft", "1.0"), ("hard", "10"))
+
+
+@pytest.fixture(scope="session")
+def guard_smoke(smoke):
+    """--guard / --max-variance in both adapters: soft at cap 1.0 and hard at cap 10."""
+    work, plan = smoke["work"], PLANS[0]
+    base = smoke["records"][(plan, "legacy", "whole")]
+    pe, sel = base["inputs"]["pe"]["path"], base["inputs"]["sel"]["path"]
+    coords = os.path.join(work, f"coords_{plan}.json")
+    jobs = {}
+    for guard, cap in GUARD_VARIANTS:
+        for impl, py in (("legacy", LEGACY_PY), ("core", CORE_PY)):
+            out = os.path.join(work, f"guard_{guard}_{cap}_{plan}_{impl}.json")
+            cmd = [py, os.path.join(BENCH, "bench_fixed_theta.py"), "--impl", impl, "--pe", pe,
+                   "--sel", sel, "--plan", plan, "--coords", coords, "--out", out,
+                   "--n-calls", "5", "--warmup", "1", "--jit", "whole", "--sel-batch", "none",
+                   "--pe-block", "none", "--seed", str(SEED), "--label",
+                   f"guard_{guard}_{impl}", "--device", "cpu", "--guard", guard,
+                   "--max-variance", cap]
+            jobs[(guard, impl)] = (cmd, out)
+    records = {}
+    for key, (cmd, out) in jobs.items():
+        r = _run(cmd, work)
+        assert r["rc"] == 0, r
+        with open(out) as f:
+            records[key] = json.load(f)
+            records[key]["_path"] = out
+    return records
+
+
+@pytest.mark.parametrize("guard,cap", GUARD_VARIANTS)
+def test_guard_variants_recorded_and_in_parity(guard_smoke, guard, cap):
+    for impl in ("legacy", "core"):
+        cfg = guard_smoke[(guard, impl)]["config"]
+        assert cfg["selection_neff_soft_guard"] is (guard == "soft")
+        assert cfg["max_likelihood_variance"] == float(cap)
+        assert cfg["guard"]["mode"] == guard and cfg["guard"]["cap"] == float(cap)
+        assert cfg["guard"]["requested_mode"] == guard
+    leg = guard_smoke[(guard, "legacy")]["config"]["legacy_cli_args"]
+    assert leg[leg.index("--selection_neff_guard") + 1] == guard
+    assert float(leg[leg.index("--max_likelihood_variance") + 1]) == float(cap)
+    s = compare_records.compare(guard_smoke[(guard, "legacy")], guard_smoke[(guard, "core")],
+                                rtol=1e-12, atol=0.0)
+    assert s["status"] == "compared", s.get("refusal_reasons")
+    assert s["verdict"]["overall_pass"] is True
+
+
+def test_compare_refuses_different_guard_settings(guard_smoke, smoke):
+    soft, hard = guard_smoke[("soft", "legacy")], guard_smoke[("hard", "core")]
+    s = compare_records.compare(soft, hard, 1e-12, 0.0)
+    assert s["status"] == "refused"
+    assert any("selection_neff_soft_guard" in r for r in s["refusal_reasons"])
+    assert any("max_likelihood_variance" in r for r in s["refusal_reasons"])
+    default = smoke["records"][(PLANS[0], "core", "whole")]
+    s = compare_records.compare(default, soft, 1e-12, 0.0)
+    assert s["status"] == "refused"
+    assert any("selection_neff_soft_guard" in r for r in s["refusal_reasons"])
+
+
 # ---------------------------------------------------------------------------
 # Dark sirens on the campaign's mock fixture T
 # ---------------------------------------------------------------------------

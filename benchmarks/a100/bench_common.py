@@ -634,3 +634,40 @@ def write_json(path, obj):
 def read_json(path):
     with open(path) as f:
         return json.load(f)
+
+
+# ---------------------------------------------------------------------------
+# Selection-guard configuration (both adapters)
+GUARD_CHOICES = ("default", "hard", "soft")
+
+
+def add_guard_args(ap):
+    """--guard / --max-variance: the sparse-selection N_eff guard of both codes.
+
+    default = each implementation's own default (legacy ``--selection_neff_guard auto``
+    resolves to hard for its dynesty sampler; core ``bind_analysis`` soft guard False);
+    hard / soft are passed explicitly (legacy ``--selection_neff_guard``, core
+    ``bind_analysis(selection_neff_soft_guard=...)``). --max-variance sets
+    ``max_likelihood_variance`` in both (legacy ``--max_likelihood_variance``, core
+    ``bind_analysis(max_likelihood_variance=...)``); unset = the implementation default.
+    """
+    ap.add_argument("--guard", choices=GUARD_CHOICES, default="default",
+                    help="selection N_eff guard: default (implementation default), hard, soft")
+    ap.add_argument("--max-variance", type=float, default=None,
+                    help="max_likelihood_variance (cap on sigma^2_lnL); unset = implementation "
+                         "default")
+
+
+def guard_request(a):
+    mode = getattr(a, "guard", "default") or "default"
+    return {"mode": None if mode == "default" else mode,
+            "requested": mode, "max_variance": getattr(a, "max_variance", None)}
+
+
+def guard_record(req, config):
+    """Requested vs resolved guard settings, as stored in ``config.guard``."""
+    soft = bool(config.get("selection_neff_soft_guard"))
+    return {"requested_mode": req["requested"],
+            "requested_max_variance": req["max_variance"],
+            "mode": "soft" if soft else "hard",
+            "cap": config.get("max_likelihood_variance")}

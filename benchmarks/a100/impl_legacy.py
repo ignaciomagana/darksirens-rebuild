@@ -124,7 +124,7 @@ def _is_dark(plan):
 
 
 def legacy_cli_args(plan, pe_path, sel_path, save_path, sel_batch, pe_block, seed,
-                    catalog_path=None):
+                    catalog_path=None, guard=None, max_variance=None):
     """The exact darksirens_inference argument vector that configures ``plan``."""
     dark = _is_dark(plan)
     argv = [
@@ -146,6 +146,14 @@ def legacy_cli_args(plan, pe_path, sel_path, save_path, sel_batch, pe_block, see
             argv += [flag, value]
     argv += _block_arg("--sel_batch_size", sel_batch)
     argv += _block_arg("--pe_event_block", pe_block)
+    # Selection N_eff guard: unset = the CLI default ('auto' -> hard for dynesty,
+    # cli/common.py resolve_selection_neff_guard; max_likelihood_variance 1.0).
+    if guard is not None:
+        if guard not in ("hard", "soft"):
+            raise ValueError(f"guard must be hard or soft, not {guard!r}")
+        argv += ["--selection_neff_guard", guard]
+    if max_variance is not None:
+        argv += ["--max_likelihood_variance", repr(float(max_variance))]
     fixed_values = {}
     if plan["sample_H0"]:
         # H0 sampled on the target box; Om0 fixed individually; w0, wa fixed as
@@ -177,7 +185,7 @@ class LegacyAdapter:
     impl = IMPL
 
     def __init__(self, plan, pe_path, sel_path, *, sel_batch, pe_block, jit_mode, seed,
-                 save_dir, counter, catalog_path=None):
+                 save_dir, counter, catalog_path=None, guard=None, max_variance=None):
         self.plan = plan
         self.pe_path = pe_path
         self.sel_path = sel_path
@@ -190,7 +198,8 @@ class LegacyAdapter:
         self.save_dir = save_dir
         self.build_warnings = []
         self.cli_argv = legacy_cli_args(plan, pe_path, sel_path, save_dir, sel_batch, pe_block, seed,
-                                        catalog_path=catalog_path)
+                                        catalog_path=catalog_path, guard=guard,
+                                        max_variance=max_variance)
         self.requested_blocks = {"sel_batch_size": sel_batch, "pe_event_block": pe_block}
         self.cli_log = ""
 
