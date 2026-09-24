@@ -429,7 +429,7 @@ class SamplerProbe:
             print(f"  [ladder] {phase} it={iteration} logz={logz:.4f} dlogz={dlogz:.4g} "
                   f"ncall={ncall} logvol={logvol:.3f}", flush=True)
 
-    # tinyns: NestedSampler.run(..., callback=, callback_interval=) (tinyns/api.py:246-296);
+    # tinyns: NestedSampler.run(..., callback=, callback_interval=) (tinyns/api.py:209-238);
     # the state dict is built every outer iteration regardless (tinyns/run.py:1999-2017).
     def install_tinyns(self):
         import tinyns
