@@ -390,3 +390,17 @@ def test_dark_preflight_refusals(dark_smoke, tmp_path):
         r = _bench_rc(CORE_PY, base + ["--catalog", cat, "--survey-fixed-override", json.dumps(ovr)],
                       work)
         assert r["rc"] == 2 and "allow-out-of-prior-fixed-survey" in r["stderr"], (ovr, r)
+    # 6. a density LABEL that the data do not carry: the fixture's own products with a
+    #    sidecar whose zmax (hence V_c) is wrong, so N_complete / V_c != n0
+    fx3 = os.path.join(work, "fixture_mislabelled_density")
+    os.makedirs(fx3)
+    for name in (sc["harness_inputs"]["pe"], sc["harness_inputs"]["sel"], sc["harness_inputs"]["catalog"],
+                 "mock_galaxy_catalog_complete.h5"):
+        os.symlink(os.path.join(DARK_FIXTURE, name), os.path.join(fx3, name))
+    with open(os.path.join(fx3, "galaxy_density.json"), "w") as f:
+        json.dump(dict(sc, zmax=0.07), f)
+    args = base[:]
+    args[args.index("--pe") + 1] = os.path.join(fx3, sc["harness_inputs"]["pe"])
+    args[args.index("--sel") + 1] = os.path.join(fx3, sc["harness_inputs"]["sel"])
+    r = _bench_rc(CORE_PY, args + ["--catalog", os.path.join(fx3, sc["harness_inputs"]["catalog"])], work)
+    assert r["rc"] == 2 and "the data imply n0" in r["stderr"], r

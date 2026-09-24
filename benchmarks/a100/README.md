@@ -113,9 +113,11 @@ product's sha256) and `SHA256SUMS`.
 **Pre-flight.** Every dark record runs `dark_fixture.preflight` before JAX is
 imported and exits 2 when the fixture's log10n0 lies outside the log10n0 prior of
 either implementation (`plans.LOG10N0_PRIOR`), differs from the plans' survey
-fiducial, was generated with `--n-galaxies`, or when the PE / selection / catalog
-files are not the bytes the sidecar lists. The record keeps the evidence under
-`fixture_preflight`.
+fiducial, was generated with `--n-galaxies`, when the density label disagrees with
+the data (N_complete of `mock_galaxy_catalog_complete.h5` over a numpy V_c(z < zmax)
+must equal n0 to `DENSITY_RTOL` = 1e-3 + 1/N_complete), or when the PE / selection /
+catalog / complete-catalog files are not the bytes the sidecar lists. The record
+keeps the evidence under `fixture_preflight` (`density_check` included).
 
 ### Plans
 | plan | sampled | fixed |

@@ -17,8 +17,10 @@ the sha256 of every product, and writes ``SHA256SUMS``.
 ``preflight`` (used by ``bench_fixed_theta.py`` for every dark-siren record)
 REFUSES a fixture whose ``log10n0`` lies outside the ``log10n0`` inference prior
 of either implementation (``plans.LOG10N0_PRIOR``), whose sidecar density is not
-the dark plans' survey fiducial, or whose PE / selection / catalog files are not
-the bytes the sidecar describes. Imports neither implementation (numpy, h5py).
+the dark plans' survey fiducial, whose density LABEL disagrees with its DATA
+(N_complete / V_c(zmax) of the complete catalog, to ``DENSITY_RTOL``), or whose PE /
+selection / catalog / complete-catalog files are not the bytes the sidecar
+describes. Imports neither implementation (numpy, h5py).
 """
 
 from __future__ import annotations
@@ -52,6 +54,39 @@ UNITS = ("comoving galaxy number density in Mpc^-3 at the generating H0 (not h^3
 
 class FixturePreflightError(RuntimeError):
     pass
+
+
+#: |N_complete / (n0 V_c) - 1| allowed between the density LABEL and the DATA (the
+#: generator draws round(n0 * int dV_c (1+z)^delta), so the true gap is ~1/N plus its
+#: 20000-node trapezoid; a mislabelled fixture is off by a factor, not a permille).
+DENSITY_RTOL = 1.0e-3
+_C_KM_S = 299792.458
+
+
+def comoving_volume_np(zmax, H0, Om0, w0, wa, delta=0.0, n=200_001) -> float:
+    """int_0^zmax dV_c/dz (1+z)^delta dz in Mpc^3, full sky, flat w0waCDM, no radiation
+    (astropy ``Flatw0waCDM`` with its default Tcmb0 = 0, as the generator builds it);
+    numpy trapezoid on ``n`` nodes (relative error ~1e-10 here). Imports numpy only."""
+    import numpy as np
+
+    z = np.linspace(0.0, float(zmax), int(n))
+    de = (1.0 + z) ** (3.0 * (1.0 + w0 + wa)) * np.exp(-3.0 * wa * z / (1.0 + z))
+    ez = np.sqrt(Om0 * (1.0 + z) ** 3 + (1.0 - Om0) * de)
+    dh = _C_KM_S / float(H0)
+    inv = 1.0 / ez
+    dc = dh * np.concatenate([[0.0], np.cumsum(0.5 * (inv[1:] + inv[:-1]) * np.diff(z))])
+    dvdz = 4.0 * np.pi * dh * dc ** 2 / ez * (1.0 + z) ** float(delta)
+    return float(np.sum(0.5 * (dvdz[1:] + dvdz[:-1]) * np.diff(z)))
+
+
+def density_check(n_complete, n0, zmax, H0, Om0, w0, wa, delta) -> dict:
+    """The density the DATA carry (N_complete / V_c) against the LABEL n0."""
+    vc = comoving_volume_np(zmax, H0, Om0, w0, wa, delta)
+    ratio = (n_complete / vc) / float(n0)
+    tol = DENSITY_RTOL + 1.0 / max(int(n_complete), 1)
+    return {"n_complete": int(n_complete), "V_c_Mpc3_numpy": vc, "n_complete_over_V_c": n_complete / vc,
+            "ratio_to_n0": ratio, "tol": tol, "ok": bool(abs(ratio - 1.0) <= tol),
+            "note": "numpy flat-w0waCDM volume (dark_fixture.comoving_volume_np), independent of astropy"}
 
 
 def sha256_file(path, bufsize=1 << 22) -> str:
@@ -192,10 +227,17 @@ def write_sidecar(a) -> dict:
     if facts.get("derived_galaxies") != n_complete:
         raise SystemExit(f"generator stdout says {facts.get('derived_galaxies')} galaxies but the "
                          f"complete catalog holds {n_complete}")
+    printed = facts.get("derived_n0_printed")
+    if printed is None or abs(float(printed) - n0) > 1e-5 * n0:
+        raise SystemExit(f"generator stdout n0={printed!r} does not match the traced --n0 {n0_arg!r}")
     H0 = float(gargs.get("H0", 67.74))
     Om0 = float(gargs.get("Om0", 0.3075))
     w0 = float(gargs.get("w0", -1.0))
     wa = float(gargs.get("wa", 0.0))
+    dens = density_check(n_complete, n0, zmax, H0, Om0, w0, wa, delta)
+    if not dens["ok"]:
+        raise SystemExit(f"the complete catalog implies n0 = {dens['n_complete_over_V_c']!r}, not the "
+                         f"traced --n0 {n0_arg!r} (ratio {dens['ratio_to_n0']!r}): refused")
     # Implied density check: N_complete / V_c(z < zmax), full sky (astropy, as the generator).
     implied = None
     try:
@@ -254,6 +296,7 @@ def write_sidecar(a) -> dict:
         "n_complete_source": f"len({COMPLETE_NAME}:/z); equals the generator's 'Derived N galaxies' line",
         "z_max_complete_catalog": zmax_complete,
         "implied_density_check": implied,
+        "implied_density_check_numpy": dens,
         "H0": H0, "Om0": Om0, "w0": w0, "wa": wa,
         "seed": int(gargs["seed"]),
         "nside": int(gargs["nside"]),
@@ -315,6 +358,8 @@ def write_sidecar(a) -> dict:
 def verify_sums(fixture_dir) -> dict:
     d = os.path.abspath(fixture_dir)
     bad, n = [], 0
+    if not os.path.isfile(os.path.join(d, SUMS_NAME)):
+        return {"n_files": 0, "mismatch": [], "ok": False, "error": f"no {SUMS_NAME} in {d}"}
     with open(os.path.join(d, SUMS_NAME)) as f:
         for line in f:
             h, name = line.strip().split("  ", 1)
@@ -362,6 +407,39 @@ def preflight(catalog_path, pe_path, sel_path, plan) -> dict:
             errs.append(f"fixture {k} {sc[k]!r} != plans.SURVEY_FIDUCIALS[{k!r}] {fid[k]!r}")
     files = sc.get("files", {})
     checked = {}
+    # The density LABEL must be the density of the DATA: recount the fixture's complete
+    # catalog (its bytes must be the sidecar's) and compare N_complete / V_c(zmax) with
+    # n0. A sidecar copied next to other products (or hand-edited) is refused here.
+    density = None
+    comp = os.path.join(os.path.dirname(os.path.abspath(catalog_path)), COMPLETE_NAME)
+    if not os.path.isfile(comp):
+        errs.append(f"no {COMPLETE_NAME} next to the catalog: the density label cannot be "
+                    "checked against the data")
+    else:
+        got = sha256_file(comp)
+        want = (files.get(COMPLETE_NAME) or {}).get("sha256")
+        checked["complete_catalog"] = {"path": comp, "sha256": got, "matches_sidecar": got == want}
+        if got != want:
+            errs.append(f"{comp} is not the sidecar's {COMPLETE_NAME}")
+        import h5py
+
+        with h5py.File(comp, "r") as f:
+            n_comp = int(f["z"].shape[0])
+        try:
+            density = density_check(n_comp, float(sc["n0"]), float(sc["zmax"]), float(sc["H0"]),
+                                    float(sc["Om0"]), float(sc["w0"]), float(sc["wa"]),
+                                    float(sc["delta"]))
+        except (KeyError, TypeError, ValueError) as exc:
+            errs.append(f"sidecar lacks the fields of the density check: {exc!r}")
+        else:
+            if n_comp != sc.get("n_complete"):
+                errs.append(f"{COMPLETE_NAME} holds {n_comp} galaxies, the sidecar says "
+                            f"{sc.get('n_complete')}")
+            if not density["ok"]:
+                errs.append(f"the data imply n0 = {density['n_complete_over_V_c']!r} "
+                            f"(N_complete {n_comp} / V_c(z<{sc['zmax']}) {density['V_c_Mpc3_numpy']!r}"
+                            f" Mpc^3), not the sidecar's n0 = {sc['n0']!r} (ratio "
+                            f"{density['ratio_to_n0']!r}, tolerance {density['tol']!r})")
     for role, p in (("catalog", catalog_path), ("pe", pe_path), ("sel", sel_path)):
         name = sc["harness_inputs"][role]
         want = (files.get(name) or {}).get("sha256")
@@ -380,6 +458,7 @@ def preflight(catalog_path, pe_path, sel_path, plan) -> dict:
         "log10n0_prior": {k: list(v[:2]) + [v[2]] for k, v in plans.LOG10N0_PRIOR.items()},
         "inside_prior": inside,
         "survey_fiducials_plans": dict(fid),
+        "density_check": density,
         "inputs": checked,
         "status": "ok" if not errs else "refused",
         "errors": errs,
