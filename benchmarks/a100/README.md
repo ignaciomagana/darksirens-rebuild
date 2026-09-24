@@ -24,6 +24,9 @@ parity probes already use), and sets `sys.dont_write_bytecode`.
 | `dark_fixture.py` | dark-siren mock fixtures: `galaxy_density.json` sidecar writer/verifier and the pre-flight |
 | `dark_diag.py` | implementation-neutral catalog-side summaries (branch evidences, per-row/per-sample arrays) |
 | `tests/test_harness_smoke.py` | smoke test: tiny spectral fixtures and dark fixture T; schema, invariants, parity at 1e-12 |
+| `bench_components.py` | component timing (a-k) of one implementation + per-component legacy-vs-core parity (`compare`) |
+| `trace_tools.py` | `jax.profiler` trace mode for the main harness and the components runner; trace -> top-N op table |
+| `tests/test_components_smoke.py` | smoke test of the components runner and the trace tools (tiny spectral fixture, dark fixture T) |
 
 ## Target definitions (Fable-owned; do not change here without the orchestrator)
 
@@ -406,3 +409,92 @@ and the registry view), `diagnostics_provenance`, `gaps`, and for legacy `legacy
 * The legacy selection sum runs over pixel-sorted injections and core's over file
   order, so `log_mu` / `n_eff` can differ in the last bits between the two while
   every mask is identical.
+
+## Component timing and profiling (`bench_components.py`, `trace_tools.py`)
+
+For the attribution question (where does a likelihood call spend its time?)
+`bench_components.py` builds the SAME model as `bench_fixed_theta.py` (the same
+adapters, plan, coordinates, inputs and block sizes) and times its pieces as
+separate `jax.jit` kernels, each with its data as ARGUMENTS (each implementation's
+own `threads_distance_table`, so the distance table and the smoothing operator are
+arguments too; every record carries the jaxpr constant inventory per component).
+Every component is warm-timed exactly like the whole likelihood in the main harness:
+first call on coords[0] (compile + run), 3 warm-ups, `--n-calls` timed calls cycling
+the coordinates, `block_until_ready` each, median/min/mean/std, compile requests per
+phase (0 in every timed loop). When a component already ran on coords[0] while the
+inputs of later components were precomputed, that invocation is its first call
+(`first_call_context`). After timing, each component is re-lowered and re-compiled
+from cold in-memory caches (`aot`: trace+lower and compile seconds, module size).
+
+| component | legacy (c042527) | core (88004d9) |
+|---|---|---|
+| `a_cosmology` | `utils.cosmology.dL_of_z` grid, `z_of_dL_precomputed`, `inference.utils.log_jacobian_*`; spectral: prepared dV/dz grid | `cosmology.distances.*`, `likelihood.weights.log_jacobian_*`; spectral: `normalized_comoving_volume_grid` |
+| `b_population` | `gw.populations.pop_model_parser` -> `log_p_pop` | `population.pop_model_parser` -> `log_p_pop` |
+| `c_pop_norm` | mass/spin `_norm` + per-sample pairing `_panel_norm`, lifted out of `component_densities` | the same calls (identical class text) |
+| `w_weights` | the `_ll_given_states` weight closures, state as input (encloses a+b+g) | the hierarchical `_weight` closures, state as input |
+| `d_pe_reduce` | TRANSCRIBED block reduction (inline in `_ll_given_states`) with legacy `log_evidence_and_mc_variance` | `likelihood.event.reduce_pe_events` (pass-through weights) |
+| `e_sel_reduce` | `selection_reduce_from_ldw_provider` + `selection_log_correction` | same names in `selection.gw` |
+| `f_kernel_state` | `redshift.catalog.catalog_kernel_state` (+ `log_galaxy_measure_grid`) | `catalog.redshift.build_catalog_kernel_state` |
+| `h_completion` | `redshift.completion.completion_curves` | `catalog.completeness.completion_curves` |
+| `fh_prior_state` | `prepare_redshift_prior_state('dark_sirens')`, built once per call | `build_incomplete_catalog_prior_state`, built twice per call as written |
+| `g_prior_eval` | `eval_redshift_prior_with_state` (with the factory's empty-row routing plan) | `eval_incomplete_catalog_prior_state_vmap`; spectral: `log_comoving_volume_prior` (enclosing) |
+| `g_prior_eval_unrouted` | the same without the routing plan (legacy dark, when routing is active) | n/a |
+| `i_whole` | the factory closure (= the main harness kernel) | `--jit whole` (default) or `asis` |
+| `j_transfer` | `device_put` of the kernel operands + sync | same |
+| `k_layout` | `_injection_pixel_order` + `_permute_rows` (a one-time build step) | n/a: core keeps the file order |
+
+`COMPONENTS` in `bench_components.py` holds the full references with `path:line`
+and says, per implementation, whether a component is `separable` (a function of the
+implementation), `enclosing`, `transcribed` or `isolated`. Outputs are stored per
+coordinate (sha256, shape, min, max, finite counts) and as float64 arrays in FILE
+order (legacy's pixel-sorted injections mapped back) in `<out>.components.npz`;
+arrays larger than `--big-array-elements` (1e6) only for `--full-array-coords`
+(0,1), informational ones only for the first of them, and `fh_prior_state.dN_miss`
+never (digest-checked equal to `h_completion.dN_miss`).
+
+```bash
+python make_coords.py --plan dark_full --seed 20260924 --n 8 --out coords.json
+$PY bench_fixed_theta.py --impl legacy ... --out main_legacy.json          # the main record
+$PY bench_components.py --impl legacy --pe PE --sel SEL --catalog CAT --plan dark_full \
+    --coords coords.json --out comp_legacy.json --device cpu --n-calls 20 --warmup 3 \
+    --main-record main_legacy.json --cache-dir CACHE --cache-mode cold [--trace TRACEDIR]
+python bench_components.py compare comp_legacy.json comp_core.json --out cmp.json --md cmp.md
+```
+
+`--main-record` makes `i_whole` prove it is the main harness's number: same
+implementation, plan, coordinates, inputs, blocks and kernel, and a bit-identical
+total (and timed values) at every coordinate (`whole_vs_main_record.bitwise`).
+`component_vs_main_diagnostics` compares `d`/`e` with the record's diagnostics
+(informational).
+
+`compare` (A = the reference, normally legacy) checks each output element by
+element: `|A-B| <= rtol |A|` (rtol 1e-12, atol 0), NaN == NaN, infinities exact;
+`g_prior_eval*` outputs (per-sample catalog log densities) under D-catvals
+(`|delta log p| <= 1e-12` absolute, informational); `C_eff` and `f` informational.
+It flags an `e_sel_reduce` failure confined to `n_eff` (with N_eff/N_draw) and a
+`d_pe_reduce` failure confined to `event_vars` for the orchestrator's rules; it
+does not apply them. `sum_check` (informational) sets the sum of the component warm
+medians (a+b+g+d+e and w+d+e, plus the prior-state builds per call) against the
+whole: the whole jit fuses and CSEs across components, so they need not agree.
+
+### Tracing (`trace_tools.py`)
+
+* `bench_components.py --trace DIR [--trace-calls N] [--trace-drop-xplane]`: after
+  the untraced timing, each component's calls run again inside
+  `jax.profiler.trace(DIR/<component>)` with a `TraceAnnotation("bench_call")` per
+  call; every traced output is checked bit for bit against the untraced one
+  (`trace.numerics_unchanged`, `trace.whole_bitwise_under_trace`). The record's
+  timings are never taken under the profiler.
+* `python trace_tools.py main --trace DIR -- <bench_fixed_theta.py arguments>`: the
+  main harness with its timed loop traced (hooks on `PhaseClock.mark`, no edit of
+  `bench_fixed_theta.py`); the record gets `trace` and a gap (its warm timings include
+  profiler overhead). `python trace_tools.py check-numerics TRACED.json UNTRACED.json`
+  compares every per-coordinate value hex (exit 0 = bit-identical).
+* `python trace_tools.py parse DIR [--top 25] [--json F] [--md F]`: the newest
+  `plugins/profile/<session>/*.trace.json.gz` -> top-N ops by self time (children on
+  the same thread subtracted) with shares, per category and per kind (fusion, reduce,
+  gather/slice, scatter, control, layout, library, sort, other), device busy time
+  (union of the op intervals) and the idle gaps inside each `bench_call` window. On
+  GPU the ops are the `/device:GPU:N` "XLA Ops" line (else its stream lines); on CPU
+  the HLO-named events of the `tf_XLA*` executor threads (so "device time" there is
+  host-thread time). The `perfetto_trace.json.gz` next to it opens in ui.perfetto.dev.
