@@ -441,6 +441,7 @@ def main(argv=None):
             "message": str(exc),
             "traceback_tail": traceback.format_exc()[-4000:],
             "stage_timing": dict(adapter.timing),
+            "memory_at_failure": bc.memory_checkpoint("at_build_failure"),
         }
         record["xla_cache"] = cache_info
         if a.impl == "legacy":

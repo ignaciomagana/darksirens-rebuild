@@ -1533,7 +1533,8 @@ def main(argv=None):
 
         record.update(status="build_error", build_error={
             "type": type(exc).__name__, "message": str(exc),
-            "traceback_tail": traceback.format_exc()[-4000:]}, finished_utc=bc.utc_now())
+            "traceback_tail": traceback.format_exc()[-4000:],
+            "memory_at_failure": bc.memory_checkpoint("at_build_failure")}, finished_utc=bc.utc_now())
         if a.impl == "legacy":
             adapter.remove_save_dir()
         bc.write_json(a.out, record)
