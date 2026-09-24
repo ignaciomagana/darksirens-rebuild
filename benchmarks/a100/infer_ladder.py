@@ -6,7 +6,7 @@
         [--device cpu|gpu|auto] [--guard soft|hard|auto] [--max-variance 1.0] \\
         [--max-samples 0] [--tinyns-preset recommended] [--sel-batch none|N] [--pe-block none|N] \\
         [--cache-dir DIR --cache-mode cold|warm|env] [--smi-log PATH] [--mem-poll-s 1.0] \\
-        [--label L] [--describe]
+        [--label L] [--arm A] [--parity-ref ID ...] [--describe]
 
 The rungs (``ladder_configs/rungs.json``, Fable-owned) are expressed in each code's own
 production path, with every sampler setting passed explicitly and identically:
@@ -41,8 +41,9 @@ logl/logwt), ``memory.csv``, ``run.log`` (stdout+stderr tee), and ``legacy_run/`
 legacy CLI's run directory: settings.json, run_fingerprint.json).
 
 Exit status: 0 ok (or described); 2 usage/input; 3 plan assertion failed; 4 build error;
-5 sampler error (e.g. the nested-sampler preflight abort under the hard guard). The
-record is written in every case except 2.
+5 sampler error (e.g. the nested-sampler preflight abort under the hard guard); 6 timeout
+(SIGTERM during sampling, e.g. from ``timeout``: the record, with status ``timeout``, and the
+progress trace up to that point are written). The record is written in every case except 2.
 """
 
 from __future__ import annotations
@@ -57,6 +58,7 @@ import math  # noqa: E402
 import os  # noqa: E402
 import re  # noqa: E402
 import resource  # noqa: E402
+import signal  # noqa: E402
 import threading  # noqa: E402
 import time  # noqa: E402
 import traceback  # noqa: E402
@@ -71,6 +73,12 @@ import plans  # noqa: E402
 
 SCHEMA = "darksirens-infer-ladder/1"
 RUNGS_FILE = os.path.join(HERE, "ladder_configs", "rungs.json")
+
+
+class LadderTimeout(BaseException):
+    """Raised by the SIGTERM handler during sampling (external per-run timeout)."""
+
+
 PROGRESS_COLUMNS = ("row", "phase", "iteration", "log_volume", "log_volume_source", "logz",
                     "dlogz_remaining", "ncall_cum", "logl_min", "logl_live_max", "t_since_sampling_s",
                     "t_unix")
@@ -927,6 +935,10 @@ def parse_args(argv=None):
     ap.add_argument("--sampler-preflight", choices=("on", "off"), default="on")
     ap.add_argument("--rungs-file", default=RUNGS_FILE)
     ap.add_argument("--label", default=None)
+    ap.add_argument("--arm", default=None,
+                    help="free-text arm name stored in the record (e.g. an experimental branch)")
+    ap.add_argument("--parity-ref", action="append", default=[],
+                    help="fixed-coordinate parity record id(s) this run relies on (repeatable; stored)")
     ap.add_argument("--cache-dir", default=None)
     ap.add_argument("--cache-mode", choices=("cold", "warm", "env"), default="env")
     ap.add_argument("--smi-log", default=None)
@@ -1046,6 +1058,8 @@ def main(argv=None):
         "status": "running",
         "label": a.label or f"{a.impl}_r{a.rung}_{a.sampler}",
         "implementation": a.impl,
+        "arm": a.arm,
+        "fixed_coordinate_parity_refs": list(a.parity_ref),
         "command_line": command_line,
         "cwd": os.getcwd(),
         "started_utc": started,
@@ -1183,12 +1197,20 @@ def main(argv=None):
     t_s0_unix = time.time()
     sampler_error = None
     result, extra = None, {}
+
+    def _on_sigterm(signum, frame):
+        raise LadderTimeout(f"signal {signum} during sampling (external timeout)")
+
+    prev_term = signal.signal(signal.SIGTERM, _on_sigterm)
     try:
         result, extra = run.run_sampler(lk)
     except BaseException as exc:  # noqa: BLE001 - legacy _fatal raises SystemExit
         sampler_error = {"type": type(exc).__name__, "message": str(exc)[:4000],
                          "traceback_tail": traceback.format_exc()[-4000:],
-                         "preflight_abort": "preflight" in str(exc).lower()}
+                         "preflight_abort": "preflight" in str(exc).lower(),
+                         "timeout": isinstance(exc, LadderTimeout)}
+    finally:
+        signal.signal(signal.SIGTERM, prev_term)
     t_sampling = time.perf_counter() - probe.t_sampling0
     t_s1_unix = time.time()
     probe.restore()
@@ -1218,6 +1240,8 @@ def main(argv=None):
     if sampler_error is not None:
         record["sampler_error"] = sampler_error
         record["result"] = None
+        if sampler_error["timeout"]:
+            return finish("timeout", 6)
         return finish("sampler_error", 5)
 
     # ---- result ---------------------------------------------------------------------
