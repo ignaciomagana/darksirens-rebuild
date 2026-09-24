@@ -103,11 +103,14 @@ def test_trace_parser_gpu_prefers_xla_ops_line(tmp_path):
     p = d / "plugins" / "profile" / "s" / "h.trace.json.gz"
     procs = {1: "/device:GPU:0", 7: "/host:CPU"}
     threads = {(1, 1): "XLA Ops", (1, 2): "Stream #13(Compute)", (7, 1): "python"}
-    events = [_x(1, 1, "fusion.3", 0.0, 10.0), _x(1, 2, "loop_fusion_kernel", 0.0, 10.0),
-              _x(1, 1, "reduce.2", 20.0, 5.0)]
+    op = _x(1, 1, "fusion.3", 0.0, 10.0)
+    op["args"] = {"long_name": "%fusion.3 = f64[8]{0} fusion(...), metadata={op_name=\"jit(f)/mul\"}"}
+    events = [op, _x(1, 2, "loop_fusion_kernel", 0.0, 10.0), _x(1, 1, "reduce.2", 20.0, 5.0)]
     _write_trace(str(p), events, procs, threads)
     s = trace_tools.summarize_trace_dir(str(d))
     assert s["mode"] == "gpu" and s["op_source"] == "GPU 'XLA Ops' line"
+    top = {r["name"]: r for r in s["top_ops"]}
+    assert "jit(f)/mul" in top["fusion.3"]["args_sample"]["long_name"] and "args_sample" not in top["reduce.2"]
     assert s["n_op_events"] == 2
     assert s["windows"]["source"].startswith("span of the op events")
     assert s["gaps"]["count"] == 1 and s["gaps"]["top"][0]["duration_us"] == pytest.approx(10.0)
@@ -128,6 +131,45 @@ def test_trace_parser_gpu_stream_lines_use_hlo_op(tmp_path):
     assert "add_fusion.7" in names and names["add_fusion.7"]["kind"] == "fusion"
     assert names["MemcpyH2D"]["kind"] == "transfer"
     assert s["windows"]["busy_s"] == pytest.approx(13e-6) and s["windows"]["idle_s"] == pytest.approx(7e-6)
+
+
+_HLO = """HloModule jit_whole, is_scheduled=true
+
+%fused_computation.1 (param_0.2: f64[4]) -> f64[4] {
+  %param_0.2 = f64[4]{0} parameter(0)
+  %multiply.3 = f64[4]{0} multiply(f64[4]{0} %param_0.2, f64[4]{0} %param_0.2), metadata={op_name="jit(whole)/jit(main)/jit(dL_of_z)/mul" source_file="/x/src/darksirens/cosmology/distances.py" source_line=262}
+  ROOT %exponential.3 = f64[4]{0} exponential(f64[4]{0} %multiply.3), metadata={op_name="jit(whole)/jit(main)/exp" source_file="/y/site-packages/darksirens/catalog/redshift.py" source_line=120}
+}
+
+%body.2 (p: f64[4]) -> f64[4] {
+  %p = f64[4]{0} parameter(0)
+  ROOT %multiply_exponential_fusion = f64[4]{0} fusion(f64[4]{0} %p), kind=kLoop, calls=%fused_computation.1, metadata={op_name="jit(whole)/jit(main)/exp" source_file="/y/site-packages/darksirens/catalog/redshift.py" source_line=120}
+}
+
+ENTRY %main.9 (Arg_0.1: f64[4]) -> f64[4] {
+  %Arg_0.1 = f64[4]{0} parameter(0)
+  ROOT %call.1 = f64[4]{0} call(f64[4]{0} %Arg_0.1), to_apply=%body.2
+}
+"""
+
+
+def test_hlo_source_map(tmp_path):
+    hm = trace_tools.parse_hlo(_HLO)
+    assert hm["instrs"]["multiply_exponential_fusion"]["calls"] == ["fused_computation.1"]
+    kind_, src, ops = trace_tools.op_sources(hm, "multiply_exponential_fusion.clone")
+    assert kind_ == "clone-stripped"
+    assert src["darksirens/catalog/redshift.py:120"] == 2 and src["darksirens/cosmology/distances.py:262"] == 1
+    assert trace_tools.op_sources(hm, "nope.3")[0] == "none"
+    summ = {"top_ops": [{"name": "multiply_exponential_fusion.clone"}, {"name": "call.1"}],
+            "all_ops_self_s": {"multiply_exponential_fusion.clone": 3.0, "call.1": 1.0, "other.2": 0.5}}
+    h = tmp_path / "k.hlo.txt"
+    h.write_text(_HLO)
+    trace_tools.annotate_with_hlo(summ, str(h))
+    a = summ["hlo_annotation"]
+    assert a["top_ops_matched"] == 2 and a["unmatched_self_s"] == pytest.approx(1.5)  # call.1 has no source
+    assert a["by_dominant_file"][0] == {"file": "darksirens/catalog/redshift.py", "self_s": 3.0,
+                                         "share": pytest.approx(3.0 / 4.5)}
+    assert summ["top_ops"][0]["hlo_sources"][0] == ("darksirens/catalog/redshift.py:120", 2)
 
 
 def test_compare_arrays_semantics():
@@ -334,6 +376,10 @@ def test_spectral_trace_numerics_unchanged(spectral):
     r = json.load(open(spectral["comps"]["core"]))
     t = r["trace"]
     assert t["numerics_unchanged"] and t["whole_bitwise_under_trace"] and t["all_parsed"]
+    assert t["hlo_annotated_components"] >= 8
+    ha = t["components"]["i_whole"]["summary"]["hlo_annotation"]
+    assert ha["top_ops_matched"] >= 1 and ha["by_dominant_file"]
+    assert os.path.isfile(r["components"]["i_whole"]["aot"]["optimized_hlo"]["file"])
     assert t["components"]["i_whole"]["summary"]["n_op_events"] > 0
     assert t["components"]["i_whole"]["xplane_removed"]
 
@@ -379,3 +425,4 @@ def test_dark_parity(dark):
 def test_dark_trace_numerics_unchanged(dark):
     t = json.load(open(dark["comps"]["legacy"]))["trace"]
     assert t["numerics_unchanged"] and t["whole_bitwise_under_trace"] and t["all_parsed"]
+    assert t["components"]["i_whole"]["summary"]["hlo_annotation"]["top_ops_matched"] >= 1

@@ -701,6 +701,17 @@ class CoreComponents:
         return None, ("not applicable: core keeps the PE and selection samples in file order "
                       "and re-orders nothing before the kernel")
 
+    def whole_jit(self, coord0):
+        """(jitted, args, kwargs) of the i_whole kernel, as impl_core.jit_evidence builds them."""
+        a = self.adapter
+        if a.jit_mode == "asis":
+            return None
+        b = a.bound
+        args = (self.jnp.asarray(coord0), b.gw_pe, b.gw_selection)
+        if self.dark:
+            args = args + (b.catalog, b.observed_density_cache)
+        return a._whole.jitted, args, self.jit_kwargs()
+
 
 # ---------------------------------------------------------------------------
 # legacy
@@ -1047,6 +1058,12 @@ class LegacyComponents:
     def extract(self, name, out):
         return extract_outputs(name, out, self.sel_to_file)
 
+    def whole_jit(self, coord0):
+        """(jitted, args, kwargs) of the factory closure, as impl_legacy.jit_evidence builds them."""
+        lk = self.lk
+        return (lk.jitted_body, (self.jnp.asarray(coord0), lk.operands, lk.distance_table,
+                                 lk.smoothing_operator), {})
+
     def layout_call(self):
         """(k): the build-time injection sort, re-run on file-order inputs."""
         jax, jnp = self.jax, self.jnp
@@ -1132,6 +1149,43 @@ def extract_outputs(name, out, sel_to_file):
             a = sel_to_file(a)
         res[k] = a
     return res
+
+
+_HEX_LITERAL = __import__("re").compile(r'dense<"0x([0-9A-Fa-f]+)">')
+
+
+def aot_with_hlo(jax, jitted, args, kwargs, counter, hlo_path):
+    """``bench_common.aot_report`` (trace + lower + compile from cold in-memory caches,
+    same fields) that also writes the OPTIMIZED HLO text (``compiled.as_text()``): its
+    instruction metadata (op_name, source_file:line) lets trace_tools map a traced op
+    back to the source lines it fuses."""
+    jax.clear_caches()
+    snap = counter.snapshot()
+    t0 = time.perf_counter()
+    lowered = jitted.lower(*args, **kwargs)
+    t_lower = time.perf_counter() - t0
+    text = lowered.as_text()
+    t1 = time.perf_counter()
+    compiled = lowered.compile()
+    t_compile = time.perf_counter() - t1
+    hex_lits = [len(m) // 2 for m in _HEX_LITERAL.findall(text)]
+    rep = {"t_trace_lower_s": t_lower, "t_compile_s": t_compile, "lowered_text_bytes": len(text),
+           "hex_literals": len(hex_lits), "hex_literal_bytes": int(sum(hex_lits)),
+           "largest_hex_literal_bytes": int(max(hex_lits)) if hex_lits else 0,
+           "compile_counter_delta": counter.delta(snap),
+           "note": "AOT trace/lower/compile after jax.clear_caches(), after the timed section"}
+    try:
+        hlo = compiled.as_text()
+    except Exception as exc:  # pragma: no cover
+        hlo = None
+        rep["optimized_hlo_error"] = f"{type(exc).__name__}: {exc}"
+    if hlo:
+        os.makedirs(os.path.dirname(hlo_path), exist_ok=True)
+        with open(hlo_path, "w") as f:
+            f.write(hlo)
+        rep["optimized_hlo"] = {"file": hlo_path, "bytes": os.path.getsize(hlo_path),
+                                "sha256": bc.sha256_file(hlo_path)}
+    return rep
 
 
 # ---------------------------------------------------------------------------
@@ -1677,12 +1731,18 @@ def main(argv=None):
     # ---- evidence: jaxpr constants, AOT trace/lower/compile ---------------------------
     kw = comps.jit_kwargs()
     data_arrays = comps.data_arrays()
+    evidence_fns = {nm: (comps.fns[nm].jitted, args0[nm][0], kw) for nm in comps.fns if nm in args0}
+    if comp_rec["i_whole"].get("available"):
+        wj = comps.whole_jit(coords[0])
+        if wj is not None:
+            evidence_fns["i_whole"] = wj
     for nm in ORDER:
         e = comp_rec[nm]
-        if not e.get("available") or nm not in comps.fns:
+        if not e.get("available") or nm not in evidence_fns:
             continue
+        jfn, jargs, jkw = evidence_fns[nm]
         try:
-            e["jaxpr"] = bc.jaxpr_const_report(comps.fns[nm].jitted, args0[nm][0], kw, data_arrays)
+            e["jaxpr"] = bc.jaxpr_const_report(jfn, jargs, jkw, data_arrays)
             if e["jaxpr"]["embeds_data_literal"]:
                 record["gaps"].append(f"{nm}: a data array is embedded as a jaxpr constant")
         except Exception as exc:  # evidence must not kill the record
@@ -1705,22 +1765,31 @@ def main(argv=None):
             record["aot_policy"] = (f"could not disable the persistent cache ({type(exc).__name__}: "
                                     f"{exc}); an aot entry with compile_counter_delta.compiles == 0 "
                                     "was served from it")
+        hlo_dir = os.path.abspath(a.out) + ".hlo"
         for nm in ORDER:
             e = comp_rec[nm]
-            if not e.get("available") or nm not in comps.fns:
+            if not e.get("available") or nm not in evidence_fns:
                 continue
+            jfn, jargs, jkw = evidence_fns[nm]
             try:
-                e["aot"] = bc.aot_report(comps.fns[nm].jitted, args0[nm][0], kw, counter)
+                e["aot"] = aot_with_hlo(jax, jfn, jargs, jkw, counter,
+                                        os.path.join(hlo_dir, f"{nm}.hlo.txt"))
             except Exception as exc:
                 e["aot"] = {"error": f"{type(exc).__name__}: {exc}"}
-        if comp_rec["i_whole"].get("available"):
-            try:
-                ev = adapter.jit_evidence(coords[0])
-                comp_rec["i_whole"]["jaxpr"] = ev.get("jaxpr")
-                comp_rec["i_whole"]["aot"] = ev.get("aot")
-                comp_rec["i_whole"]["jit_evidence_kernel"] = ev.get("kernel")
-            except Exception as exc:
-                comp_rec["i_whole"]["aot"] = {"error": f"{type(exc).__name__}: {exc}"}
+        if a.trace and record.get("trace"):
+            import trace_tools
+
+            n_ann = 0
+            for nm, entry in record["trace"]["components"].items():
+                hp = ((comp_rec.get(nm) or {}).get("aot") or {}).get("optimized_hlo", {}).get("file")
+                if hp and entry.get("parse_ok"):
+                    try:
+                        trace_tools.annotate_trace_entry(entry, hp, top_n=a.trace_top,
+                                                         title=f"{a.impl} {a.plan} {nm}")
+                        n_ann += 1
+                    except Exception as exc:
+                        entry["hlo_annotation_error"] = f"{type(exc).__name__}: {exc}"
+            record["trace"]["hlo_annotated_components"] = n_ann
     mem.append(bc.memory_checkpoint("after_evidence"))
 
     # ---- informational sum check ------------------------------------------------------

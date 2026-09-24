@@ -190,6 +190,10 @@ def summarize_trace_file(path, top_n=25, annotation=ANNOTATION):
     for evs in by_thread.values():
         for e, st in _self_times(evs):
             r = rows.setdefault(e["name"], {"count": 0, "self_us": 0.0, "total_us": 0.0})
+            if "args" not in r and e.get("args"):
+                # GPU op events carry e.g. the HLO long name / source metadata that maps a
+                # fusion back to the code; CPU thunk events carry none.
+                r["args"] = {str(k): str(v)[:300] for k, v in list(e["args"].items())[:8]}
             r["count"] += 1
             r["self_us"] += st
             r["total_us"] += e["dur"]
@@ -226,9 +230,10 @@ def summarize_trace_file(path, top_n=25, annotation=ANNOTATION):
 
     def top(d, n):
         items = sorted(d.items(), key=lambda kv: -kv[1]["self_us"])[:n]
-        return [{"rank": i + 1, "name": k, "count": v["count"], "self_s": v["self_us"] * 1e-6,
-                 "share": (v["self_us"] / self_total) if self_total else None,
-                 "mean_us": v["self_us"] / v["count"] if v["count"] else None}
+        return [dict({"rank": i + 1, "name": k, "count": v["count"], "self_s": v["self_us"] * 1e-6,
+                      "share": (v["self_us"] / self_total) if self_total else None,
+                      "mean_us": v["self_us"] / v["count"] if v["count"] else None},
+                     **({"args_sample": v["args"]} if v.get("args") else {}))
                 for i, (k, v) in enumerate(items)]
     cats, kinds = {}, {}
     for name, r in rows.items():
@@ -249,6 +254,7 @@ def summarize_trace_file(path, top_n=25, annotation=ANNOTATION):
     gl = [g["duration_us"] for g in gaps]
     return {
         "schema": SUMMARY_SCHEMA,
+        "all_ops_self_s": {k: v["self_us"] * 1e-6 for k, v in rows.items()},
         "trace_file": os.path.abspath(path),
         "session_dir": os.path.dirname(os.path.abspath(path)),
         "mode": mode,
@@ -308,11 +314,19 @@ def summary_markdown(s, title=None):
              f"{_f(d['op_self_total_s'])} s, mean concurrency {_f(d['mean_concurrency'])}",
              f"* gaps: {s['gaps']['count']} (> 10 us: {s['gaps']['gt_10us']}, > 100 us: "
              f"{s['gaps']['gt_100us']}, > 1 ms: {s['gaps']['gt_1ms']}), total {_f(s['gaps']['total_s'])} s",
-             "", "| rank | op | category | kind | count | self s | share | mean us |",
-             "|---|---|---|---|---|---|---|---|"]
+             "", "| rank | op | category | kind | count | self s | share | mean us | fused source lines (HLO) |",
+             "|---|---|---|---|---|---|---|---|---|"]
     for r in s["top_ops"]:
+        srcs = ", ".join(f"{a} x{b}" for a, b in (r.get("hlo_sources") or []))
         lines.append(f"| {r['rank']} | `{r['name']}` | {r['category']} | {r['kind']} | {r['count']} | "
-                     f"{_f(r['self_s'])} | {_f(r['share'])} | {_f(r['mean_us'])} |")
+                     f"{_f(r['self_s'])} | {_f(r['share'])} | {_f(r['mean_us'])} | {srcs} |")
+    ha = s.get("hlo_annotation")
+    if ha:
+        lines += ["", f"Dominant-source attribution ({ha['note']}; {ha['top_ops_matched']}/{ha['top_ops']} "
+                  f"top ops matched in `{os.path.basename(ha['hlo_file'])}`):", "",
+                  "| file | self s | share |", "|---|---|---|"]
+        for r in ha["by_dominant_file"]:
+            lines.append(f"| {r['file']} | {_f(r['self_s'])} | {_f(r['share'])} |")
     lines += ["", "| kind | count | self s | share |", "|---|---|---|---|"]
     for k, v in s["by_kind"].items():
         lines.append(f"| {k} | {v['count']} | {_f(v['self_s'])} | {_f(v['share'])} |")
@@ -337,9 +351,141 @@ def write_summary(summary, json_path=None, md_path=None, title=None):
 
 
 def compact(summary, n=10):
-    return {k: summary[k] for k in ("mode", "op_source", "n_op_events", "windows", "device_time",
-                                    "by_kind", "gaps")} | {"top_ops": summary["top_ops"][:n],
-                                                           "trace_file": summary["trace_file"]}
+    out = {k: summary[k] for k in ("mode", "op_source", "n_op_events", "windows", "device_time",
+                                   "by_kind", "gaps")} | {"top_ops": summary["top_ops"][:n],
+                                                          "trace_file": summary["trace_file"]}
+    if summary.get("hlo_annotation"):
+        ha = summary["hlo_annotation"]
+        out["hlo_annotation"] = {k: ha[k] for k in ("hlo_file", "top_ops_matched", "top_ops",
+                                                    "by_dominant_file", "note")}
+    return out
+
+
+# ---------------------------------------------------------------------------
+# optimized-HLO source map: trace op name -> the source lines it fuses
+# ---------------------------------------------------------------------------
+_H_INSTR = re.compile(r"^\s+(?:ROOT\s+)?%?([\w.\-]+)\s*=\s*(.*)$")
+_H_CALLS = re.compile(r"\bcalls=%?([\w.\-]+)")
+_H_META = re.compile(r"metadata=\{([^}]*)\}")
+_H_OPN = re.compile(r'op_name="([^"]*)"')
+_H_SF = re.compile(r'source_file="([^"]*)"')
+_H_SL = re.compile(r"source_line=(\d+)")
+
+
+def _short_source(path):
+    i = path.rfind("darksirens/")
+    return path[i:] if i >= 0 else os.path.basename(path)
+
+
+def parse_hlo(text):
+    """Optimized HLO text (``compiled.as_text()``) -> {instruction: {calls, meta, comp}}."""
+    instrs, comp = {}, None
+    comps = {}
+    for line in text.splitlines():
+        if not line.strip():
+            continue
+        if not line[0].isspace():
+            if line.rstrip().endswith("{") and not line.startswith("HloModule"):
+                head = line.split()[1] if line.startswith("ENTRY") else line.split()[0]
+                comp = head.lstrip("%").split("(")[0]
+                comps[comp] = []
+            elif line.strip() == "}":
+                comp = None
+            continue
+        m = _H_INSTR.match(line)
+        if not m or comp is None:
+            continue
+        name, rest = m.group(1), m.group(2)
+        meta = None
+        mm = _H_META.search(rest)
+        if mm:
+            body = mm.group(1)
+            on, sf, sl = _H_OPN.search(body), _H_SF.search(body), _H_SL.search(body)
+            meta = (on.group(1) if on else None, _short_source(sf.group(1)) if sf else None,
+                    int(sl.group(1)) if sl else None)
+        calls = _H_CALLS.findall(rest)
+        instrs[name] = {"comp": comp, "calls": calls, "meta": meta}
+        comps[comp].append(name)
+    return {"instrs": instrs, "comps": comps}
+
+
+def op_sources(hmap, name, depth=3):
+    """(match kind, Counter of 'file:line', Counter of op_name) over the instruction
+    and every instruction of the computations it calls (fusions), recursively."""
+    from collections import Counter
+
+    instrs, comps = hmap["instrs"], hmap["comps"]
+    match = "exact"
+    if name not in instrs:
+        base = name
+        while True:
+            b2 = re.sub(r"\.clone(\.\d+)?$", "", base)
+            if b2 == base:
+                break
+            base = b2
+        if base in instrs:
+            name, match = base, "clone-stripped"
+        else:
+            return "none", Counter(), Counter()
+    src, ops = Counter(), Counter()
+    todo, seen = [(name, 0)], set()
+    while todo:
+        n, d = todo.pop()
+        if n in seen:
+            continue
+        seen.add(n)
+        ins = instrs.get(n)
+        if ins is None:
+            continue
+        if ins["meta"]:
+            on, sf, sl = ins["meta"]
+            if sf and sl is not None:
+                src[f"{sf}:{sl}"] += 1
+            if on:
+                ops[on[-160:]] += 1
+        if d < depth:
+            for c in ins["calls"]:
+                todo.extend((x, d + 1) for x in comps.get(c, ()))
+    return match, src, ops
+
+
+def annotate_with_hlo(summary, hlo_path, n_sources=3):
+    """Add the fused source lines / op names to each top op, and a dominant-source
+    time table (each op's self time goes to the file:line most of its instructions
+    carry: a heuristic, labelled as such)."""
+    with open(hlo_path) as f:
+        hmap = parse_hlo(f.read())
+    matched = 0
+    for r in summary["top_ops"]:
+        kind_, src, ops = op_sources(hmap, r["name"])
+        r["hlo_match"] = kind_
+        if kind_ != "none":
+            matched += 1
+            r["hlo_sources"] = src.most_common(n_sources)
+            r["hlo_op_names"] = ops.most_common(n_sources)
+    by_src, by_file, unmatched = {}, {}, 0.0
+    for name, self_s in summary.get("all_ops_self_s", {}).items():
+        kind_, src, _ops = op_sources(hmap, name)
+        if kind_ == "none" or not src:
+            unmatched += self_s
+            continue
+        top, _n = src.most_common(1)[0]
+        by_src[top] = by_src.get(top, 0.0) + self_s
+        f = top.rsplit(":", 1)[0]
+        by_file[f] = by_file.get(f, 0.0) + self_s
+    tot = sum(by_src.values()) + unmatched
+    summary["hlo_annotation"] = {
+        "hlo_file": os.path.abspath(hlo_path), "top_ops_matched": matched,
+        "top_ops": len(summary["top_ops"]),
+        "by_dominant_source": [{"source": k, "self_s": v, "share": v / tot if tot else None}
+                               for k, v in sorted(by_src.items(), key=lambda kv: -kv[1])[:15]],
+        "by_dominant_file": [{"file": k, "self_s": v, "share": v / tot if tot else None}
+                             for k, v in sorted(by_file.items(), key=lambda kv: -kv[1])],
+        "unmatched_self_s": unmatched,
+        "note": ("heuristic: each op's self time is assigned to the source line most of its "
+                 "(fused) instructions carry in the optimized HLO metadata"),
+    }
+    return summary
 
 
 # ---------------------------------------------------------------------------
@@ -431,10 +577,20 @@ def trace_components(trace_dir, names, calls, comps, comp_rec, whole_vals, n_coo
     return out
 
 
+def annotate_trace_entry(entry, hlo_path, top_n=25, title=None):
+    """Re-parse a trace_components entry and annotate it with the kernel's HLO."""
+    summ = summarize_trace_dir(entry["dir"], top_n=top_n)
+    annotate_with_hlo(summ, hlo_path)
+    write_summary(summ, os.path.join(entry["dir"], "trace_summary.json"),
+                  os.path.join(entry["dir"], "trace_summary.md"), title=title)
+    entry["summary"] = compact(summ)
+    return entry
+
+
 # ---------------------------------------------------------------------------
 # main harness with the timed loop traced
 # ---------------------------------------------------------------------------
-def run_main_traced(trace_dir, bench_args, top_n=25):
+def run_main_traced(trace_dir, bench_args, top_n=25, hlo=None):
     import bench_common as bc
     import impl_core
     import impl_legacy
@@ -494,6 +650,8 @@ def run_main_traced(trace_dir, bench_args, top_n=25):
                 "scope": "the timed loop only (first call, warm-ups and untimed passes not traced)"}
         try:
             summ = summarize_trace_dir(trace_dir, top_n=top_n)
+            if hlo:
+                annotate_with_hlo(summ, hlo)
             write_summary(summ, os.path.join(trace_dir, "trace_summary.json"),
                           os.path.join(trace_dir, "trace_summary.md"),
                           title=f"{rec.get('implementation')} {rec.get('plan', {}).get('name')} timed loop")
@@ -566,8 +724,10 @@ def main(argv=None):
         ap = argparse.ArgumentParser(prog="trace_tools.py main")
         ap.add_argument("--trace", required=True)
         ap.add_argument("--top", type=int, default=25)
+        ap.add_argument("--hlo", default=None, help="optimized HLO of the same whole kernel (e.g. "
+                        "a components record's <out>.hlo/i_whole.hlo.txt) to annotate the table")
         x = ap.parse_args(rest[:i])
-        return run_main_traced(x.trace, rest[i + 1:], top_n=x.top)
+        return run_main_traced(x.trace, rest[i + 1:], top_n=x.top, hlo=x.hlo)
     if cmd == "parse":
         ap = argparse.ArgumentParser(prog="trace_tools.py parse")
         ap.add_argument("dir")
@@ -575,8 +735,12 @@ def main(argv=None):
         ap.add_argument("--annotation", default=ANNOTATION)
         ap.add_argument("--json", default=None)
         ap.add_argument("--md", default=None)
+        ap.add_argument("--hlo", default=None, help="optimized HLO text of the traced module "
+                        "(bench_components.py writes <out>.hlo/<component>.hlo.txt)")
         x = ap.parse_args(rest)
         s = summarize_trace_dir(x.dir, top_n=x.top, annotation=x.annotation)
+        if x.hlo:
+            annotate_with_hlo(s, x.hlo)
         write_summary(s, x.json, x.md)
         print(summary_markdown(s))
         return 0

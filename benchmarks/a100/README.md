@@ -508,3 +508,10 @@ whole: the whole jit fuses and CSEs across components, so they need not agree.
   synthetic trace only); on CPU
   the HLO-named events of the `tf_XLA*` executor threads (so "device time" there is
   host-thread time). The `perfetto_trace.json.gz` next to it opens in ui.perfetto.dev.
+* Source attribution: the components runner saves each kernel's OPTIMIZED HLO
+  (`<out>.hlo/<component>.hlo.txt`, from its AOT compile) and annotates its trace
+  table: for every top op, the `source_file:line` and `op_name` metadata of the HLO
+  instructions it fuses (`hlo_sources`, `hlo_op_names`), plus a dominant-source table
+  (each op's self time assigned to the source line most of its instructions carry: a
+  heuristic, labelled as such). `trace_tools.py parse DIR --hlo FILE` and
+  `trace_tools.py main --hlo FILE` do the same for any trace whose module that HLO is.
