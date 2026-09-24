@@ -236,7 +236,22 @@ def compare(A, B, rtol, atol):
         "B_all_bitwise": all(pc["kernel_vs_diag_total"]["bitwise"] for pc in B["values"]["per_coord"]),
     }
     ta, tb = A["timing"], B["timing"]
+    issues = []
+    for label, get in (("backend", lambda r: r["device"]["backend"]),
+                       ("device_kind", lambda r: r["device"]["device_kind"]),
+                       ("host", lambda r: r["env"]["host"]),
+                       ("n_calls", lambda r: r["config"].get("n_calls")),
+                       ("warmup", lambda r: r["config"].get("warmup"))):
+        va, vb = get(A), get(B)
+        if va != vb:
+            issues.append(f"{label}: {va} vs {vb}")
+    for tag, rec in (("A", A), ("B", B)):
+        req = rec["timing"]["compile"]["timed_loop"]["requests"]
+        if req:
+            issues.append(f"{tag} compiles inside its timed loop ({req} requests)")
     summary["timing"] = {
+        "comparable": not issues,
+        "comparability_issues": issues,
         "first_call_s": {"A": ta["t_first_call_s"], "B": tb["t_first_call_s"],
                          "ratio_A_over_B": _ratio(ta["t_first_call_s"], tb["t_first_call_s"])},
         "warm_median_s": {"A": ta["warm"]["median_s"], "B": tb["warm"]["median_s"],
@@ -300,6 +315,9 @@ def to_markdown(s):
                  f"{r['max_abs']:.3e} | {r['max_rel']:.3e} | {r['pass']} |")
     t = s["timing"]
     L.append("")
+    if t.get("comparability_issues"):
+        L.append("Timing ratios are NOT like for like: " + "; ".join(t["comparability_issues"]))
+        L.append("")
     L.append("| timing | A | B | A/B |")
     L.append("|---|---|---|---|")
     for k in ("first_call_s", "warm_median_s", "warm_min_s"):

@@ -366,6 +366,7 @@ def main(argv=None):
 
     snap = counter.snapshot()
     times, idx = [], []
+    load_before = os.getloadavg() if hasattr(os, "getloadavg") else None
     clock.mark("timed_loop_start")
     for i in range(a.n_calls):
         k = i % n_coords
@@ -377,6 +378,7 @@ def main(argv=None):
         per_call_values[k].append(v)
     clock.mark("timed_loop_end")
     compile_loop = counter.delta(snap)
+    load_after = os.getloadavg() if hasattr(os, "getloadavg") else None
     mem.append(bc.memory_checkpoint("after_timed_loop"))
 
     # ---- optional utilisation window (steady-state calls for the 1 Hz sampler) --
@@ -577,8 +579,19 @@ def main(argv=None):
                       "mask passes"),
         "phase_clock": clock.stamps,
     }
+    record["timing"]["host_loadavg_timed_loop"] = {
+        "before": list(load_before) if load_before else None,
+        "after": list(load_after) if load_after else None,
+        "os_cpu_count": os.cpu_count(),
+        "note": "1/5/15-min host load averages: other processes competing for the host",
+    }
     if a.n_calls < 20:
         record["gaps"].append(f"n_calls={a.n_calls} < 20: below the campaign minimum")
+    if compile_loop["requests"] > 0:
+        record["gaps"].append(
+            f"{compile_loop['requests']} compile requests inside the timed loop: the warm "
+            "statistics and the peak memory include per-call compilation and are not a "
+            "steady state (peak memory grows with --n-calls)")
     if a.smi_log:
         time.sleep(2.5)
         record["timing"]["gpu_util_timed_loop"] = bc.smi_window_stats(

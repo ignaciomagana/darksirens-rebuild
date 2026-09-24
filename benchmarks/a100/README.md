@@ -229,6 +229,14 @@ buffers and can exceed the kernel's peak (measured on CPU, core `asis` with
 `sel 4096 / pe 6`: 3846 MiB at the end of the timed loop, 5141 MiB after the
 diagnostics). Quote the kernel-phase value for the memory gate.
 
+`host_loadavg_timed_loop` records the host load averages before and after the timed
+loop (competing processes on a shared CPU host). A record whose timed loop issued
+compile requests lists a gap: its warm statistics and peak memory are not a steady
+state. `compare_records.py` sets `timing.comparable = false` and lists why when the two
+records ran on different backends, device kinds or hosts, with different `--n-calls` /
+`--warmup`, or when either compiled inside its timed loop; the ratios are still
+reported.
+
 With `JAX_COMPILATION_CACHE_DIR` set (the campaign env scripts set it), a first call
 can be served from the persistent cache: compare `compile.first_call.requests` with
 `compile.first_call.compiles`, and never compare first-call times across different
