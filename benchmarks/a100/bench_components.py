@@ -281,6 +281,17 @@ def output_class(comp, key):
     return OUTPUT_CLASS.get((comp, key), "gate")
 
 
+#: Outputs compared only where a same-component mask is 0. The per-row offset
+#: ``log_kw_eff_rowmax`` is a don't-care value on galaxy-free rows: the evaluator
+#: returns -inf there whatever the offset (``row_empty``; legacy redshift/catalog.py
+#: CatalogKernelState.row_empty, core catalog/redshift.py:309). Legacy's H0-pinned
+#: builder stores ``rowmax + shift`` (redshift/catalog.py:1218), i.e. the scalar
+#: shift 3 ln(H0/67.74) on those rows, where the unpinned rule (and core) clamps to
+#: 0.0 (legacy catalog.py:1136-1148). The unmasked difference is still reported.
+MASKED_BY = {("f_kernel_state", "log_kw_eff_rowmax"): ("row_empty", "rows with row_empty == 1 "
+                                                       "(offset unused: the evaluator returns -inf)")}
+
+
 #: Outputs never written to the npz (digest only): fh_prior_state's dN_miss is the
 #: h_completion array (the record checks the digests are equal per coordinate).
 DIGEST_ONLY = {("fh_prior_state", "dN_miss")}
@@ -1899,7 +1910,22 @@ def compare(path_a, path_b, rtol=1e-12):
                 nk = f"{nm}__{key}__c{k}"
                 if da.get("stored") and db.get("stored") and za is not None and zb is not None \
                         and nk in za.files and nk in zb.files:
-                    r = compare_arrays(za[nk], zb[nk], rtol)
+                    xa, xb = za[nk], zb[nk]
+                    mask_info = None
+                    if (nm, key) in MASKED_BY:
+                        mkey, why = MASKED_BY[(nm, key)]
+                        mk = f"{nm}__{mkey}__c{k}"
+                        if mk in za.files and mk in zb.files and np.array_equal(za[mk], zb[mk]):
+                            keep = np.asarray(za[mk]) == 0
+                            full = compare_arrays(xa, xb, rtol)
+                            mask_info = {"masked_by": mkey, "excluded": why,
+                                         "n_excluded": int((~keep).sum()),
+                                         "unmasked_max_abs": full["max_abs"],
+                                         "unmasked_pass_rel": full["pass_rel"]}
+                            xa, xb = np.asarray(xa)[keep], np.asarray(xb)[keep]
+                    r = compare_arrays(xa, xb, rtol)
+                    if mask_info is not None:
+                        r["mask"] = mask_info
                     elem += 1
                     ok_rel &= r["pass_rel"]
                     ok_abs &= r["pass_abs"]

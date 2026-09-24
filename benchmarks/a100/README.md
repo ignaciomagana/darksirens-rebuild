@@ -474,6 +474,11 @@ total (and timed values) at every coordinate (`whole_vs_main_record.bitwise`).
 element: `|A-B| <= rtol |A|` (rtol 1e-12, atol 0), NaN == NaN, infinities exact;
 `g_prior_eval*` outputs (per-sample catalog log densities) under D-catvals
 (`|delta log p| <= 1e-12` absolute, informational); `C_eff` and `f` informational.
+`f_kernel_state.log_kw_eff_rowmax` (the evaluator's per-row stabilising offset) is
+compared on occupied rows only (`MASKED_BY`): on a galaxy-free row the evaluator
+returns -inf whatever the offset, and legacy's H0-pinned builder stores the scalar
+shift 3 ln(H0/67.74) there (`redshift/catalog.py:1218`) where the unpinned rule and
+core store 0.0; the unmasked difference is reported next to it.
 It flags an `e_sel_reduce` failure confined to `n_eff` (with N_eff/N_draw) and a
 `d_pe_reduce` failure confined to `event_vars` for the orchestrator's rules; it
 does not apply them. `sum_check` (informational) sets the sum of the component warm

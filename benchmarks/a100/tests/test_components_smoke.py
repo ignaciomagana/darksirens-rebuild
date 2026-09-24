@@ -147,6 +147,38 @@ def test_compare_arrays_semantics():
     assert bcmp.compare_arrays(np.zeros(3), np.zeros(4), 1e-12)["shape_mismatch"]
 
 
+def test_masked_rowmax_comparison(tmp_path):
+    """log_kw_eff_rowmax is compared on occupied rows only (legacy's pinned offset on
+    galaxy-free rows is a don't-care value); the unmasked difference is reported."""
+    def rec(path, rowmax, empty):
+        arrays = {"f_kernel_state__log_kw_eff_rowmax__c0": rowmax,
+                  "f_kernel_state__row_empty__c0": empty}
+        np.savez(str(path) + ".components.npz", **arrays)
+        outs = {k.split("__")[1]: {"class": "gate", "per_coord": [
+            dict(bcmp._array_digest(v), coord=0, stored=True)]} for k, v in arrays.items()}
+        r = {"schema": bcmp.RECORD_SCHEMA, "label": str(path), "implementation": "x",
+             "plan": {"name": "dark_full"}, "coords": {"values_hex": [["0x1p0"]]},
+             "inputs": {"pe": {"sha256": "p"}, "sel": {"sha256": "s"}, "catalog": {"sha256": "c"}},
+             "dims": {"n_events": 1, "nsamp": 1, "n_injections": 1, "ndraw": 1.0},
+             "device": {}, "env": {}, "config": {},
+             "components_npz": {"file": os.path.basename(str(path)) + ".components.npz"},
+             "components": {"f_kernel_state": {"available": True, "kind": "separable", "outputs": outs,
+                                               "timing": {"warm": {"median_s": 1.0}}}}}
+        with open(path, "w") as f:
+            json.dump(r, f)
+    empty = np.array([0, 1, 0], dtype=np.uint8)
+    rec(tmp_path / "a.json", np.array([1.5, 2.25, -3.0]), empty)       # legacy pinned: shift on the empty row
+    rec(tmp_path / "b.json", np.array([1.5, 0.0, -3.0]), empty)        # core: clamp 0.0
+    s = bcmp.compare(str(tmp_path / "a.json"), str(tmp_path / "b.json"))
+    row = [r for r in s["rows"] if r["component"] == "f_kernel_state"][0]
+    assert row["parity_1e12"] is True
+    m = row["keys"]["log_kw_eff_rowmax"]["per_coord"][0]["mask"]
+    assert m["n_excluded"] == 1 and m["unmasked_pass_rel"] is False and m["unmasked_max_abs"] == 2.25
+    rec(tmp_path / "c.json", np.array([1.5, 0.0, -3.1]), empty)        # an occupied row differs
+    s = bcmp.compare(str(tmp_path / "a.json"), str(tmp_path / "c.json"))
+    assert [r for r in s["rows"] if r["component"] == "f_kernel_state"][0]["parity_1e12"] is False
+
+
 def test_storage_policy_and_classes():
     assert bcmp.output_class("g_prior_eval", "log_prior_sel") == "catvals"
     assert bcmp.output_class("h_completion", "f") == "info"
