@@ -90,7 +90,7 @@ arrival time.
 
 ## Post-reconstruction Phase 12 — first production consumer
 
-Status: **PHASE 12C CORE ACCEPTED / CONSUMER PIN UPDATE PENDING / HILDAFS NUMERICAL RUN READY AFTER THAT**
+Status: **PHASE 12C CORE ACCEPTED / CONSUMER ON THE 12C PIN (MERGED WITHOUT CONTRACT CI, SEE 12C CONSUMER) / PHASE 12D PROPOSED, NOT ACCEPTED / HILDAFS NUMERICAL RUN READY**
 
 **No new H0 result is accepted yet.**
 
@@ -102,7 +102,7 @@ before an H0 run. Phase 12B corrects and supersedes that pre-correction target.
 ### Active Phase-12 package pins
 
 ```text
-darksirens-core     8bf2bec53ff7b557c6b930d4044008cb72008f61   (Phase 12C; consumer still on bb4812dc until it adopts the pin)
+darksirens-core     8bf2bec53ff7b557c6b930d4044008cb72008f61   (Phase 12C; consumer adopted it in cc030f02 on 2026-09-24)
 darksirens-surveys  f027aef02d342041ce7259cdbf47fe689e6462f2
 darksirens-lss      3429bb2f420239bc731cc9e73e50bf5351181c14
 darksirens-lensing  43c450742b733d7b8d938116021e8ca52a31226e
@@ -199,10 +199,49 @@ pixelisation). The DESI P12.4 fixed-population target is untouched by the
 numerics changes. The consumer must adopt the new core pin (a consumer PR under
 its contract CI) and regenerate P12.1-P12.3 provenance before P12.4 runs.
 
+### Phase 12C consumer pin adoption (MERGED WITHOUT CONTRACT CI)
+
+```text
+repository:            ignaciomagana/desi_darksirens_selection
+consumer PR:           #9 (no consumer code change; pins, marker, tests, runbook)
+merged head:           3c8aa4d7c1afe039e8ee6aa0deeff3a889efde03
+merge/main:            cc030f023f5fdee00caeada3af02566865dfcc72
+tree:                  2048b624725856ab61b45911d235a6edbf5e2911
+contract CI:           DID NOT RUN (private repo, Actions billing block; every run
+                       on the branch and on main ended with zero steps)
+local stand-in:        job commands on the merged tree, Python 3.12.14,
+                       numpy 2.5.3, pytest 8.4.2: compileall clean,
+                       36 passed, 1 skipped by design
+```
+
+Merged on the owner's decision on 2026-09-24. The `phase12-contract` workflow
+must be re-run on consumer `main` once Actions is unblocked before the CI line
+above can be replaced by a run ID. P12.1 will still verify the installed pins
+exactly at run time.
+
+### Phase 12D — core deferred follow-up (PROPOSED / MERGED AS A RECORD / NOT ACCEPTED)
+
+```text
+contract record:    phases/12D_core_deferred_followup_contract.md
+core PRs merged:    #17 through #23 (in order, squash), then #24
+core main:          c3bc005b41be7f24e2baa202bafa717f2237f1b3 (tree ad4ab934) after #23
+                    88004d96ddeee37c47abc1d2dfd1c6fc3c203dfd (tree 00e4b9e5) after #24
+push gates on c3bc005b: reference-integrity 35898821948, real-backends 35898822004,
+                    phase8d-release-contract 35898822026 — all SUCCESS
+push gates on 88004d96: reference-integrity 35954407573, real-backends 35954407608,
+                    phase8d-release-contract 35954407601 — all SUCCESS
+production pin:     UNCHANGED, 8bf2bec5
+```
+
+Conditions 1 and 2 of the record's pin decision are met; condition 3
+(promotion to an acceptance record with a new pin) is open. Core #24 closes the
+record's first "left open" item: the `real-backends` job now fails when pytest
+fails behind `tee`. A post-12D pin, if adopted, should be `88004d96` or later.
+
 ### Next admissible action
 
 Run the chain on Hildafs from consumer main
-`2668ae7e2eb9325910e1a8bec9b7228003cb4942`, using the exact package pins above
+`cc030f023f5fdee00caeada3af02566865dfcc72`, using the exact package pins above
 and the site-neutral Slurm/runbook already in the consumer repository.
 
 After the run:
