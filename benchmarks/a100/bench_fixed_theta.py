@@ -5,7 +5,8 @@
         --plan spectral_full --coords coords.json --out record.json \\
         --n-calls 20 --warmup 3 --jit whole|asis --sel-batch N|none|default \\
         --pe-block N|none|default --seed S --label L [--device gpu|cpu] \\
-        [--mask-chunk 131072] [--smi-log PATH] [--util-window-s 0]
+        [--mask-chunk 131072] [--smi-log PATH] [--util-window-s 0] \\
+        [--cache-dir DIR --cache-mode cold|warm|env]
 
 One process evaluates ONE implementation (both install as ``darksirens``) and
 writes ONE record JSON (schema in README.md). Order of work:
@@ -85,7 +86,28 @@ def parse_args(argv=None):
                     help="after the timed loop, keep calling the kernel for this many seconds "
                          "(untimed per call) so a 1 Hz nvidia-smi sampler sees the steady state; "
                          "0 = off. The timed loop itself is usually far shorter than 1 s.")
+    ap.add_argument("--cache-dir", default=None,
+                    help="set JAX_COMPILATION_CACHE_DIR to DIR before JAX is imported "
+                         "(overrides the env script's value); recorded in xla_cache")
+    ap.add_argument("--cache-mode", choices=("cold", "warm", "env"), default="env",
+                    help="cold: DIR must be absent or empty (created), so the first call is a "
+                         "true compile; warm: DIR must already hold entries (a persistent-cache "
+                         "rerun); env: no check (legacy behaviour). cold/warm need --cache-dir")
     return ap.parse_args(argv)
+
+
+def _dir_inventory(path):
+    """(files, bytes) under ``path``; (0, 0) when it does not exist."""
+    n = b = 0
+    if path and os.path.isdir(path):
+        for root, _dirs, files in os.walk(path):
+            for fn in files:
+                n += 1
+                try:
+                    b += os.path.getsize(os.path.join(root, fn))
+                except OSError:
+                    pass
+    return n, b
 
 
 # ---------------------------------------------------------------------------
@@ -218,6 +240,29 @@ def main(argv=None):
             print(f"missing input {f}", file=sys.stderr)
             return 2
 
+    # ---- persistent XLA cache policy (must precede ``import jax``) --------------
+    cache_info = {"mode": a.cache_mode, "requested_dir": a.cache_dir,
+                  "env_dir_before_override": os.environ.get("JAX_COMPILATION_CACHE_DIR")}
+    if a.cache_mode in ("cold", "warm") and not a.cache_dir:
+        print(f"--cache-mode {a.cache_mode} needs --cache-dir", file=sys.stderr)
+        return 2
+    if a.cache_dir:
+        cdir = os.path.abspath(a.cache_dir)
+        n0, b0 = _dir_inventory(cdir)
+        if a.cache_mode == "cold" and n0:
+            print(f"--cache-mode cold but {cdir} already holds {n0} files", file=sys.stderr)
+            return 2
+        if a.cache_mode == "warm" and not n0:
+            print(f"--cache-mode warm but {cdir} is empty or missing", file=sys.stderr)
+            return 2
+        os.makedirs(cdir, exist_ok=True)
+        os.environ["JAX_COMPILATION_CACHE_DIR"] = cdir
+        cache_info.update(dir=cdir, files_before=n0, bytes_before=b0)
+    else:
+        cdir = os.environ.get("JAX_COMPILATION_CACHE_DIR")
+        n0, b0 = _dir_inventory(cdir)
+        cache_info.update(dir=cdir, files_before=n0, bytes_before=b0)
+
     # ---- JAX + hooks before the implementation is imported ----------------
     t0 = time.perf_counter()
     import jax
@@ -287,6 +332,7 @@ def main(argv=None):
             "traceback_tail": traceback.format_exc()[-4000:],
             "stage_timing": dict(adapter.timing),
         }
+        record["xla_cache"] = cache_info
         if a.impl == "legacy":
             record["build_error"]["legacy_cli_args"] = adapter.cli_argv
             adapter.remove_save_dir()
@@ -350,6 +396,8 @@ def main(argv=None):
     compile_first = counter.delta(snap)
     per_call_values[0].append(v)
     clock.mark("first_call_end")
+    cache_info["files_after_first_call"], cache_info["bytes_after_first_call"] = \
+        _dir_inventory(cache_info.get("dir"))
     mem.append(bc.memory_checkpoint("after_first_call"))
 
     snap = counter.snapshot()
@@ -609,6 +657,30 @@ def main(argv=None):
     else:
         record["timing"]["gpu_util_timed_loop"] = None
     record["timing"]["util_window"] = util_window
+
+    # ---- persistent-cache state: cold/warm evidence for the first call ----------
+    cache_info["files_at_end"], cache_info["bytes_at_end"] = _dir_inventory(cache_info.get("dir"))
+    cache_info["jax_config"] = {
+        k: getattr(jax.config, k, None) for k in (
+            "jax_compilation_cache_dir", "jax_enable_compilation_cache",
+            "jax_persistent_cache_min_compile_time_secs",
+            "jax_persistent_cache_min_entry_size_bytes")}
+    cache_info["first_call_requests"] = compile_first["requests"]
+    cache_info["first_call_compiles"] = compile_first["compiles"]
+    cache_info["first_call_cache_hits"] = compile_first["requests"] - compile_first["compiles"]
+    cache_info["first_call_all_compiled"] = compile_first["requests"] == compile_first["compiles"]
+    cache_info["note"] = ("compile_or_get_cached requests minus backend_compile calls = executables "
+                          "served from the persistent cache; cold mode starts from an empty "
+                          "directory, so any hit there is an in-process reuse, not a stale entry. "
+                          "Entries are written only for compiles above "
+                          "jax_persistent_cache_min_compile_time_secs.")
+    if cache_info["jax_config"]["jax_compilation_cache_dir"] != cache_info.get("dir"):
+        record["gaps"].append(
+            f"jax_compilation_cache_dir={cache_info['jax_config']['jax_compilation_cache_dir']!r} "
+            f"differs from the requested cache dir {cache_info.get('dir')!r}")
+    if a.cache_mode == "cold" and not cache_info["first_call_all_compiled"]:
+        record["gaps"].append("cold cache mode but the first call had persistent-cache hits")
+    record["xla_cache"] = cache_info
 
     record["jit_evidence"] = jit_ev
     record["diagnostics_provenance"] = adapter.diag_provenance

@@ -5,7 +5,7 @@
         --plans spectral_H0,spectral_pop,spectral_joint_small,spectral_full \\
         --seed 20260924 --n 8 --outdir DIR --tag T [--device cpu] \\
         [--sel-batch none] [--pe-block none] [--n-calls 20] [--parallel 1] \\
-        [--wrap "/path/gpu_run.sh {smi}"]
+        [--wrap "/path/gpu_run.sh {smi}"] [--cold-cache-root DIR]
 
 For every plan: make_coords.py, then bench_fixed_theta.py for legacy (factory
 kernel), core --jit whole and core --jit asis, then compare_records.py for
@@ -14,7 +14,9 @@ legacy vs core-whole, legacy vs core-asis and core-whole vs core-asis. Writes
 
 ``--wrap`` prefixes every benchmark process (``{smi}`` is replaced by a per-run
 nvidia-smi log path), e.g. the campaign's ``gpu_run.sh``. GPU runs must use
-``--parallel 1``.
+``--parallel 1``. ``--cold-cache-root DIR`` gives every benchmark process its own
+empty persistent XLA cache ``DIR/<run name>`` (``--cache-mode cold``), so each
+first call is a true compile.
 """
 
 from __future__ import annotations
@@ -60,6 +62,8 @@ def main(argv=None):
     ap.add_argument("--wrap", default=None)
     ap.add_argument("--impls", default="legacy:whole,core:whole,core:asis")
     ap.add_argument("--util-window-s", type=float, default=0.0)
+    ap.add_argument("--cold-cache-root", default=None,
+                    help="per-run empty JAX_COMPILATION_CACHE_DIR under this root")
     a = ap.parse_args(argv)
 
     os.makedirs(a.outdir, exist_ok=True)
@@ -91,6 +95,9 @@ def main(argv=None):
                    "--jit", jit, "--sel-batch", a.sel_batch, "--pe-block", a.pe_block,
                    "--seed", str(a.seed), "--label", name, "--device", a.device,
                    "--util-window-s", str(a.util_window_s)]
+            if a.cold_cache_root:
+                cmd += ["--cache-dir", os.path.join(os.path.abspath(a.cold_cache_root), name),
+                        "--cache-mode", "cold"]
             if a.wrap:
                 smi = os.path.join(a.outdir, name + ".smi.csv")
                 cmd = shlex.split(a.wrap.replace("{smi}", smi)) + cmd + ["--smi-log", smi]
