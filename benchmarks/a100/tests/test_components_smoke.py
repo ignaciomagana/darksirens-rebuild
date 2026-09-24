@@ -231,6 +231,40 @@ def test_masked_rowmax_comparison(tmp_path):
     assert any("status=plan_mismatch" in r for r in s["refused"])
 
 
+def test_unstored_coordinate_with_different_digest_is_unverified(tmp_path):
+    """An output stored only at coordinate 0 (big array) whose coordinate-1 digests
+    differ is not silently covered by the parity verdict of coordinate 0."""
+    def rec(path, x0, x1):
+        np.savez(str(path) + ".components.npz", **{"h_completion__dN_miss__c0": x0})
+        per = [dict(bcmp._array_digest(x0), coord=0, stored=True),
+               dict(bcmp._array_digest(x1), coord=1, stored=False)]
+        r = {"schema": bcmp.RECORD_SCHEMA, "status": "ok", "label": str(path), "implementation": "x",
+             "plan": {"name": "dark_full", "population_model": "m", "sampled": ["H0"],
+                      "full_order": ["H0"], "universe": "dark", "fixed": {}},
+             "coords": {"names": ["H0"], "values_hex": [["0x1p0"], ["0x1p1"]]},
+             "inputs": {"pe": {"sha256": "p"}, "sel": {"sha256": "s"}, "catalog": {"sha256": "c"}},
+             "dims": {"n_events": 1, "nsamp": 1, "n_pe_samples": 1, "n_injections": 1, "ndraw": 1.0},
+             "device": {}, "env": {},
+             "config": {"max_likelihood_variance": 1.0, "selection_neff_soft_guard": False},
+             "components_npz": {"file": os.path.basename(str(path)) + ".components.npz"},
+             "components": {"h_completion": {"available": True, "kind": "separable",
+                                             "outputs": {"dN_miss": {"class": "gate", "per_coord": per}},
+                                             "timing": {"warm": {"median_s": 1.0}}}}}
+        with open(path, "w") as f:
+            json.dump(r, f)
+    x0 = np.array([1.0, 2.0])
+    rec(tmp_path / "a.json", x0, np.array([3.0, 4.0]))
+    rec(tmp_path / "b.json", x0, np.array([3.0, 4.0 * (1 + 1e-15)]))
+    s = bcmp.compare(str(tmp_path / "a.json"), str(tmp_path / "b.json"))
+    row = [r for r in s["rows"] if r["component"] == "h_completion"][0]
+    assert row["parity_1e12"] is True and row["unverified_coords"] == {"dN_miss": [1]}
+    assert row["coverage_complete"] is False and s["all_gate_coverage_complete"] is False
+    assert "1 coord(s) unverified" in bcmp.summary_markdown(s)
+    rec(tmp_path / "c.json", x0, np.array([3.0, 4.0]))
+    s = bcmp.compare(str(tmp_path / "a.json"), str(tmp_path / "c.json"))
+    assert s["all_gate_coverage_complete"] is True
+
+
 def test_storage_policy_and_classes():
     assert bcmp.output_class("g_prior_eval", "log_prior_sel") == "catvals"
     assert bcmp.output_class("h_completion", "f") == "info"

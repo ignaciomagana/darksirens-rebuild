@@ -1992,6 +1992,7 @@ def compare(path_a, path_b, rtol=1e-12):
             cls = oa[key]["class"]
             per = []
             elem, rel_worst, abs_worst, ok_rel, ok_abs, digest_eq = 0, 0.0, 0.0, True, True, True
+            unverified = []  # neither compared element by element nor bit-identical
             for da, db in zip(oa[key]["per_coord"], ob[key]["per_coord"]):
                 k = da["coord"]
                 same = da["sha256"] == db["sha256"] and da["shape"] == db["shape"]
@@ -2023,7 +2024,10 @@ def compare(path_a, path_b, rtol=1e-12):
                     per.append(dict(r, coord=k, elementwise=True))
                 else:
                     per.append({"coord": k, "elementwise": False, "digest_equal": same})
+                    if not same:
+                        unverified.append(k)
             keys[key] = {"class": cls, "coords_elementwise": elem, "digest_equal_all": digest_eq,
+                         "unverified_coords": unverified,
                          "pass_rel": ok_rel if elem else None, "pass_abs": ok_abs if elem else None,
                          "max_rel": bc.fval(rel_worst), "max_abs": bc.fval(abs_worst), "per_coord": per}
             if cls in ("gate", "catvals"):
@@ -2056,6 +2060,12 @@ def compare(path_a, path_b, rtol=1e-12):
                                           "compared element by element (arrays above "
                                           "--big-array-elements only at --full-array-coords)")
         row["bitwise_all"] = all(v["digest_equal_all"] for v in keys.values())
+        # A coordinate whose array was not stored (above --big-array-elements, outside
+        # --full-array-coords) is covered only when its digests are equal; otherwise the
+        # parity verdict above does not speak for it.
+        row["unverified_coords"] = {k: v["unverified_coords"] for k, v in keys.items()
+                                    if v["class"] in ("gate", "catvals") and v["unverified_coords"]}
+        row["coverage_complete"] = not row["unverified_coords"]
         row["keys_missing_in_one"] = missing
         row["keys"] = keys
         # rule annotations (the orchestrator applies the rules; these are flags)
@@ -2078,6 +2088,7 @@ def compare(path_a, path_b, rtol=1e-12):
         "rows": rows,
         "all_gate_parity": all(r["parity_1e12"] for r in rows
                                if r["parity_1e12"] is not None and r.get("criterion", "").startswith("rtol")),
+        "all_gate_coverage_complete": all(r.get("coverage_complete", True) for r in rows),
         "whole_vs_main_bitwise": {"a": (wa or {}).get("bitwise"), "b": (wb or {}).get("bitwise")},
         "sum_check": {"a": A.get("sum_check"), "b": B.get("sum_check")},
         "trace_numerics_unchanged": {"a": (A.get("trace") or {}).get("numerics_unchanged"),
@@ -2119,6 +2130,9 @@ def summary_markdown(s):
              "|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in s["rows"]:
         par = {True: "pass", False: "FAIL", None: "n/a"}[r["parity_1e12"]]
+        n_unv = sum(len(v) for v in (r.get("unverified_coords") or {}).values())
+        if n_unv:
+            par += f" ({n_unv} coord(s) unverified)"
         crit = "D-catvals abs" if r.get("criterion", "").startswith("D-catvals") else (
             "rtol" if r.get("criterion") else "")
         first_a, first_b = r.get("t_first_call_s_a"), r.get("t_first_call_s_b")

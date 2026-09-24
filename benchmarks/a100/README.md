@@ -475,7 +475,10 @@ status, plan name / model / sampled / fixed values, catalog, coordinates, input 
 dims, guard mode and variance cap). `compare` (A = the reference, normally legacy) checks each output element by
 element: `|A-B| <= rtol |A|` (rtol 1e-12, atol 0), NaN == NaN, infinities exact;
 `g_prior_eval*` outputs (per-sample catalog log densities) under D-catvals
-(`|delta log p| <= 1e-12` absolute, informational); `C_eff` and `f` informational.
+(`|delta log p| <= 1e-12` absolute, informational); `C_eff` and `f` informational. A coordinate whose array was not stored (above
+`--big-array-elements`, outside `--full-array-coords`) counts only if its digests are
+equal; otherwise it is listed in `unverified_coords` and the table says so
+(`all_gate_coverage_complete`); pass `--full-array-coords 0,1,...,8` to compare all.
 `f_kernel_state.log_kw_eff_rowmax` (the evaluator's per-row stabilising offset) is
 compared on occupied rows only (`MASKED_BY`): on a galaxy-free row the evaluator
 returns -inf whatever the offset, and legacy's H0-pinned builder stores the scalar
