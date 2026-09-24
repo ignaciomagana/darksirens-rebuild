@@ -152,12 +152,33 @@ def g3c():
     return out
 
 
+def retry(sel_batch, pe_block, fixtures=("R2", "R3", "RC")):
+    """OOM policy: every G3-A / G3-B cell of ``fixtures`` again at explicit blocks
+    (sel_batch, pe_block), tag ``b<sel>x<pe>``; comparisons as in g3a/g3b, against the
+    legacy record of the same cell at the same blocks and guard."""
+    blk = f"b{sel_batch}x{pe_block}"
+    kw = dict(blocks=blk, sel_batch=str(sel_batch), pe_block=str(pe_block))
+
+    def fix(s):
+        s.update(kw)
+        s["record_id"] = s["record_id"].replace("_default_", f"_{blk}_")
+        s["compare_to"] = [c.replace("_default_", f"_{blk}_") for c in s["compare_to"]]
+        s["flags"] = dict(s.get("flags") or {}, oom_retry_of=s["record_id"].replace(f"_{blk}_", "_default_"))
+        return s
+    out = [fix(s) for s in g3a() + g3b() if s["fixture"] in fixtures]
+    return out
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("what", choices=("smoke", "m5b", "g3", "g3c"))
+    ap.add_argument("what", choices=("smoke", "m5b", "g3", "g3c", "retry"))
     ap.add_argument("--out", required=True)
+    ap.add_argument("--sel-batch", type=int, default=4096)
+    ap.add_argument("--pe-block", type=int, default=6)
+    ap.add_argument("--fixtures", default="R2,R3,RC")
     a = ap.parse_args(argv)
-    specs = {"smoke": smoke, "m5b": m5b, "g3": lambda: g3a() + g3b(), "g3c": g3c}[a.what]()
+    specs = {"smoke": smoke, "m5b": m5b, "g3": lambda: g3a() + g3b(), "g3c": g3c,
+             "retry": lambda: retry(a.sel_batch, a.pe_block, tuple(a.fixtures.split(",")))}[a.what]()
     ids = [s["record_id"] for s in specs]
     assert len(ids) == len(set(ids)), "duplicate record ids"
     with open(a.out, "w") as f:
