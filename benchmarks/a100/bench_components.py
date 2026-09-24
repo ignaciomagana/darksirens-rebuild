@@ -1524,6 +1524,7 @@ def main(argv=None):
                           guard=bc.guard_request(a)["mode"], max_variance=a.max_variance,
                           **adapter_kw)
     mem = [bc.memory_checkpoint("after_import")]
+    bc.register_partial(record, a.out, mem, "build")
     snap = counter.snapshot()
     try:
         adapter.build()
@@ -1572,6 +1573,7 @@ def main(argv=None):
     # ---- component kernels -------------------------------------------------------
     comps = (LegacyComponents if a.impl == "legacy" else CoreComponents)(adapter, plan)
     context = {"phase": "input precompute"}
+    bc.partial_stage("input precompute")
     fc = {name: FirstCall(fn, counter, jax, context) for name, fn in comps.fns.items()}
     t0 = time.perf_counter()
     calls, args0 = comps.build_calls(coords, fc)
@@ -1634,6 +1636,7 @@ def main(argv=None):
             comp_rec[nm] = entry
             continue
         first = fc[nm].record if nm in fc else None
+        bc.partial_stage(f"component {nm}")
         t = time_component(calls[nm], n_coords, a.n_calls, a.warmup, counter, jax,
                            first_record=first, keep=keep_whole if nm == "i_whole" else None)
         entry["timing"] = t
@@ -2197,4 +2200,4 @@ def compare_main(argv):
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "compare":
         sys.exit(compare_main(sys.argv[2:]))
-    sys.exit(main())
+    sys.exit(bc.run_recording_failures(main))

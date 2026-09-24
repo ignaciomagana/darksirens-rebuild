@@ -538,3 +538,21 @@ def test_dark_trace_numerics_unchanged(dark):
     assert ha["top_ops_matched"] >= 1
     # the legacy package lives in site-packages: its own files, not the harness, must carry the time
     assert ha["by_dominant_file"][0]["file"].startswith("darksirens/"), ha["by_dominant_file"][:3]
+
+
+def test_run_recording_failures_writes_oom_record(tmp_path):
+    import bench_common as bc
+
+    out = tmp_path / "rec.json"
+    rec = {"status": "running", "label": "x"}
+
+    def main_fn(argv):
+        bc.register_partial(rec, str(out), [], "build")
+        bc.partial_stage("first_call")
+        raise RuntimeError("RESOURCE_EXHAUSTED: Out of memory while trying to allocate 123 bytes.")
+
+    assert bc.run_recording_failures(main_fn) == 5
+    got = json.loads(out.read_text())
+    assert got["status"] == "oom" and got["failure"]["stage"] == "first_call"
+    assert "memory_at_failure" in got["failure"] and "RESOURCE_EXHAUSTED" in got["failure"]["message"]
+    bc._PARTIAL.clear()

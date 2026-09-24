@@ -415,6 +415,7 @@ def main(argv=None):
     record["harness"]["git"].pop("known_digest_match", None)
 
     mem = [bc.memory_checkpoint("after_import")]
+    bc.register_partial(record, a.out, mem, "build")
     out_dir = os.path.dirname(os.path.abspath(a.out))
     os.makedirs(out_dir, exist_ok=True)
     save_dir = os.path.abspath(a.out) + ".legacy_save"
@@ -497,6 +498,7 @@ def main(argv=None):
 
     # ---- timed section -------------------------------------------------------
     per_call_values = {i: [] for i in range(n_coords)}
+    bc.partial_stage("first_call")
     clock.mark("first_call_start")
     snap = counter.snapshot()
     t0 = time.perf_counter()
@@ -510,6 +512,7 @@ def main(argv=None):
         _dir_inventory(cache_info.get("dir"))
     mem.append(bc.memory_checkpoint("after_first_call"))
 
+    bc.partial_stage("warmup_and_timed_loop")
     snap = counter.snapshot()
     warm_times = []
     for i in range(a.warmup):
@@ -569,6 +572,7 @@ def main(argv=None):
     mem.append(bc.memory_checkpoint("after_jit_evidence"))
 
     # ---- per-coordinate values -----------------------------------------------
+    bc.partial_stage("diagnostics")
     timed_hex = {k: [bc.fhex(np.asarray(x)) for x in vals] for k, vals in per_call_values.items()}
     timed_consistent = all(len(set(h)) <= 1 for h in timed_hex.values())
     per_coord = []
@@ -855,4 +859,4 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(bc.run_recording_failures(main))

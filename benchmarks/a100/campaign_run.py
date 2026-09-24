@@ -131,6 +131,8 @@ def classify(rc, rec_path, stderr_path):
     blob = err
     if rec is not None and rec.get("build_error"):
         blob += json.dumps(rec["build_error"])
+    if rec is not None and rec.get("failure"):
+        blob += json.dumps(rec["failure"].get("message"))
     if OOM_RE.search(blob):
         return "oom", rec
     if rec is not None and rec.get("status") in ("plan_mismatch", "build_error"):

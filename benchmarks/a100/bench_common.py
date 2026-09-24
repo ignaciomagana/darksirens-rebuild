@@ -17,6 +17,7 @@ import resource
 import socket
 import subprocess
 import sys
+import sys
 import time
 
 import numpy as np
@@ -671,3 +672,44 @@ def guard_record(req, config):
             "requested_max_variance": req["max_variance"],
             "mode": "soft" if soft else "hard",
             "cap": config.get("max_likelihood_variance")}
+
+
+# ---------------------------------------------------------------------------
+# Failure records (OOM policy): a run that dies after the record exists still writes it
+_PARTIAL = {}
+
+
+def register_partial(record, out, mem=None, stage=None):
+    """Remember the in-progress record so a later exception can still be recorded."""
+    _PARTIAL.update(record=record, out=out, mem=mem, stage=stage)
+
+
+def partial_stage(stage):
+    _PARTIAL["stage"] = stage
+
+
+def run_recording_failures(main_fn, argv=None):
+    """Run ``main_fn(argv)``; on an exception after ``register_partial``, write the record
+    with status ``oom`` (RESOURCE_EXHAUSTED / out of memory) or ``error``, the device
+    memory_stats at failure, the stage and the traceback, and exit 5."""
+    import traceback
+
+    try:
+        return main_fn(argv)
+    except Exception as exc:  # noqa: BLE001 - recorded, then re-signalled by the exit code
+        rec = _PARTIAL.get("record")
+        if rec is None:
+            raise
+        msg = f"{type(exc).__name__}: {exc}"
+        oom = any(s in msg for s in ("RESOURCE_EXHAUSTED", "out of memory", "Out of memory"))
+        rec["status"] = "oom" if oom else "error"
+        at_fail = memory_checkpoint("at_failure")
+        rec["failure"] = {"type": type(exc).__name__, "message": str(exc)[:4000],
+                          "stage": _PARTIAL.get("stage"), "memory_at_failure": at_fail,
+                          "memory_checkpoints": list(_PARTIAL.get("mem") or []),
+                          "traceback_tail": traceback.format_exc()[-6000:]}
+        rec["finished_utc"] = utc_now()
+        write_json(_PARTIAL["out"], rec)
+        print(f"RUN FAILED ({rec['status']}, stage {_PARTIAL.get('stage')}): {msg[:500]}",
+              file=sys.stderr)
+        return 5
