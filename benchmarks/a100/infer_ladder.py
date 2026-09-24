@@ -6,7 +6,8 @@
         [--device cpu|gpu|auto] [--guard soft|hard|auto] [--max-variance 1.0] \\
         [--max-samples 0] [--tinyns-preset recommended] [--sel-batch none|N] [--pe-block none|N] \\
         [--cache-dir DIR --cache-mode cold|warm|env] [--smi-log PATH] [--mem-poll-s 1.0] \\
-        [--label L] [--arm A] [--parity-ref ID ...] [--describe]
+        [--label L] [--arm A] [--parity-ref ID ...] [--policy-note TEXT]
+        [--max-evals N] [--max-wall-s S] [--describe]
 
 The rungs (``ladder_configs/rungs.json``, Fable-owned) are expressed in each code's own
 production path, with every sampler setting passed explicitly and identically:
@@ -43,7 +44,19 @@ legacy CLI's run directory: settings.json, run_fingerprint.json).
 Exit status: 0 ok (or described); 2 usage/input; 3 plan assertion failed; 4 build error;
 5 sampler error (e.g. the nested-sampler preflight abort under the hard guard); 6 timeout
 (SIGTERM during sampling, e.g. from ``timeout``: the record, with status ``timeout``, and the
-progress trace up to that point are written). The record is written in every case except 2.
+progress trace up to that point are written); 7 budget-capped (``--max-evals`` or
+``--max-wall-s`` reached during sampling: status ``budget-capped``, progress trace kept, no
+posterior). The record is written in every case except 2.
+
+Budgets (``--max-evals``, ``--max-wall-s``; 0 = none) are observation-side stops: the check
+runs in the progress hook after each progress row is recorded (TinyNS: once per JAX block of
+``jax_block_size`` iterations, so the evaluation count can overshoot by at most one block;
+dynesty: every iteration) and, for the wall budget, also as a SIGALRM at the limit. The
+evaluation count is the one reported in ``likelihood_calls.n_like_evals`` (TinyNS: preflight
+eager calls + the sampler's ncall; dynesty: every eager call during sampling). The wall budget
+is measured from the start of the sampling phase (preflight included). Nothing is passed to
+the sampler, so a capped run is the same deterministic trajectory as an uncapped one up to the
+stop.
 """
 
 from __future__ import annotations
@@ -77,6 +90,14 @@ RUNGS_FILE = os.path.join(HERE, "ladder_configs", "rungs.json")
 
 class LadderTimeout(BaseException):
     """Raised by the SIGTERM handler during sampling (external per-run timeout)."""
+
+
+class LadderBudget(BaseException):
+    """Raised by the progress hook / SIGALRM when a --max-evals / --max-wall-s budget is reached."""
+
+    def __init__(self, kind, value, limit):
+        super().__init__(f"budget reached: {kind} {value} >= {limit}")
+        self.kind, self.value, self.limit = kind, value, limit
 
 
 PROGRESS_COLUMNS = ("row", "phase", "iteration", "log_volume", "log_volume_source", "logz",
@@ -410,9 +431,13 @@ class Monitor(threading.Thread):
 class SamplerProbe:
     """Progress trace of tinyns / dynesty through their own observation hooks."""
 
-    def __init__(self, nlive, counting, log_every=500):
+    def __init__(self, nlive, counting, log_every=500, sampler=None, max_evals=0, max_wall_s=0.0):
         self.nlive = int(nlive)
         self.counting = counting
+        self.sampler = sampler
+        self.max_evals = int(max_evals or 0)
+        self.max_wall_s = float(max_wall_s or 0.0)
+        self.budget_hit = None
         self.rows = []
         self.t_sampling0 = None
         self.events = {}
@@ -436,6 +461,33 @@ class SamplerProbe:
         if self.log_every and len(self.rows) % self.log_every == 0:
             print(f"  [ladder] {phase} it={iteration} logz={logz:.4f} dlogz={dlogz:.4g} "
                   f"ncall={ncall} logvol={logvol:.3f}", flush=True)
+        self._check_budget(ncall, now)
+
+    def n_evals_now(self, ncall=None):
+        """Likelihood evaluations so far, by the definition of likelihood_calls.n_like_evals."""
+        if self.sampler == "dynesty":
+            return self.counting.count("sampling", "eager")
+        pre = (self.events.get("sampler_run_entry") or {}).get("eager_calls_so_far") or 0
+        if ncall is None:
+            main = [r for r in self.rows if r[7] is not None]
+            ncall = main[-1][7] if main else None
+        return None if ncall is None else int(pre) + int(ncall)
+
+    def _check_budget(self, ncall, now):
+        if self.budget_hit is not None:
+            return
+        if self.max_evals:
+            n = self.n_evals_now(ncall)
+            if n is not None and n >= self.max_evals:
+                self.budget_hit = {"kind": "evals", "value": n, "limit": self.max_evals,
+                                   "source": "progress hook", "row": len(self.rows) - 1}
+                raise LadderBudget("evals", n, self.max_evals)
+        if self.max_wall_s and self.t_sampling0 is not None:
+            w = now - self.t_sampling0
+            if w >= self.max_wall_s:
+                self.budget_hit = {"kind": "wall", "value": w, "limit": self.max_wall_s,
+                                   "source": "progress hook", "row": len(self.rows) - 1}
+                raise LadderBudget("wall_s", w, self.max_wall_s)
 
     # tinyns: NestedSampler.run(..., callback=, callback_interval=) (tinyns/api.py:209-238);
     # the state dict is built every outer iteration regardless (tinyns/run.py:1999-2017).
@@ -939,6 +991,11 @@ def parse_args(argv=None):
                     help="free-text arm name stored in the record (e.g. an experimental branch)")
     ap.add_argument("--parity-ref", action="append", default=[],
                     help="fixed-coordinate parity record id(s) this run relies on (repeatable; stored)")
+    ap.add_argument("--policy-note", default=None, help="free text stored in the record (run policy / decision)")
+    ap.add_argument("--max-evals", type=int, default=0,
+                    help="stop sampling (status budget-capped, exit 7) once n_like_evals >= N (0 = none)")
+    ap.add_argument("--max-wall-s", type=float, default=0.0,
+                    help="stop sampling (status budget-capped, exit 7) after S seconds of sampling (0 = none)")
     ap.add_argument("--cache-dir", default=None)
     ap.add_argument("--cache-mode", choices=("cold", "warm", "env"), default="env")
     ap.add_argument("--smi-log", default=None)
@@ -1060,6 +1117,12 @@ def main(argv=None):
         "implementation": a.impl,
         "arm": a.arm,
         "fixed_coordinate_parity_refs": list(a.parity_ref),
+        "policy_note": a.policy_note,
+        "budget": {"max_evals": int(a.max_evals) or None, "max_wall_s_sampling": float(a.max_wall_s) or None,
+                   "rule": ("stop at the first of: sampler convergence (dlogz), n_like_evals >= max_evals, "
+                            "sampling wall >= max_wall_s; checked after each progress row (tinyns: per "
+                            "JAX block; dynesty: per iteration) and by SIGALRM for the wall"),
+                   "stop_reason": None},
         "command_line": command_line,
         "cwd": os.getcwd(),
         "started_utc": started,
@@ -1184,7 +1247,8 @@ def main(argv=None):
         return finish("described", 0)
 
     # ---- sampling -------------------------------------------------------------------
-    probe = SamplerProbe(a.nlive, lk, log_every=a.progress_log_every)
+    probe = SamplerProbe(a.nlive, lk, log_every=a.progress_log_every, sampler=a.sampler,
+                         max_evals=a.max_evals, max_wall_s=a.max_wall_s)
     if a.sampler == "tinyns":
         probe.install_tinyns()
     else:
@@ -1201,15 +1265,29 @@ def main(argv=None):
     def _on_sigterm(signum, frame):
         raise LadderTimeout(f"signal {signum} during sampling (external timeout)")
 
+    def _on_alarm(signum, frame):
+        if probe.budget_hit is None:
+            w = time.perf_counter() - probe.t_sampling0
+            probe.budget_hit = {"kind": "wall", "value": w, "limit": float(a.max_wall_s),
+                                "source": "SIGALRM", "row": len(probe.rows) - 1}
+            raise LadderBudget("wall_s", w, float(a.max_wall_s))
+
     prev_term = signal.signal(signal.SIGTERM, _on_sigterm)
+    prev_alrm = signal.signal(signal.SIGALRM, _on_alarm) if a.max_wall_s else None
+    if a.max_wall_s:
+        signal.setitimer(signal.ITIMER_REAL, float(a.max_wall_s))
     try:
         result, extra = run.run_sampler(lk)
     except BaseException as exc:  # noqa: BLE001 - legacy _fatal raises SystemExit
         sampler_error = {"type": type(exc).__name__, "message": str(exc)[:4000],
                          "traceback_tail": traceback.format_exc()[-4000:],
                          "preflight_abort": "preflight" in str(exc).lower(),
-                         "timeout": isinstance(exc, LadderTimeout)}
+                         "timeout": isinstance(exc, LadderTimeout),
+                         "budget": isinstance(exc, LadderBudget)}
     finally:
+        if a.max_wall_s:
+            signal.setitimer(signal.ITIMER_REAL, 0.0)
+            signal.signal(signal.SIGALRM, prev_alrm)
         signal.signal(signal.SIGTERM, prev_term)
     t_sampling = time.perf_counter() - probe.t_sampling0
     t_s1_unix = time.time()
@@ -1240,8 +1318,35 @@ def main(argv=None):
     if sampler_error is not None:
         record["sampler_error"] = sampler_error
         record["result"] = None
+        # throughput of the partial run (same definitions as an ok run)
+        n_part = probe.n_evals_now()
+        mrows = [r for r in probe.rows if r[1] == "main"]
+        st_p = {}
+        if len(mrows) >= 2 and mrows[-1][10] - mrows[0][10] > 0:
+            r0, r1 = mrows[0], mrows[-1]
+            dt = r1[10] - r0[10]
+            st_p = {"window": [r0[2], r1[2]], "seconds": dt, "iterations_per_s": (r1[2] - r0[2]) / dt,
+                    "evals_per_s": (None if r0[7] is None or r1[7] is None else (r1[7] - r0[7]) / dt),
+                    "log_volume_per_s": (None if not (math.isfinite(r0[3]) and math.isfinite(r1[3]))
+                                         else (r0[3] - r1[3]) / dt),
+                    "note": "between the first and the last main-loop progress rows (partial run)"}
+        record["progress"]["steady_state"] = st_p
+        record["likelihood_calls"].update(
+            n_like_evals=n_part,
+            n_like_evals_source=("partial run up to the stop: " +
+                                 ("every eager call during sampling" if a.sampler == "dynesty" else
+                                  "preflight eager calls + tinyns ncall at the last progress row")),
+            evals_per_s_sampling=(None if not n_part else n_part / t_sampling),
+            evals_per_s_steady=st_p.get("evals_per_s"))
+        if sampler_error["budget"]:
+            record["budget"]["stop_reason"] = f"budget: {probe.budget_hit}"
+            record["budget"]["hit"] = probe.budget_hit
+            return finish("budget-capped", 7)
         if sampler_error["timeout"]:
+            record["budget"]["stop_reason"] = "SIGTERM (external timeout / stop)"
             return finish("timeout", 6)
+        record["budget"]["stop_reason"] = ("preflight abort" if sampler_error["preflight_abort"]
+                                           else "sampler error")
         return finish("sampler_error", 5)
 
     # ---- result ---------------------------------------------------------------------
@@ -1333,6 +1438,8 @@ def main(argv=None):
                            "(legacy sampling.py:560; core tinyns_adapter.py:104)"},
         "resolved_in_implementation": record["settings"]["resolved"].get("seed"),
     }
+    record["budget"]["stop_reason"] = "converged (sampler returned: dlogz criterion)"
+    record["budget"]["final_dlogz_remaining_last_row"] = (main_rows[-1][6] if main_rows else None)
     record["timing"]["t_main_loop_s"] = t_main
     record["timing"]["t_post_s"] = time.perf_counter() - t0
     clock.mark("post_end")
