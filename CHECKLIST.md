@@ -186,7 +186,9 @@ consumer main       2668ae7e2eb9325910e1a8bec9b7228003cb4942
 
 ### Numerical production — next work
 
-- [ ] adopt the Phase-12C core pin 8bf2bec5 in the consumer (consumer PR, contract CI)
+- [x] adopt the Phase-12C core pin 8bf2bec5 in the consumer (consumer PR #9, merged cc030f02 on 2026-09-24 without contract CI: Actions billing block, local stand-in run green)
+- [ ] re-run the consumer `phase12-contract` workflow on main once Actions is unblocked
+- [ ] promote phases/12D_core_deferred_followup_contract.md to an acceptance record with a post-12D core pin (88004d96 or later), or record why not
 - [ ] run P12.1 on Hildafs under the exact active package pins
 - [ ] resolve/fingerprint the live `mth_map_nside128.h5` footprint product
 - [ ] rebuild/fingerprint standardized DESI input if needed
