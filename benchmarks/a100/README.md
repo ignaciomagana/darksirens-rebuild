@@ -131,7 +131,8 @@ Survey fiducials: log10n0 = -3 (the fixture density), delta = 0, sigma_kde = 0 (
 shared defaults; each record asserts both registries still give these defaults and
 the bounds log10n0 [-4, -1], delta [-3, 3], sigma_kde [0, 0.05]).
 `--survey-fixed-override '{"log10n0": X}'` replaces a FIXED survey value (plans whose
-survey block is fixed only); a value outside either log10n0 prior additionally needs
+survey block is fixed only); a log10n0 outside either log10n0 prior, or a delta /
+sigma_kde outside `plans.SURVEY_BOUNDS`, additionally needs
 `--allow-out-of-prior-fixed-survey` and is recorded as a gap (the PR-6a 5e-5 density
 is checked this way, at fixed coordinates only).
 

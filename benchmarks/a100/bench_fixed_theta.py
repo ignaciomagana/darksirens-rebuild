@@ -102,8 +102,9 @@ def parse_args(argv=None):
                          "survey block is fixed (fixed-coordinate checks only, e.g. the PR-6a "
                          "density {\"log10n0\": -4.301029995663981})")
     ap.add_argument("--allow-out-of-prior-fixed-survey", action="store_true",
-                    help="accept a --survey-fixed-override log10n0 outside the log10n0 prior of "
-                         "either implementation (fixed coordinate only; recorded as a gap)")
+                    help="accept a --survey-fixed-override value outside its prior: log10n0 "
+                         "outside the log10n0 prior of either implementation, delta / sigma_kde "
+                         "outside plans.SURVEY_BOUNDS (fixed coordinate only; recorded as a gap)")
     ap.add_argument("--cache-mode", choices=("cold", "warm", "env"), default="env",
                     help="cold: DIR must be absent or empty (created), so the first call is a "
                          "true compile; warm: DIR must already hold entries (a persistent-cache "
@@ -289,18 +290,28 @@ def main(argv=None):
         except dark_fixture.FixturePreflightError as exc:
             print(f"FIXTURE PREFLIGHT REFUSED: {exc}", file=sys.stderr)
             return 2
-        if override and "log10n0" in override:
-            x = float(override["log10n0"])
-            outside = [k for k, (lo, hi, _s) in plans.LOG10N0_PRIOR.items() if not lo <= x <= hi]
-            if outside and not a.allow_out_of_prior_fixed_survey:
-                print(f"--survey-fixed-override log10n0={x!r} is outside the log10n0 prior of "
-                      f"{outside}; pass --allow-out-of-prior-fixed-survey for a fixed-coordinate "
-                      "check", file=sys.stderr)
-                return 2
-            if outside:
-                override_gap = (f"fixed-coordinate survey override log10n0={x!r} lies outside the "
-                                f"log10n0 prior of {outside}: parity at a pinned coordinate only, "
-                                "never a sampled run")
+        # Every overridden survey value is checked against the prior bounds (log10n0
+        # against BOTH implementations' priors, delta / sigma_kde against the shared
+        # survey bounds): an out-of-bounds pin is a fixed-coordinate ablation only and
+        # needs the explicit flag, and the record carries it as a gap.
+        outside_all = []
+        for lab, val in (override or {}).items():
+            x = float(val)
+            if lab == "log10n0":
+                outside = [k for k, (lo, hi, _s) in plans.LOG10N0_PRIOR.items() if not lo <= x <= hi]
+                if outside:
+                    outside_all.append(f"log10n0={x!r} outside the log10n0 prior of {outside}")
+            else:
+                lo, hi = plans.SURVEY_BOUNDS[lab]
+                if not lo <= x <= hi:
+                    outside_all.append(f"{lab}={x!r} outside the survey bounds [{lo}, {hi}]")
+        if outside_all and not a.allow_out_of_prior_fixed_survey:
+            print(f"--survey-fixed-override: {'; '.join(outside_all)}; pass "
+                  "--allow-out-of-prior-fixed-survey for a fixed-coordinate check", file=sys.stderr)
+            return 2
+        if outside_all:
+            override_gap = (f"fixed-coordinate survey override {'; '.join(outside_all)}: parity "
+                            "at a pinned coordinate only, never a sampled run")
     elif a.catalog or override:
         print(f"plan {a.plan} is catalog-free: --catalog / --survey-fixed-override refused",
               file=sys.stderr)

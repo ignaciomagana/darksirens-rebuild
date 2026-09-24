@@ -384,7 +384,9 @@ def test_dark_preflight_refusals(dark_smoke, tmp_path):
     args[args.index("--coords") + 1] = sp_coords
     r = _bench_rc(CORE_PY, args + ["--catalog", cat], work)
     assert r["rc"] == 2 and "catalog-free" in r["stderr"], r
-    # 5. an out-of-prior FIXED survey override needs the explicit flag
-    r = _bench_rc(CORE_PY, base + ["--catalog", cat, "--survey-fixed-override",
-                                   json.dumps({"log10n0": math.log10(5e-5)})], work)
-    assert r["rc"] == 2 and "allow-out-of-prior-fixed-survey" in r["stderr"], r
+    # 5. an out-of-prior FIXED survey override needs the explicit flag (log10n0 against both
+    #    log10n0 priors, delta / sigma_kde against the shared survey bounds)
+    for ovr in ({"log10n0": math.log10(5e-5)}, {"delta": 5.0}, {"sigma_kde": -0.01}):
+        r = _bench_rc(CORE_PY, base + ["--catalog", cat, "--survey-fixed-override", json.dumps(ovr)],
+                      work)
+        assert r["rc"] == 2 and "allow-out-of-prior-fixed-survey" in r["stderr"], (ovr, r)
