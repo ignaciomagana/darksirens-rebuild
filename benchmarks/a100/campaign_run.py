@@ -229,7 +229,10 @@ def main(argv=None):
                  "--cache-dir", cdir, "--cache-mode", mode]
         if components:
             if sp.get("main_record"):
-                bench += ["--main-record", sp["main_record"]]
+                mr = str(sp["main_record"])
+                if mr.startswith("@OUT/"):
+                    mr = os.path.join(out, mr[len("@OUT/"):])
+                bench += ["--main-record", mr]
             if sp.get("trace"):
                 bench += ["--trace", os.path.join(out, "traces", rid), "--trace-drop-xplane"]
         else:
