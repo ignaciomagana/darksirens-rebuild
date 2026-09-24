@@ -206,6 +206,11 @@ class CoreAdapter:
             "n_injections": int(self.injections.n_injections),
             "n_injections_padded": int(b.gw_selection.dL.shape[0]),
             "ndraw": float(b.n_draw),
+            "catalog": {
+                "present": b.catalog is not None,
+                "zgals_shape": None if b.catalog is None else list(np.shape(b.catalog.zgals)),
+                "note": "BoundAnalysis.catalog (None for a SpectralRedshift analysis)",
+            },
         }
 
     # ----------------------------------------------------------------- kernel

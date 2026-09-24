@@ -237,6 +237,14 @@ class LegacyAdapter:
             "n_injections": self.n_injections,
             "n_injections_padded": int(self.gw_sel.dL.shape[0]),
             "ndraw": self.ndraw,
+            "catalog": {
+                "present": bool(getattr(self.opts, "survey_path", None)),
+                "survey_path": getattr(self.opts, "survey_path", None),
+                "n_catalogs": int(getattr(self.opts, "n_catalogs", 1)),
+                "em_catalog_zgals_shape": list(np.shape(self.em_pe.zgals)),
+                "note": ("spectral_sirens reads no galaxy catalog; legacy still threads a "
+                         "placeholder EMCatalog through the kernel"),
+            },
         }
 
     # ----------------------------------------------------------------- kernel
