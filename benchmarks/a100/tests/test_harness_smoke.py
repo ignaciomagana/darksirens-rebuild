@@ -464,3 +464,65 @@ def test_dark_preflight_refusals(dark_smoke, tmp_path):
     args[args.index("--sel") + 1] = os.path.join(fx3, sc["harness_inputs"]["sel"])
     r = _bench_rc(CORE_PY, args + ["--catalog", os.path.join(fx3, sc["harness_inputs"]["catalog"])], work)
     assert r["rc"] == 2 and "the data imply n0" in r["stderr"], r
+
+
+# ---------------------------------------------------------------------------
+# Gate 3b memory knobs: legacy --row-chunk, --mem-fraction, --steady-window, npz digest
+# ---------------------------------------------------------------------------
+@pytest.fixture(scope="session")
+def knobs_smoke(tmp_path_factory):
+    for p in (LEGACY_PY, CORE_PY, os.path.join(DARK_FIXTURE, "galaxy_density.json")):
+        _need(p)
+    pe, sel, cat, _sc = _dark_inputs(DARK_FIXTURE)
+    work = str(tmp_path_factory.mktemp("bench_knobs_smoke"))
+    plan = "dark_full"
+    coords = os.path.join(work, f"coords_{plan}.json")
+    r = _run([sys.executable, os.path.join(BENCH, "make_coords.py"), "--plan", plan,
+              "--seed", str(SEED), "--n", "4", "--out", coords], work)
+    assert r["rc"] == 0, r
+
+    def cmd(impl, py, out, extra):
+        return [py, os.path.join(BENCH, "bench_fixed_theta.py"), "--impl", impl, "--pe", pe,
+                "--sel", sel, "--catalog", cat, "--plan", plan, "--coords", coords, "--out", out,
+                "--n-calls", "6", "--warmup", "1", "--jit", "whole", "--sel-batch", "none",
+                "--pe-block", "none", "--seed", str(SEED), "--label", os.path.basename(out),
+                "--device", "cpu", "--steady-window", "4", "--catalog-npz", "digest"] + extra
+
+    recs, runs = {}, {}
+    jobs = {"legacy": ("legacy", LEGACY_PY, ["--row-chunk", "64", "--mem-fraction", "0.5",
+                                              "--slow-call-s", "1e-9", "--slow-n-calls", "5"]),
+            "core": ("core", CORE_PY, ["--mem-fraction", "0.5"])}
+    for key, (impl, py, extra) in jobs.items():
+        out = os.path.join(work, f"knobs_{key}.json")
+        runs[key] = _run(cmd(impl, py, out, extra), work)
+        assert runs[key]["rc"] == 0, runs[key]
+        with open(out) as f:
+            recs[key] = json.load(f)
+            recs[key]["_path"] = out
+    refused = _run(cmd("core", CORE_PY, os.path.join(work, "knobs_refused.json"),
+                       ["--row-chunk", "512"]), work)
+    return {"records": recs, "refused": refused}
+
+
+def test_memory_knobs_recorded_and_in_parity(knobs_smoke):
+    L, C = knobs_smoke["records"]["legacy"], knobs_smoke["records"]["core"]
+    mk = L["config"]["memory_knobs"]
+    assert mk["row_chunk"]["legacy_cli_value"] == "64"
+    assert mk["row_chunk"]["module_mode"] == 64 and mk["row_chunk"]["effective_for_catalog"] == 64
+    args = L["config"]["legacy_cli_args"]
+    assert args[args.index("--row_chunk") + 1] == "64"
+    for R in (L, C):
+        mf = R["config"]["memory_knobs"]["mem_fraction"]
+        assert mf["effective"] == 0.5 and mf["allocator"] == "non-default"
+        assert R["env"]["env_vars"]["XLA_PYTHON_CLIENT_MEM_FRACTION"] == "0.5"
+        assert "catalog_arrays" not in R and R["catalog_arrays_digest"]
+        assert R["timing"]["warm"]["steady"]["window"] == 4
+    assert C["config"]["memory_knobs"]["row_chunk"]["module_mode"].startswith("auto")
+    # slow-call rule: legacy's warm-up exceeded 1e-9 s -> 5 timed calls
+    assert L["config"]["slow_call_rule"]["triggered"] is True and L["config"]["n_calls"] == 5
+    assert L["timing"]["warm"]["n"] == 5 and C["timing"]["warm"]["n"] == 6
+    s = compare_records.compare(L, C, rtol=1e-12, atol=0.0)
+    assert s["status"] == "compared", s.get("refusal_reasons")
+    assert s["verdict"]["overall_pass"] is True
+    assert knobs_smoke["refused"]["rc"] == 2
+    assert "--row-chunk" in knobs_smoke["refused"]["stderr"]

@@ -214,9 +214,66 @@ def g3c_split(record_ids, specs):
     return out
 
 
+G3_RECORDS = f"{ROOT}/benchmarks/gate3/records"
+
+
+def g3b_retries(sel_batch=4096, pe_block=6):
+    """Gate 3b memory retries (documented knobs only, identical treatment of both codes).
+
+    OUT = benchmarks/gate3/retries; copy gate3/coords/{dark_H0,dark_full}.json into
+    OUT/coords/ first (same coordinates as the Gate 3 records). Every record: blocks
+    b<sel>x<pe>, cold cache, --catalog-npz digest (no 1.2 GB sidecars). Candidates (the
+    driver runs them conditionally, see the Gate 3b report):
+
+    * L-<plan>-<fx>-rc2048 / -rc512: legacy whole R2, R3 x dark_full, dark_H0, legacy
+      --row_chunk 2048 then 512 on OOM, default allocator; n_calls 50, --steady-window 30;
+      -rc512_mf095: once more at --mem-fraction 0.95 when both row chunks OOM.
+    * RC at --mem-fraction 0.95, dark_full then dark_H0: core whole and legacy (--row_chunk
+      512); n_calls 20 (5 if a warm-up call exceeds 30 s: --slow-call-s 30).
+    * core asis R2 dark_full at --mem-fraction 0.95, n_calls 10.
+    * core whole R2 dark_full, default allocator, n_calls 50, --steady-window 30.
+    """
+    blk = f"b{sel_batch}x{pe_block}"
+    kw = dict(blocks=blk, sel_batch=str(sel_batch), pe_block=str(pe_block))
+    npz = ["--catalog-npz", "digest"]
+    steady = ["--steady-window", "30"]
+
+    def mk(env, jit, plan, fx, tag, extra, n_calls, **more):
+        s = dspec("G3R", env, jit, plan, fx, tag=tag, n_calls=n_calls, **kw)
+        s["record_id"] = s["record_id"].replace("_default_", f"_{blk}_")
+        s["extra_args"] = list(extra) + npz
+        s["flags"] = dict(s.get("flags") or {}, gate="3b",
+                          knobs=" ".join(str(x) for x in extra))
+        s.update(more)
+        return s
+
+    out = []
+    for fx in ("R2", "R3"):
+        for plan in ("dark_full", "dark_H0"):
+            core_ref = f"{G3_RECORDS}/G3A_core_whole_{blk}_{plan}_{fx}.json"
+            for rc in ("2048", "512"):
+                out.append(mk("legacy", "whole", plan, fx, f"rc{rc}",
+                              ["--row-chunk", rc] + steady, 50, paired_ref=core_ref))
+            out.append(mk("legacy", "whole", plan, fx, "rc512_mf095",
+                          ["--row-chunk", "512", "--mem-fraction", "0.95"] + steady, 50,
+                          paired_ref=core_ref))
+    slow = ["--slow-call-s", "30", "--slow-n-calls", "5"]
+    for plan in ("dark_full", "dark_H0"):
+        out.append(mk("core", "whole", plan, "RC", "mf095",
+                      ["--mem-fraction", "0.95"] + slow, 20))
+        out.append(mk("legacy", "whole", plan, "RC", "rc512_mf095",
+                      ["--row-chunk", "512", "--mem-fraction", "0.95"] + slow, 20))
+    out.append(mk("core", "asis", "dark_full", "R2", "mf095", ["--mem-fraction", "0.95"], 10,
+                  paired_ref=f"{G3_RECORDS}/G3A_core_whole_{blk}_dark_full_R2.json"))
+    out.append(mk("core", "whole", "dark_full", "R2", "steady", steady, 50,
+                  compare_to=[f"{G3_RECORDS}/G3A_core_whole_{blk}_dark_full_R2.json"]))
+    return out
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("what", choices=("smoke", "m5b", "g3", "g3c", "retry", "g3c_blocked", "g3c_split"))
+    ap.add_argument("what", choices=("smoke", "m5b", "g3", "g3c", "retry", "g3c_blocked", "g3c_split",
+                                     "g3b_retries"))
     ap.add_argument("--split-ids", default=None, help="g3c_split: comma-separated components record ids")
     ap.add_argument("--out", required=True)
     ap.add_argument("--sel-batch", type=int, default=4096)
@@ -226,6 +283,7 @@ def main(argv=None):
     specs = {"smoke": smoke, "m5b": m5b, "g3": lambda: g3a() + g3b(), "g3c": g3c,
              "retry": lambda: retry(a.sel_batch, a.pe_block, tuple(a.fixtures.split(","))),
              "g3c_blocked": lambda: g3c_blocked((a.sel_batch, a.pe_block)),
+             "g3b_retries": lambda: g3b_retries(a.sel_batch, a.pe_block),
              "g3c_split": lambda: g3c_split(a.split_ids.split(","),
                                             g3c_blocked((a.sel_batch, a.pe_block)))}[a.what]()
     ids = [s["record_id"] for s in specs]

@@ -398,7 +398,9 @@ def device_fingerprint(requested: str) -> dict:
 # ----------------------------------------------------------------------------
 # Memory
 # ----------------------------------------------------------------------------
-def memory_checkpoint(tag: str) -> dict:
+def memory_checkpoint(tag: str, full: bool = False) -> dict:
+    """Host maxRSS and the device allocator's counters; ``full`` also keeps the whole
+    ``memory_stats()`` dict (used at failure points: largest free block, alloc counts)."""
     import jax
 
     stats = None
@@ -413,6 +415,7 @@ def memory_checkpoint(tag: str) -> dict:
         "device_peak_bytes_in_use": None if not stats else stats.get("peak_bytes_in_use"),
         "device_bytes_in_use": None if not stats else stats.get("bytes_in_use"),
         "device_bytes_limit": None if not stats else stats.get("bytes_limit"),
+        **({"device_memory_stats": dict(stats) if stats else None} if full else {}),
     }
 
 
@@ -703,7 +706,7 @@ def run_recording_failures(main_fn, argv=None):
         msg = f"{type(exc).__name__}: {exc}"
         oom = any(s in msg for s in ("RESOURCE_EXHAUSTED", "out of memory", "Out of memory"))
         rec["status"] = "oom" if oom else "error"
-        at_fail = memory_checkpoint("at_failure")
+        at_fail = memory_checkpoint("at_failure", full=True)
         rec["failure"] = {"type": type(exc).__name__, "message": str(exc)[:4000],
                           "stage": _PARTIAL.get("stage"), "memory_at_failure": at_fail,
                           "memory_checkpoints": list(_PARTIAL.get("mem") or []),
@@ -713,3 +716,34 @@ def run_recording_failures(main_fn, argv=None):
         print(f"RUN FAILED ({rec['status']}, stage {_PARTIAL.get('stage')}): {msg[:500]}",
               file=sys.stderr)
         return 5
+
+
+# ---------------------------------------------------------------------------
+# Memory knobs of the Gate 3 retries (recorded in every record's config.memory_knobs)
+DEFAULT_MEM_FRACTION = 0.75   # jax 0.4.34 XLA_PYTHON_CLIENT_MEM_FRACTION default (BFC limit)
+
+
+def apply_mem_fraction(frac):
+    """Set XLA_PYTHON_CLIENT_MEM_FRACTION for THIS (child) process before ``import jax``.
+
+    None leaves the environment untouched (the default allocator, 0.75 of device memory
+    unless the env script sets it). Returns what was requested and what the environment
+    held before, for the record."""
+    before = os.environ.get("XLA_PYTHON_CLIENT_MEM_FRACTION")
+    if frac is not None:
+        if not 0.0 < float(frac) <= 1.0:
+            raise ValueError(f"--mem-fraction must be in (0, 1], not {frac!r}")
+        os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = repr(float(frac))
+    return {"requested": None if frac is None else float(frac), "env_before": before}
+
+
+def mem_fraction_record(req, bytes_limit):
+    eff = os.environ.get("XLA_PYTHON_CLIENT_MEM_FRACTION")
+    frac = float(eff) if eff else DEFAULT_MEM_FRACTION
+    return {"requested": req["requested"], "env_before": req["env_before"],
+            "env_effective": eff, "effective": frac,
+            "allocator": "default" if eff is None else "non-default",
+            "device_bytes_limit": bytes_limit,
+            "preallocate": os.environ.get("XLA_PYTHON_CLIENT_PREALLOCATE"),
+            "note": ("XLA_PYTHON_CLIENT_MEM_FRACTION caps the BFC allocator (bytes_limit); "
+                     "unset = jax default 0.75")}

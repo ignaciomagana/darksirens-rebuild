@@ -369,6 +369,28 @@ can be served from the persistent cache: compare `compile.first_call.requests` w
 `compile.first_call.compiles`, and never compare first-call times across different
 cache states.
 
+### Memory knobs (Gate 3b retries)
+
+Only documented knobs, applied identically to both codes where both have them, every value
+recorded in `config.memory_knobs` (requested and effective, plus `non_default_settings`):
+
+* `--row-chunk auto|off|N` (legacy only, dark plans): legacy's own CLI `--row_chunk`
+  (`cli/inference.py:1853-1866` -> `redshift/catalog.py:169-191`, `lax.map` over N-row chunks
+  of the kernel-state build). Unset = `auto`, the H2 setting. Refused for core (exit 2): core's
+  row chunking is fixed (auto, 512 rows above n_rows*n_max > 2^25, `catalog/redshift.py:46-49`),
+  recorded as such.
+* `--mem-fraction X`: `XLA_PYTHON_CLIENT_MEM_FRACTION` for the benchmark process, set before JAX
+  is imported; unset = the default allocator (0.75). The resulting `bytes_limit` is recorded.
+* `--steady-window N`: `timing.warm.steady` = statistics of the last N timed calls;
+  `timing.warm.first20` = the first 20 (the 20-call protocol median inside a longer run).
+* `--slow-call-s S --slow-n-calls N`: if a warm-up call exceeds S seconds, N timed calls.
+* `--catalog-npz digest`: no `.catalog.npz` sidecar (about 1.2 GB on R2); each array's shape
+  and sha256 go into `catalog_arrays_digest`. compare_records then checks the empty-row sets
+  through the per-coordinate `row_empty_sha256_u8`; every JSON catalog field is still compared.
+* Failure records carry the full device `memory_stats()` at the failure point
+  (`failure.memory_at_failure.device_memory_stats`, incl. `largest_free_block_bytes`).
+* `gate3_specs.py g3b_retries` lists the candidate records; `gate3b_table.py` builds the CSV.
+
 ## Record schema (`darksirens-bench-fixed-theta/1`)
 
 Top level: `schema`, `status` (`ok` | `plan_mismatch`), `label`, `implementation`,

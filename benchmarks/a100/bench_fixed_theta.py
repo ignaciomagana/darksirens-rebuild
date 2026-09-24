@@ -8,7 +8,16 @@
         [--mask-chunk 131072] [--smi-log PATH] [--util-window-s 0] \\
         [--cache-dir DIR --cache-mode cold|warm|env] \\
         [--catalog CAT.h5] [--survey-fixed-override JSON [--allow-out-of-prior-fixed-survey]] \\
-        [--guard default|hard|soft] [--max-variance X]
+        [--guard default|hard|soft] [--max-variance X] \\
+        [--row-chunk auto|off|N] [--mem-fraction X] [--steady-window N] \\
+        [--slow-call-s S --slow-n-calls N] [--catalog-npz write|digest]
+
+Memory knobs (Gate 3 retries; every value is recorded in ``config.memory_knobs``):
+``--row-chunk`` is legacy's own CLI ``--row_chunk`` (dark plans; core has no knob and
+is recorded with its fixed rule, auto 512 above 2**25 elements); ``--mem-fraction``
+sets XLA_PYTHON_CLIENT_MEM_FRACTION for this process before JAX is imported (unset =
+the default allocator, 0.75). ``--steady-window N`` adds ``timing.warm.steady`` (the
+last N timed calls) and ``timing.warm.first20`` (the first 20).
 
 Dark-siren plans (``dark_*``) need ``--catalog``; the fixture's
 ``galaxy_density.json`` sidecar must pass ``dark_fixture.preflight`` (log10n0
@@ -107,11 +116,65 @@ def parse_args(argv=None):
                          "outside the log10n0 prior of either implementation, delta / sigma_kde "
                          "outside plans.SURVEY_BOUNDS (fixed coordinate only; recorded as a gap)")
     bc.add_guard_args(ap)
+    ap.add_argument("--row-chunk", default=None,
+                    help="legacy only (dark plans): pass-through of legacy's --row_chunk "
+                         "auto|off|N (unset = auto, the H2 setting); refused for core, whose "
+                         "row chunking is fixed (auto: 512 above n_rows*n_max > 2**25)")
+    ap.add_argument("--mem-fraction", type=float, default=None,
+                    help="XLA_PYTHON_CLIENT_MEM_FRACTION for this process (set before JAX is "
+                         "imported; unset = default allocator 0.75); recorded")
+    ap.add_argument("--steady-window", type=int, default=0,
+                    help="also report the median of the last N timed calls "
+                         "(timing.warm.steady) and of the first 20 (timing.warm.first20)")
+    ap.add_argument("--slow-call-s", type=float, default=None,
+                    help="if any warm-up call takes longer than S seconds, run --slow-n-calls "
+                         "timed calls instead of --n-calls (recorded in config)")
+    ap.add_argument("--slow-n-calls", type=int, default=5)
+    ap.add_argument("--catalog-npz", choices=("write", "digest"), default="write",
+                    help="dark plans: write the per-row / per-sample catalog sidecar .npz "
+                         "(default) or record only each array's shape and sha256 (digest; "
+                         "for R2-scale records whose sidecar is ~1.2 GB)")
     ap.add_argument("--cache-mode", choices=("cold", "warm", "env"), default="env",
                     help="cold: DIR must be absent or empty (created), so the first call is a "
                          "true compile; warm: DIR must already hold entries (a persistent-cache "
                          "rerun); env: no check (legacy behaviour). cold/warm need --cache-dir")
     return ap.parse_args(argv)
+
+
+def memory_knobs(a, adapter, config, device, mem_frac_req):
+    """Every memory-relevant setting of this record, requested and effective."""
+    import jax
+
+    try:
+        limit = jax.devices()[0].memory_stats().get("bytes_limit")
+    except Exception:
+        limit = None
+    if a.impl == "legacy":
+        ds = config.get("dark_settings") or {}
+        res = ds.get("resolved") or {}
+        rc = {"requested": a.row_chunk if a.row_chunk is not None else "auto (harness default)",
+              "legacy_cli_value": ((ds.get("cli_knobs") or {}).get("--row_chunk") or {}).get("value"),
+              "module_mode": res.get("row_chunk_module"),
+              "effective_for_catalog": res.get("row_chunk_effective"),
+              "default": a.row_chunk is None} if ds else None
+    else:
+        rc = {"requested": None, "legacy_cli_value": None,
+              "module_mode": "auto (fixed, no knob)",
+              "effective_for_catalog": ("512 if n_rows*n_max > 2**25 else none "
+                                        "(catalog/redshift.py:46-49,198-223)"),
+              "default": True} if config.get("dark_settings") else None
+    mf = bc.mem_fraction_record(mem_frac_req, limit)
+    non_default = []
+    if rc and not rc["default"]:
+        non_default.append(f"row_chunk={a.row_chunk}")
+    if mf["allocator"] != "default":
+        non_default.append(f"XLA_PYTHON_CLIENT_MEM_FRACTION={mf['env_effective']}")
+    for k, v in (("sel_batch", a.sel_batch), ("pe_block", a.pe_block)):
+        if v != "default":
+            non_default.append(f"{k}={v}")
+    return {"row_chunk": rc, "mem_fraction": mf,
+            "blocks": {"sel_batch": a.sel_batch, "pe_block": a.pe_block},
+            "non_default_settings": non_default}
 
 
 def _dir_inventory(path):
@@ -359,6 +422,20 @@ def main(argv=None):
         n0, b0 = _dir_inventory(cdir)
         cache_info.update(dir=cdir, files_before=n0, bytes_before=b0)
 
+    # ---- allocator fraction (must precede ``import jax``) ------------------------
+    if a.row_chunk is not None and a.impl != "legacy":
+        print("--row-chunk is legacy's --row_chunk; core's row chunking is fixed (auto 512 "
+              "above 2**25 elements) and has no knob", file=sys.stderr)
+        return 2
+    if a.row_chunk is not None and not dark:
+        print("--row-chunk applies to dark-siren plans only", file=sys.stderr)
+        return 2
+    try:
+        mem_frac_req = bc.apply_mem_fraction(a.mem_fraction)
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+
     # ---- JAX + hooks before the implementation is imported ----------------
     t0 = time.perf_counter()
     import jax
@@ -415,12 +492,18 @@ def main(argv=None):
     record["harness"]["git"].pop("known_digest_match", None)
 
     mem = [bc.memory_checkpoint("after_import")]
+    record["memory_knobs_requested"] = {
+        "row_chunk": a.row_chunk, "mem_fraction": bc.mem_fraction_record(
+            mem_frac_req, mem[0]["device_bytes_limit"]),
+        "sel_batch": a.sel_batch, "pe_block": a.pe_block}
     bc.register_partial(record, a.out, mem, "build")
     out_dir = os.path.dirname(os.path.abspath(a.out))
     os.makedirs(out_dir, exist_ok=True)
     save_dir = os.path.abspath(a.out) + ".legacy_save"
     adapter_cls = impl.LegacyAdapter if a.impl == "legacy" else impl.CoreAdapter
     adapter_kw = {"catalog_path": os.path.abspath(a.catalog)} if dark else {}
+    if a.impl == "legacy" and a.row_chunk is not None:
+        adapter_kw["row_chunk"] = a.row_chunk
     adapter = adapter_cls(plan, os.path.abspath(a.pe), os.path.abspath(a.sel),
                           sel_batch=a.sel_batch, pe_block=a.pe_block, jit_mode=a.jit,
                           seed=a.seed, save_dir=save_dir, counter=counter,
@@ -441,7 +524,7 @@ def main(argv=None):
             "message": str(exc),
             "traceback_tail": traceback.format_exc()[-4000:],
             "stage_timing": dict(adapter.timing),
-            "memory_at_failure": bc.memory_checkpoint("at_build_failure"),
+            "memory_at_failure": bc.memory_checkpoint("at_build_failure", full=True),
         }
         record["xla_cache"] = cache_info
         if a.impl == "legacy":
@@ -463,8 +546,10 @@ def main(argv=None):
 
     record["config"] = adapter.config()
     record["config"].update(seed=a.seed, n_calls=a.n_calls, warmup=a.warmup, device=a.device,
-                            mask_chunk=a.mask_chunk)
+                            mask_chunk=a.mask_chunk, steady_window=a.steady_window)
     record["config"]["guard"] = bc.guard_record(bc.guard_request(a), record["config"])
+    record["config"]["memory_knobs"] = memory_knobs(a, adapter, record["config"], device,
+                                                    mem_frac_req)
     dims = adapter.dims()
     dims["T_obs_yr"] = record["inputs"]["sel"]["attrs"].get("T_obs_yr")
     dims["n_coords"] = int(n_coords)
@@ -525,6 +610,17 @@ def main(argv=None):
         per_call_values[k].append(v)
     compile_warm = counter.delta(snap)
     clock.mark("warmup_end")
+    n_calls_requested = a.n_calls
+    slow_rule = None
+    if a.slow_call_s is not None:
+        slow = bool(warm_times) and max(warm_times) > a.slow_call_s
+        slow_rule = {"slow_call_s": a.slow_call_s, "slow_n_calls": a.slow_n_calls,
+                     "max_warmup_call_s": max(warm_times) if warm_times else None,
+                     "triggered": slow, "n_calls_requested": n_calls_requested}
+        if slow:
+            a.n_calls = a.slow_n_calls
+        record["config"]["n_calls"] = a.n_calls
+    record["config"]["slow_call_rule"] = slow_rule
 
     snap = counter.snapshot()
     times, idx = [], []
@@ -656,7 +752,20 @@ def main(argv=None):
         if cat_summary is not None:
             per_coord[-1]["catalog"] = cat_summary
     mem.append(bc.memory_checkpoint("after_diagnostics"))
-    if dark:
+    if dark and a.catalog_npz == "digest":
+        import hashlib
+
+        arrays = dark_diag.stack_npz(cat_rows_all, cat_pe_all, cat_sel_all)
+        record["catalog_arrays_digest"] = {
+            k: {"shape": list(v.shape), "dtype": v.dtype.str,
+                "sha256": hashlib.sha256(np.ascontiguousarray(v).tobytes()).hexdigest()}
+            for k, v in arrays.items()}
+        record["catalog_arrays_digest_note"] = (
+            "--catalog-npz digest: no sidecar written (disk); sha256 of each array's C-order "
+            "bytes as np.savez would store it (bitwise evidence only; compare_records then "
+            "checks the empty-row sets through row_empty_sha256_u8)")
+        del arrays
+    elif dark:
         npz_path = os.path.abspath(a.out) + ".catalog.npz"
         arrays = dark_diag.stack_npz(cat_rows_all, cat_pe_all, cat_sel_all)
         np.savez_compressed(npz_path, **arrays)
@@ -729,6 +838,12 @@ def main(argv=None):
 
     # ---- timing summary --------------------------------------------------------
     warm = bc.stats(times)
+    warm["first20"] = bc.stats(times[:20]) if len(times) >= 20 else None
+    warm["steady"] = None
+    if a.steady_window and len(times) >= a.steady_window:
+        warm["steady"] = dict(bc.stats(times[-a.steady_window:]), window=int(a.steady_window),
+                              calls=[len(times) - a.steady_window, len(times)],
+                              note="last --steady-window timed calls")
     warm["calls_s"] = times
     warm["coord_index"] = idx
     record["timing"] = {

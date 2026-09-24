@@ -124,8 +124,13 @@ def _is_dark(plan):
 
 
 def legacy_cli_args(plan, pe_path, sel_path, save_path, sel_batch, pe_block, seed,
-                    catalog_path=None, guard=None, max_variance=None):
-    """The exact darksirens_inference argument vector that configures ``plan``."""
+                    catalog_path=None, guard=None, max_variance=None, row_chunk=None):
+    """The exact darksirens_inference argument vector that configures ``plan``.
+
+    ``row_chunk`` (dark plans only): None keeps ``LEGACY_DARK_SETTINGS['--row_chunk']``
+    ('auto'); otherwise the value is passed as the legacy CLI's own ``--row_chunk``
+    (``auto|off|N``, cli/inference.py:1853-1866, applied at :2646-2658 through
+    ``redshift.catalog.configure_catalog_row_chunk``)."""
     dark = _is_dark(plan)
     argv = [
         "--gw_path", pe_path,
@@ -143,7 +148,11 @@ def legacy_cli_args(plan, pe_path, sel_path, save_path, sel_batch, pe_block, see
         for flag, (value, _why) in LEGACY_DARK_SETTINGS.items():
             if flag == "--universe_model":
                 continue
+            if flag == "--row_chunk" and row_chunk is not None:
+                value = str(row_chunk)
             argv += [flag, value]
+    elif row_chunk is not None:
+        raise ValueError("--row-chunk applies to dark-siren plans only")
     argv += _block_arg("--sel_batch_size", sel_batch)
     argv += _block_arg("--pe_event_block", pe_block)
     # Selection N_eff guard: unset = the CLI default ('auto' -> hard for dynesty,
@@ -185,8 +194,10 @@ class LegacyAdapter:
     impl = IMPL
 
     def __init__(self, plan, pe_path, sel_path, *, sel_batch, pe_block, jit_mode, seed,
-                 save_dir, counter, catalog_path=None, guard=None, max_variance=None):
+                 save_dir, counter, catalog_path=None, guard=None, max_variance=None,
+                 row_chunk=None):
         self.plan = plan
+        self.row_chunk_requested = row_chunk
         self.pe_path = pe_path
         self.sel_path = sel_path
         self.catalog_path = catalog_path
@@ -199,7 +210,7 @@ class LegacyAdapter:
         self.build_warnings = []
         self.cli_argv = legacy_cli_args(plan, pe_path, sel_path, save_dir, sel_batch, pe_block, seed,
                                         catalog_path=catalog_path, guard=guard,
-                                        max_variance=max_variance)
+                                        max_variance=max_variance, row_chunk=row_chunk)
         self.requested_blocks = {"sel_batch_size": sel_batch, "pe_event_block": pe_block}
         self.cli_log = ""
 
@@ -348,8 +359,18 @@ class LegacyAdapter:
                 self.universe_model, (self.em_pe,), (self.em_sel,))]
         except Exception as exc:  # pragma: no cover
             share = f"{type(exc).__name__}: {exc}"
+        knobs = {k: {"value": v, "why": why} for k, (v, why) in LEGACY_DARK_SETTINGS.items()}
+        if self.row_chunk_requested is not None:
+            knobs["--row_chunk"] = {
+                "value": str(self.row_chunk_requested),
+                "why": ("NON-DEFAULT memory retry (bench_fixed_theta.py --row-chunk): legacy CLI "
+                        "--row_chunk (cli/inference.py:1853-1866) -> configure_catalog_row_chunk "
+                        "(redshift/catalog.py:169-182): lax.map over fixed-size row chunks of "
+                        "the kernel-state build, same per-row arithmetic; core has no knob "
+                        "(fixed auto: 512 above n_rows*n_max > 2**25)"),
+                "default": LEGACY_DARK_SETTINGS["--row_chunk"][0]}
         self.dark_settings = {
-            "cli_knobs": {k: {"value": v, "why": why} for k, (v, why) in LEGACY_DARK_SETTINGS.items()},
+            "cli_knobs": knobs,
             "no_knob_behaviour": {k: v for k, v in LEGACY_DARK_NO_KNOB.items()},
             "resolved": {
                 "universe_model": self.universe_model,
@@ -431,6 +452,9 @@ class LegacyAdapter:
                               "sample pixels (likelihood/catalog_views.py:318-340); galaxies z-sorted "
                               "within rows at load (catalogs/io.py:488)"),
         }
+        # the chunk the kernel-state build resolves for THIS catalog (None = one full vmap)
+        self.dark_settings["resolved"]["row_chunk_effective"] = rcat._resolve_row_chunk(
+            int(z.shape[0]), int(z.shape[1]))
 
     def operands_for_sync(self):
         lk = self.likelihood

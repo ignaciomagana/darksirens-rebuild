@@ -9,7 +9,8 @@ SPEC is a JSON list of record specs::
      "jit": "whole|asis", "blocks": "default|matched|none", "sel_batch": "default|none|N",
      "pe_block": "default|none|N", "plan": ..., "pe": PATH, "sel": PATH,
      "pe_label": ..., "sel_label": ..., "n_calls": 20, "warmup": 3, "util_window_s": 10,
-     "cache": "cold" | {"warm_from": RECORD_ID}, "compare_to": [RECORD_ID, ...],
+     "cache": "cold" | {"warm_from": RECORD_ID},
+     "compare_to": [RECORD_ID | /abs/path/record.json, ...],
      "flags": {...},
      # optional (Gate 2 / M5):
      "catalog": CAT.h5,            # dark-siren plans: passed as --catalog
@@ -277,9 +278,22 @@ def main(argv=None):
                  "command_line": cmd, "compares": {}}
         # comparisons (A = the earlier reference record)
         for k, ref in enumerate(sp.get("compare_to") or []):
-            ref_rec = os.path.join(out, "records", ref + ".json")
-            base = rid if k == 0 else f"{rid}__vs__{ref}"
-            if status != "ok" or index["runs"].get(ref, {}).get("status") != "ok":
+            if os.path.isabs(ref):
+                # a record of another campaign directory (e.g. Gate 3 retries vs gate3/records)
+                ref_rec = ref
+                ref_name = os.path.basename(ref)
+                ref_name = ref_name[:-len(".json")] if ref_name.endswith(".json") else ref_name
+                try:
+                    with open(ref_rec) as f:
+                        ref_ok = json.load(f).get("status") == "ok"
+                except (OSError, ValueError):
+                    ref_ok = False
+            else:
+                ref_rec = os.path.join(out, "records", ref + ".json")
+                ref_name = ref
+                ref_ok = index["runs"].get(ref, {}).get("status") == "ok"
+            base = rid if k == 0 else f"{rid}__vs__{ref_name}"
+            if status != "ok" or not ref_ok:
                 entry["compares"][ref] = {"rc": None, "skipped": "record or reference not ok"}
                 continue
             entry["compares"][ref] = compare(a.driver_python, ref_rec, rec,
