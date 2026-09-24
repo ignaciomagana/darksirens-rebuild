@@ -90,6 +90,8 @@ def category(name):
 
 def kind(cat):
     c = cat.lower()
+    if "memcpy" in c or "memset" in c:
+        return "transfer"
     if "fusion" in c:
         return "fusion"
     if c.startswith("reduce") or c in ("all-reduce",):
@@ -168,8 +170,10 @@ def summarize_trace_file(path, top_n=25, annotation=ANNOTATION):
             src = "GPU 'XLA Ops' line"
         else:
             ops_lines = [ln for ln in lines if str(tname.get(ln, "")).startswith("Stream")]
-            src = "GPU stream lines (kernels)"
+            src = "GPU stream lines (kernels; named by their hlo_op arg when present)"
         ops = [e for e in gpu_events if (e["pid"], e["tid"]) in set(ops_lines)]
+        if not ops_lines or str(tname.get(ops_lines[0], "")).strip() != "XLA Ops":
+            ops = [dict(e, name=str((e.get("args") or {}).get("hlo_op") or e["name"])) for e in ops]
     else:
         mode = "cpu"
         host = [p for p, n in pname.items() if str(n).startswith("/host:CPU")]
