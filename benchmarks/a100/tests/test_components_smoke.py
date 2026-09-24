@@ -192,17 +192,20 @@ def test_compare_arrays_semantics():
 def test_masked_rowmax_comparison(tmp_path):
     """log_kw_eff_rowmax is compared on occupied rows only (legacy's pinned offset on
     galaxy-free rows is a don't-care value); the unmasked difference is reported."""
-    def rec(path, rowmax, empty):
+    def rec(path, rowmax, empty, fixed=None, status="ok"):
         arrays = {"f_kernel_state__log_kw_eff_rowmax__c0": rowmax,
                   "f_kernel_state__row_empty__c0": empty}
         np.savez(str(path) + ".components.npz", **arrays)
         outs = {k.split("__")[1]: {"class": "gate", "per_coord": [
             dict(bcmp._array_digest(v), coord=0, stored=True)]} for k, v in arrays.items()}
-        r = {"schema": bcmp.RECORD_SCHEMA, "label": str(path), "implementation": "x",
-             "plan": {"name": "dark_full"}, "coords": {"values_hex": [["0x1p0"]]},
+        r = {"schema": bcmp.RECORD_SCHEMA, "status": status, "label": str(path), "implementation": "x",
+             "plan": {"name": "dark_full", "population_model": "m", "sampled": ["H0"],
+                      "full_order": ["H0"], "universe": "dark", "fixed": fixed or {}},
+             "coords": {"names": ["H0"], "values_hex": [["0x1p0"]]},
              "inputs": {"pe": {"sha256": "p"}, "sel": {"sha256": "s"}, "catalog": {"sha256": "c"}},
-             "dims": {"n_events": 1, "nsamp": 1, "n_injections": 1, "ndraw": 1.0},
-             "device": {}, "env": {}, "config": {},
+             "dims": {"n_events": 1, "nsamp": 1, "n_pe_samples": 1, "n_injections": 1, "ndraw": 1.0},
+             "device": {}, "env": {},
+             "config": {"max_likelihood_variance": 1.0, "selection_neff_soft_guard": False},
              "components_npz": {"file": os.path.basename(str(path)) + ".components.npz"},
              "components": {"f_kernel_state": {"available": True, "kind": "separable", "outputs": outs,
                                                "timing": {"warm": {"median_s": 1.0}}}}}
@@ -219,6 +222,13 @@ def test_masked_rowmax_comparison(tmp_path):
     rec(tmp_path / "c.json", np.array([1.5, 0.0, -3.1]), empty)        # an occupied row differs
     s = bcmp.compare(str(tmp_path / "a.json"), str(tmp_path / "c.json"))
     assert [r for r in s["rows"] if r["component"] == "f_kernel_state"][0]["parity_1e12"] is False
+    # records of different experiments are refused with the main comparator's rules
+    rec(tmp_path / "d.json", np.array([1.5, 0.0, -3.0]), empty, fixed={"log10n0": -2.5})
+    s = bcmp.compare(str(tmp_path / "a.json"), str(tmp_path / "d.json"))
+    assert any("plan.fixed" in r for r in s["refused"])
+    rec(tmp_path / "e.json", np.array([1.5, 0.0, -3.0]), empty, status="plan_mismatch")
+    s = bcmp.compare(str(tmp_path / "a.json"), str(tmp_path / "e.json"))
+    assert any("status=plan_mismatch" in r for r in s["refused"])
 
 
 def test_storage_policy_and_classes():

@@ -470,7 +470,9 @@ total (and timed values) at every coordinate (`whole_vs_main_record.bitwise`).
 `component_vs_main_diagnostics` compares `d`/`e` with the record's diagnostics
 (informational).
 
-`compare` (A = the reference, normally legacy) checks each output element by
+`compare` refuses (exit 2) two records that `compare_records.py` would refuse (record
+status, plan name / model / sampled / fixed values, catalog, coordinates, input files,
+dims, guard mode and variance cap). `compare` (A = the reference, normally legacy) checks each output element by
 element: `|A-B| <= rtol |A|` (rtol 1e-12, atol 0), NaN == NaN, infinities exact;
 `g_prior_eval*` outputs (per-sample catalog log densities) under D-catvals
 (`|delta log p| <= 1e-12` absolute, informational); `C_eff` and `f` informational.

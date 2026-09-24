@@ -1930,6 +1930,12 @@ def compare(path_a, path_b, rtol=1e-12):
         if r.get("schema") != RECORD_SCHEMA:
             raise SystemExit(f"{p}: not a {RECORD_SCHEMA} record")
     refusals = []
+    # The main comparator's refusal rules first (record status, plan name / model /
+    # sampled / fixed values, catalog, coordinates, input files, dims, guard mode and
+    # variance cap): two component records of different experiments are never compared.
+    import compare_records
+
+    refusals += compare_records.refusal_reasons(A, B)
     if A["plan"]["name"] != B["plan"]["name"]:
         refusals.append("different plans")
     if A["coords"]["values_hex"] != B["coords"]["values_hex"]:
