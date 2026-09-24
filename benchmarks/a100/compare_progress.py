@@ -117,6 +117,16 @@ def main(argv=None):
     for k in ("iterations_per_s", "evals_per_s", "neg_log_volume_per_s"):
         if PA.get(k) and PB.get(k):
             ratio[k] = PB[k] / PA[k]
+    ea = (ra.get("likelihood_calls") or {}).get("n_like_evals")
+    eb = (rb.get("likelihood_calls") or {}).get("n_like_evals")
+    la = int((ra.get("progress") or {}).get("last_main_iteration") or -1)
+    lb = int((rb.get("progress") or {}).get("last_main_iteration") or -1)
+    replica = {"n_like_evals_equal": ea is not None and ea == eb, "n_like_evals": [ea, eb],
+               "last_iteration_equal": la == lb, "last_iteration": [la, lb],
+               "same_progress_rows": sorted(ia) == sorted(ib),
+               "ncall_cum_identical_on_common_rows": ncall_identical}
+    replica["deterministic_replica"] = bool(replica["n_like_evals_equal"] and replica["last_iteration_equal"]
+                                            and replica["same_progress_rows"] and ncall_identical)
     res = {"schema": "darksirens-infer-ladder-progress-compare/1",
            "A": {"dir": os.path.abspath(a.A), "label": ra["label"], "impl": ra["implementation"], "arm": ra.get("arm"),
                  "status": ra["status"]},
@@ -126,6 +136,7 @@ def main(argv=None):
            "n_common_rows": len(common), "rows_only_in_A": len(only_a), "rows_only_in_B": len(only_b),
            "traces_identical_on_common_rows": first_div is None and len(common) > 0,
            "first_divergence": first_div,
+           "replica": replica,
            "ncall_cum_identical_on_common_rows": ncall_identical,
            "max_rel_diff_on_common_rows": max_rel,
            "performance": {"A": PA, "B": PB, "ratio_B_over_A": ratio},
@@ -138,13 +149,15 @@ def main(argv=None):
              f"* rung {res['rung']}, sampler {res['sampler']}; status A {res['A']['status']}, B {res['B']['status']}",
              f"* common rows {len(common)} (only A {len(only_a)}, only B {len(only_b)}); traces identical on "
              f"common rows: {res['traces_identical_on_common_rows']}; first divergence: {first_div}",
+             f"* deterministic replica (equal evaluation and iteration counts, same rows, identical ncall "
+             f"trace): {replica['deterministic_replica']} (evals {ea} / {eb}, last iteration {la} / {lb})",
              f"* cumulative ncall identical on common rows: {ncall_identical}; max relative difference "
              f"logz {max_rel['logz']:.3g}, logl_min {max_rel['logl_min']:.3g}",
              "", "| metric | A | B | B/A |", "|---|---|---|---|"]
         for k in ("iterations_per_s", "evals_per_s", "neg_log_volume_per_s", "seconds"):
             L.append(f"| {k} | {PA.get(k)} | {PB.get(k)} | {ratio.get(k)} |")
         open(a.md, "w").write("\n".join(L) + "\n")
-    print(f"common={len(common)} identical={res['traces_identical_on_common_rows']} "
+    print(f"replica={replica['deterministic_replica']} common={len(common)} identical={res['traces_identical_on_common_rows']} "
           f"ncall_identical={ncall_identical} max_rel={max_rel} ratio={ratio}")
     return 0
 

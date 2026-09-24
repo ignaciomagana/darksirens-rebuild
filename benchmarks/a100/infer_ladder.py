@@ -333,10 +333,17 @@ class TimedCompileCounter(bc.CompileCounter):
 class CountingLikelihood:
     """Transparent wrapper: counts eager (concrete) and traced calls per phase."""
 
+    EAGER_LOG_CAP = 5000
+
     def __init__(self, fn):
         self.fn = fn
         self.phase = "init"
         self.counts = {}
+        # (t_start, t_end) perf_counter of the first EAGER_LOG_CAP eager calls of the sampling
+        # phase (preflight + initial live points); each eager result is block_until_ready'd
+        # inside the wrapper so t_end includes the device work (the samplers convert every
+        # eager value to a Python float right after the call anyway: values unchanged).
+        self.eager_log = []
 
     def __call__(self, theta):
         import jax
@@ -344,7 +351,13 @@ class CountingLikelihood:
         kind = "traced" if isinstance(theta, jax.core.Tracer) else "eager"
         key = (self.phase, kind)
         self.counts[key] = self.counts.get(key, 0) + 1
-        return self.fn(theta)
+        if kind == "traced":
+            return self.fn(theta)
+        t0 = time.perf_counter()
+        out = jax.block_until_ready(self.fn(theta))
+        if self.phase == "sampling" and len(self.eager_log) < self.EAGER_LOG_CAP:
+            self.eager_log.append((t0, time.perf_counter()))
+        return out
 
     def count(self, phase=None, kind=None):
         return sum(v for (p, k), v in self.counts.items()
@@ -1024,6 +1037,38 @@ def _sanitize_name(label):
     return s or "p"
 
 
+def eager_phases(lk, probe, sampler):
+    """Preflight and initial-live-point phases from the eager-call log (seconds relative to the
+    start of sampling). tinyns: initial live points = eager calls after NestedSampler.run entry
+    and before the first progress row (tinyns/run.py:65-75 evaluates them in a Python loop when
+    the likelihood is not vectorized); dynesty: eager calls inside the NestedSampler constructor."""
+    ev = probe.events
+    t0 = probe.t_sampling0
+    log = lk.eager_log
+    if sampler == "tinyns":
+        a_key, b_key = "sampler_run_entry", "first_progress"
+    else:
+        a_key, b_key = "sampler_construct_entry", "sampler_constructed"
+    ta = (ev.get(a_key) or {}).get("t_perf")
+    tb = (ev.get(b_key) or {}).get("t_perf")
+    out = {"source": f"eager calls between events {a_key} and {b_key}", "eager_log_len": len(log),
+           "eager_log_cap": lk.EAGER_LOG_CAP}
+    if ta is None:
+        return out
+    pre = [c for c in log if c[1] <= ta]
+    ini = [c for c in log if c[0] >= ta and (tb is None or c[1] <= tb)]
+    if pre:
+        out["preflight"] = {"n_eager_calls": len(pre), "t_start_s": pre[0][0] - t0, "t_end_s": pre[-1][1] - t0,
+                            "seconds": pre[-1][1] - pre[0][0], "sum_call_s": sum(b - a for a, b in pre)}
+    if ini:
+        tot = sum(b - a for a, b in ini)
+        out["initial_live_points"] = {"n_eager_calls": len(ini), "t_start_s": ini[0][0] - t0,
+                                      "t_end_s": ini[-1][1] - t0, "seconds": ini[-1][1] - ini[0][0],
+                                      "sum_call_s": tot, "mean_s_per_call": tot / len(ini),
+                                      "log_truncated": len(log) >= lk.EAGER_LOG_CAP}
+    return out
+
+
 def main(argv=None):
     a = parse_args(argv)
     command_line = [sys.executable] + list(sys.argv if argv is None else ["infer_ladder.py"] + argv)
@@ -1299,6 +1344,10 @@ def main(argv=None):
     probe.write_csv(os.path.join(out, "progress.csv"))
     ev = {k: v["t_perf"] - probe.t_sampling0 for k, v in probe.events.items()}
     record["timing"].update(t_sampling_s=t_sampling, sampling_events_s=ev)
+    try:
+        record["timing"]["sampling_eager_phases"] = eager_phases(lk, probe, a.sampler)
+    except Exception as exc:  # noqa: BLE001 - observation only
+        record["timing"]["sampling_eager_phases"] = {"error": f"{type(exc).__name__}: {exc}"}
     record["progress"] = {"csv": os.path.join(out, "progress.csv"), "columns": list(PROGRESS_COLUMNS),
                           **probe.summary(),
                           "log_volume_note": ("tinyns: expected static-NS log X = -iteration/nlive; "
