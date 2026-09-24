@@ -10,8 +10,10 @@ NaN equals NaN, and +/-inf must match exactly.
 
 Refuses (exit 2, summary ``status: refused``) when the two records do not
 describe the same experiment: different schema, plan, coordinates (names or
-bit patterns), input files (sha256), physical dims, or a record whose own plan
-assertions failed. Exit 1 when the comparison ran but parity (at the given
+bit patterns), input files (sha256), physical dims, selection-guard mode or
+``max_likelihood_variance``, or a record whose own plan assertions failed.
+Block sizes may differ (that is how the batched paths are checked against the
+single pass); both sides' values are in the summary. Exit 1 when the comparison ran but parity (at the given
 tolerances), mask equality or repeat consistency failed; 0 otherwise.
 """
 
@@ -42,6 +44,7 @@ ARRAY_FIELDS = ("event_log_evidence", "event_mc_variance")
 MASK_KEYS = ("pe_structural", "pe_support", "pe_final", "sel_structural", "sel_support",
              "sel_final")
 DIM_KEYS = ("n_events", "nsamp", "n_pe_samples", "n_injections", "ndraw")
+LIKELIHOOD_SETTINGS = ("max_likelihood_variance", "selection_neff_soft_guard")
 
 
 def _hexes(rec, field):
@@ -119,6 +122,12 @@ def refusal_reasons(A, B):
     for k in DIM_KEYS:
         if A["dims"].get(k) != B["dims"].get(k):
             r.append(f"dims.{k}: {A['dims'].get(k)} vs {B['dims'].get(k)}")
+    # The guard mode and the variance cap are part of the likelihood's definition:
+    # two records built with different values evaluate different functions.
+    for k in LIKELIHOOD_SETTINGS:
+        va, vb = A["config"].get(k), B["config"].get(k)
+        if va is None or vb is None or va != vb:
+            r.append(f"config.{k}: {va} vs {vb} (different likelihood definition, or not recorded)")
     return r
 
 
@@ -148,6 +157,8 @@ def _side(rec):
         "jax": rec["env"]["versions"].get("jax"),
         "sel_batch_size": rec["config"]["sel_batch_size"],
         "pe_event_block": rec["config"]["pe_event_block"],
+        "max_likelihood_variance": rec["config"].get("max_likelihood_variance"),
+        "selection_neff_soft_guard": rec["config"].get("selection_neff_soft_guard"),
         "plan_adapter": rec["config"].get("plan_adapter") is not None,
         "record": rec.get("_path"),
     }

@@ -176,3 +176,16 @@ def test_compare_refuses_mismatched_experiments(smoke):
     B["inputs"]["pe"]["sha256"] = "0" * 64
     s = compare_records.compare(A, B, 1e-12, 0.0)
     assert s["status"] == "refused" and any("input pe" in r for r in s["refusal_reasons"])
+    for key, value in (("max_likelihood_variance", 2.0), ("selection_neff_soft_guard", True)):
+        B = copy.deepcopy(smoke["records"][(plan, "core", "whole")])
+        B["config"][key] = value
+        s = compare_records.compare(A, B, 1e-12, 0.0)
+        assert s["status"] == "refused" and any(key in r for r in s["refusal_reasons"])
+
+
+@pytest.mark.parametrize("plan", PLANS)
+@pytest.mark.parametrize("impl,jit", [("legacy", "whole"), ("core", "whole"), ("core", "asis")])
+def test_likelihood_settings_are_the_dynesty_defaults(smoke, plan, impl, jit):
+    cfg = smoke["records"][(plan, impl, jit)]["config"]
+    assert cfg["max_likelihood_variance"] == 1.0
+    assert cfg["selection_neff_soft_guard"] is False

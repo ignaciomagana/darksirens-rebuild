@@ -165,8 +165,10 @@ full parameter vector (which must be bit-identical). Per field it reports
 the samples that contribute, and the same three for the unpadded injections), the
 per-event count of contributing samples, the guard verdict and the finiteness of the
 total must be exactly equal. The comparator refuses (exit 2) records with a
-different plan, coordinates, input sha256 or dims, or whose own plan assertions
-failed. Exit 1 = compared but parity, masks or repeat consistency failed.
+different plan, coordinates, input sha256, dims, selection-guard mode or
+`max_likelihood_variance`, or whose own plan assertions failed. Block sizes may
+differ between the two records (that is how a blocked run is checked against the
+single pass); both are listed in the summary. Exit 1 = compared but parity, masks or repeat consistency failed.
 
 Repeat consistency (inside one record): the last coordinate repeats the first; every
 recorded value and mask of the pair, and every timed-loop value of each coordinate,
