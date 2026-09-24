@@ -448,7 +448,10 @@ compile too (`first_call_compile.compiles`).
 
 `COMPONENTS` in `bench_components.py` holds the full references with `path:line`
 and says, per implementation, whether a component is `separable` (a function of the
-implementation), `enclosing`, `transcribed` or `isolated`. Outputs are stored per
+implementation), `enclosing`, `transcribed` or `isolated` (per plan universe where it
+differs: core's spectral `g_prior_eval` is `enclosing`, since `log_comoving_volume_prior`
+rebuilds and normalises the dV/dz grid per call); the compare table shows both kinds and
+names the enclosing components (`w_weights` = a+b+g, `fh_prior_state` = f+h). Outputs are stored per
 coordinate (sha256, shape, min, max, finite counts) and as float64 arrays in FILE
 order (legacy's pixel-sorted injections mapped back) in `<out>.components.npz`;
 arrays larger than `--big-array-elements` (1e6) only for `--full-array-coords`

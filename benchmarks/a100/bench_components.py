@@ -218,6 +218,9 @@ COMPONENTS = [
                      f"({C_}catalog/models.py:123-153); spectral: cosmology.volume."
                      f"log_comoving_volume_prior ({C_}cosmology/volume.py:33-44)"),
         "same_quantity": True, "kind": {"legacy": "separable", "core": "separable"},
+        # spectral plans: core's log_comoving_volume_prior rebuilds and normalises the
+        # dV/dz grid on every call (per side), legacy reads its prepared state
+        "kind_spectral": {"legacy": "separable", "core": "enclosing"},
         "note": ("z from a_cosmology, state from fh_prior_state. Spectral core is ENCLOSING: it "
                  "re-normalises the dV/dz grid per side, which legacy does once in its prepared "
                  "state (a_cosmology). Per-sample log densities are compared under D-catvals "
@@ -1618,7 +1621,8 @@ def main(argv=None):
         ok, why = avail[nm]
         entry = {"letter": c["letter"], "title": c["title"], "legacy_ref": c["legacy_ref"],
                  "core_ref": c["core_ref"], "same_quantity": c["same_quantity"],
-                 "kind": c["kind"][a.impl], "note": c["note"], "available": bool(ok)}
+                 "kind": c.get(f"kind_{universe}", c["kind"])[a.impl], "note": c["note"],
+                 "available": bool(ok)}
         if not ok:
             entry["reason"] = why
             comp_rec[nm] = entry
@@ -2125,9 +2129,9 @@ def summary_markdown(s):
              f"Whole vs main harness bit-identical: A {s['whole_vs_main_bitwise']['a']}, "
              f"B {s['whole_vs_main_bitwise']['b']}. Trace numerics unchanged: "
              f"A {s['trace_numerics_unchanged']['a']}, B {s['trace_numerics_unchanged']['b']}.", "",
-             "| component | parity 1e-12 | criterion | worst key | max_rel | A warm ms | B warm ms | B/A | "
-             "A first s | B first s | A AOT compile s | B AOT compile s | coords elem. |",
-             "|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+             "| component | kind A / B | parity 1e-12 | criterion | worst key | max_rel | A warm ms | B warm ms | "
+             "B/A | A first s | B first s | A AOT compile s | B AOT compile s | coords elem. |",
+             "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in s["rows"]:
         par = {True: "pass", False: "FAIL", None: "n/a"}[r["parity_1e12"]]
         n_unv = sum(len(v) for v in (r.get("unverified_coords") or {}).values())
@@ -2138,12 +2142,18 @@ def summary_markdown(s):
         first_a, first_b = r.get("t_first_call_s_a"), r.get("t_first_call_s_b")
         ratio = r.get("ratio_b_over_a")
         lines.append(
-            f"| {r['component']} | {par} | {crit} | {r.get('worst_key') or ''} | "
+            f"| {r['component']} | {r.get('kind_a') or '-'} / {r.get('kind_b') or '-'} | {par} | {crit} | "
+            f"{r.get('worst_key') or ''} | "
             f"{'' if r.get('max_rel') is None else r['max_rel']} | {_ms(r['warm_median_s_a'])} | "
             f"{_ms(r['warm_median_s_b'])} | {'' if ratio is None else f'{ratio:.2f}'} | "
             f"{_f2(first_a)} | {_f2(first_b)} | {_aot(r, 'a')} | {_aot(r, 'b')} | "
             f"{'' if r.get('coords_elementwise_min') is None else r['coords_elementwise_min']} |")
-    lines += ["", "Sum of component warm medians vs whole (informational):", ""]
+    lines += ["", "Kinds: separable = the implementation's own function; enclosing = the smallest "
+              "enclosing callable (it computes more than the component); transcribed = the kernel's "
+              "inline code run from the implementation's leaf functions; isolated = calls lifted out "
+              "of a larger function. Titles: " + "; ".join(
+                  f"{c['name']} = {c['title']}" for c in COMPONENTS if "encloses" in c["title"]) + ".",
+              "", "Sum of component warm medians vs whole (informational):", ""]
     for side in ("a", "b"):
         sc = (s.get("sum_check") or {}).get(side) or {}
         for k, v in (sc.get("sums") or {}).items():

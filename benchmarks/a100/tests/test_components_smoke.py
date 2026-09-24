@@ -278,6 +278,9 @@ def test_storage_policy_and_classes():
     assert set(bcmp.ORDER) == {c["name"] for c in bcmp.COMPONENTS}
     for c in bcmp.COMPONENTS:
         assert c["legacy_ref"] and c["core_ref"] and set(c["kind"]) == {"legacy", "core"}
+        for u in ("dark", "spectral"):
+            assert set(c.get(f"kind_{u}", c["kind"])) == {"legacy", "core"}
+    assert bcmp.COMPONENT_BY_NAME["g_prior_eval"]["kind_spectral"]["core"] == "enclosing"
 
 
 # ---------------------------------------------------------------------------
