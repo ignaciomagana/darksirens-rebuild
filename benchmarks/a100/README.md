@@ -255,3 +255,11 @@ and the registry view), `diagnostics_provenance`, `gaps`, and for legacy `legacy
   import times are recorded separately and are not part of any gate.
 * Legacy `default` block sizes on a GPU come from its H100-calibrated memory model;
   record `config.block_size_resolution` when comparing defaults.
+* Core `--jit asis` with an explicit `--sel-batch N` and/or `--pe-block N` re-traces and
+  re-compiles its `lax.scan` bodies on every call (measured on CPU, Product A first16 +
+  stride100, `sel 4096 / pe 6`: 2 compile requests per call in the timed loop, 4.9 s
+  median per call against 26 ms for `--jit whole`, 5.4 GB peak RSS). Check
+  `timing.compile.timed_loop` before reading an eager timing.
+* The legacy selection sum runs over pixel-sorted injections and core's over file
+  order, so `log_mu` / `n_eff` can differ in the last bits between the two while
+  every mask is identical.
