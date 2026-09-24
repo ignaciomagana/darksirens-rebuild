@@ -424,7 +424,10 @@ the coordinates, `block_until_ready` each, median/min/mean/std, compile requests
 phase (0 in every timed loop). When a component already ran on coords[0] while the
 inputs of later components were precomputed, that invocation is its first call
 (`first_call_context`). After timing, each component is re-lowered and re-compiled
-from cold in-memory caches (`aot`: trace+lower and compile seconds, module size).
+from cold in-memory caches with the persistent compilation cache disabled for that
+pass (`aot`: trace+lower and compile seconds, module size; `aot_policy`), so an AOT
+compile time is never a cache read. With `--cache-mode cold` the first call is a true
+compile too (`first_call_compile.compiles`).
 
 | component | legacy (c042527) | core (88004d9) |
 |---|---|---|
@@ -493,8 +496,10 @@ whole: the whole jit fuses and CSEs across components, so they need not agree.
 * `python trace_tools.py parse DIR [--top 25] [--json F] [--md F]`: the newest
   `plugins/profile/<session>/*.trace.json.gz` -> top-N ops by self time (children on
   the same thread subtracted) with shares, per category and per kind (fusion, reduce,
-  gather/slice, scatter, control, layout, library, sort, other), device busy time
+  gather/slice, scatter, control, layout, library, sort, transfer, other), device busy time
   (union of the op intervals) and the idle gaps inside each `bench_call` window. On
-  GPU the ops are the `/device:GPU:N` "XLA Ops" line (else its stream lines); on CPU
+  GPU the ops are the `/device:GPU:N` "XLA Ops" line (else its stream lines, each
+  kernel named by its `hlo_op` arg when present; the GPU branch is so far checked on a
+  synthetic trace only); on CPU
   the HLO-named events of the `tf_XLA*` executor threads (so "device time" there is
   host-thread time). The `perfetto_trace.json.gz` next to it opens in ui.perfetto.dev.

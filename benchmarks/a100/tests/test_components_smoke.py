@@ -113,6 +113,23 @@ def test_trace_parser_gpu_prefers_xla_ops_line(tmp_path):
     assert s["gaps"]["count"] == 1 and s["gaps"]["top"][0]["duration_us"] == pytest.approx(10.0)
 
 
+def test_trace_parser_gpu_stream_lines_use_hlo_op(tmp_path):
+    d = tmp_path / "tr"
+    p = d / "plugins" / "profile" / "s" / "h.trace.json.gz"
+    procs = {1: "/device:GPU:0", 7: "/host:CPU"}
+    threads = {(1, 2): "Stream #13(Compute)", (1, 3): "Stream #14(MemcpyH2D)", (7, 1): "python"}
+    k = _x(1, 2, "loop_add_fusion_kernel", 0.0, 10.0)
+    k["args"] = {"hlo_op": "add_fusion.7", "hlo_module": "jit_f"}
+    events = [k, _x(1, 3, "MemcpyH2D", 12.0, 3.0), _x(7, 1, "bench_call", 0.0, 20.0)]
+    _write_trace(str(p), events, procs, threads)
+    s = trace_tools.summarize_trace_dir(str(d))
+    assert s["mode"] == "gpu" and s["op_source"].startswith("GPU stream lines")
+    names = {r["name"]: r for r in s["top_ops"]}
+    assert "add_fusion.7" in names and names["add_fusion.7"]["kind"] == "fusion"
+    assert names["MemcpyH2D"]["kind"] == "transfer"
+    assert s["windows"]["busy_s"] == pytest.approx(13e-6) and s["windows"]["idle_s"] == pytest.approx(7e-6)
+
+
 def test_compare_arrays_semantics():
     a = np.array([1.0, -np.inf, np.nan, 0.0, 2.0])
     r = bcmp.compare_arrays(a, a.copy(), 1e-12)
@@ -241,6 +258,7 @@ def _check_record(path, impl, dark_plan):
     assert r["whole_vs_main_record"]["bitwise"], r["whole_vs_main_record"]
     assert r["repeat_consistency"]["bitwise"]
     assert r["xla_cache"]["mode"] == "cold" and r["xla_cache"]["files_before"] == 0
+    assert r["aot_policy"].startswith("persistent compilation cache disabled")
     expect = {"a_cosmology", "b_population", "c_pop_norm", "w_weights", "d_pe_reduce", "e_sel_reduce",
               "g_prior_eval", "i_whole", "j_transfer"}
     if dark_plan:
@@ -258,6 +276,7 @@ def _check_record(path, impl, dark_plan):
             assert e["repeat_bitwise"], n
             assert not e["jaxpr"]["embeds_data_literal"], n
             assert "t_compile_s" in e["aot"], (n, e["aot"])
+            assert e["aot"]["compile_counter_delta"]["compiles"] >= 1, (n, e["aot"])  # a real compile
     if impl == "legacy":
         lay = r["components"]["k_layout"]["layout"]
         assert lay["order_reproduces_adapter_order"] and lay["permuted_equals_kernel_operands"]
