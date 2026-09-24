@@ -40,6 +40,29 @@ Sources of the numbers (read and printed from both implementations):
   ``pop_model_prior_parser`` / ``get_fixed_population_params`` (legacy
   ``darksirens/gw/populations/registry.py``; core
   ``src/darksirens/population/registry.py``), identical bit for bit.
+
+Dark-siren target (incomplete-catalog conditional estimand, the only one core
+implements; ``--catalog_sky_weighting conditional`` in legacy):
+
+* ``dark_H0``: H0 sampled; population and survey fixed;
+* ``dark_pop``: population sampled; H0 = 67.74 and survey fixed;
+* ``dark_survey``: ``log10n0``, ``delta``, ``sigma_kde`` sampled; H0 and
+  population fixed;
+* ``dark_joint_cosmo_pop``: H0 + the first three population parameters; the
+  rest of the population and the survey fixed;
+* ``dark_joint_cosmo_survey``: H0 + the survey block; population fixed;
+* ``dark_full``: H0 + population + survey.
+
+Om0, w0, wa are fixed as in the spectral plans. Survey fiducials: ``log10n0``
+= -3 (the fixtures' injected density, n0 = 1e-3 Mpc^-3, from their
+``galaxy_density.json`` sidecar; ``dark_fixture.preflight`` asserts that the
+fixture carries exactly this value), ``delta`` = 0 and ``sigma_kde`` = 0, the
+defaults both implementations share (legacy ``darksirens/core/constants.py``
+``SURVEY_PARAMS_FID_BY_NAME``; core ``src/darksirens/catalog/types.py``
+``CatalogParameters``; asserted at runtime from each implementation). Survey
+prior bounds: legacy ``darksirens/inference/prior.py:290-297`` (``_SURVEY_BLOCK``),
+core ``src/darksirens/analysis.py:17-21`` (``_INCOMPLETE_CATALOG_PRIORS``),
+identical; ``b_miss`` is inert in legacy without ``--use_lss`` and absent in core.
 """
 
 from __future__ import annotations
@@ -110,8 +133,26 @@ POPULATION_MODELS = {
     },
 }
 
+#: Survey (incomplete-catalog) block of the dark-siren plans, in plan order.
+SURVEY_LABELS = ("log10n0", "delta", "sigma_kde")
+SURVEY_BOUNDS = {"log10n0": (-4.0, -1.0), "delta": (-3.0, 3.0), "sigma_kde": (0.0, 0.05)}
+SURVEY_PRIOR_KINDS = {n: ["uniform", None, None] for n in SURVEY_LABELS}
+#: log10n0 = the fixtures' injected density (n0 = 1e-3 Mpc^-3); delta and
+#: sigma_kde = the defaults both implementations share (asserted per record).
+SURVEY_FIDUCIALS = {"log10n0": -3.0, "delta": 0.0, "sigma_kde": 0.0}
+#: The log10n0 inference prior of each implementation: (lower, upper, source).
+#: ``dark_fixture.preflight`` refuses a fixture outside either one; every dark
+#: record re-reads both registries and asserts they still equal these bounds.
+LOG10N0_PRIOR = {
+    "legacy": (-4.0, -1.0, "darksirens/inference/prior.py:290 (_SURVEY_BLOCK log10n0)"),
+    "core": (-4.0, -1.0, "src/darksirens/analysis.py:17-18 (_INCOMPLETE_CATALOG_PRIORS)"),
+}
+
 #: ``sample_population``: "none" (population fixed at its fiducials), "all",
 #: or an int k = the first k population parameters in plan order.
+#: ``universe``: "spectral" (no catalog) or "dark" (incomplete-catalog
+#: conditional dark sirens, needs ``--catalog``); ``sample_survey``: "none"
+#: (survey block fixed at SURVEY_FIDUCIALS) or "all" (dark plans only).
 PLANS = {
     "spectral_H0": {
         "population_model": DEFAULT_POPULATION_MODEL,
@@ -143,9 +184,58 @@ PLANS = {
         "sample_population": "all",
         "target": "product_b_variant",
     },
+    "dark_H0": {
+        "population_model": DEFAULT_POPULATION_MODEL,
+        "universe": "dark",
+        "sample_H0": True,
+        "sample_population": "none",
+        "sample_survey": "none",
+        "target": "dark",
+    },
+    "dark_pop": {
+        "population_model": DEFAULT_POPULATION_MODEL,
+        "universe": "dark",
+        "sample_H0": False,
+        "sample_population": "all",
+        "sample_survey": "none",
+        "target": "dark",
+    },
+    "dark_survey": {
+        "population_model": DEFAULT_POPULATION_MODEL,
+        "universe": "dark",
+        "sample_H0": False,
+        "sample_population": "none",
+        "sample_survey": "all",
+        "target": "dark",
+    },
+    "dark_joint_cosmo_pop": {
+        "population_model": DEFAULT_POPULATION_MODEL,
+        "universe": "dark",
+        "sample_H0": True,
+        "sample_population": 3,
+        "sample_survey": "none",
+        "target": "dark",
+    },
+    "dark_joint_cosmo_survey": {
+        "population_model": DEFAULT_POPULATION_MODEL,
+        "universe": "dark",
+        "sample_H0": True,
+        "sample_population": "none",
+        "sample_survey": "all",
+        "target": "dark",
+    },
+    "dark_full": {
+        "population_model": DEFAULT_POPULATION_MODEL,
+        "universe": "dark",
+        "sample_H0": True,
+        "sample_population": "all",
+        "sample_survey": "all",
+        "target": "dark",
+    },
 }
 
 ORDINARY_PLANS = tuple(k for k, v in PLANS.items() if v["target"] == "ordinary")
+DARK_PLANS = tuple(k for k, v in PLANS.items() if v.get("universe") == "dark")
 
 
 def population_spec(model: str) -> dict:
@@ -154,11 +244,24 @@ def population_spec(model: str) -> dict:
     return copy.deepcopy(POPULATION_MODELS[model])
 
 
-def resolve_plan(name: str) -> dict:
+def is_dark(plan) -> bool:
+    """True for a resolved dark-siren plan (or a plan name)."""
+    if isinstance(plan, str):
+        return PLANS[plan].get("universe", "spectral") == "dark"
+    return plan.get("universe", "spectral") == "dark"
+
+
+def resolve_plan(name: str, survey_fixed_override: dict | None = None) -> dict:
     """Expand a plan name into sampled names, bounds, fixed values and fiducials.
 
-    ``full_order`` is H0, Om0, w0, wa followed by the population labels; every
-    name in it has a fiducial, and every name is either sampled or fixed.
+    ``full_order`` is H0, Om0, w0, wa followed by the population labels (and,
+    for a dark plan, the survey labels); every name in it has a fiducial, and
+    every name is either sampled or fixed.
+
+    ``survey_fixed_override`` (dark plans whose survey block is FIXED only)
+    replaces fixed survey values, e.g. ``{"log10n0": log10(5e-5)}`` for the
+    PR-6a fixed-coordinate density check; the resolved plan records it under
+    ``survey_fixed_override`` and the values appear in ``fixed``.
     """
     if name not in PLANS:
         raise KeyError(f"unknown plan {name!r}; known: {sorted(PLANS)}")
@@ -172,6 +275,10 @@ def resolve_plan(name: str) -> dict:
         pop_sampled = []
     else:
         pop_sampled = list(labels[: int(k)])
+    dark = p.get("universe", "spectral") == "dark"
+    survey_labels = list(SURVEY_LABELS) if dark else []
+    ks = p.get("sample_survey", "none")
+    survey_sampled = list(survey_labels) if (dark and ks == "all") else []
 
     fiducials = {H0_LABEL: H0_FIDUCIAL, **FIXED_COSMOLOGY}
     fiducials.update(dict(zip(labels, pop["fiducials"])))
@@ -179,11 +286,23 @@ def resolve_plan(name: str) -> dict:
     bounds.update({lab: [lo, hi] for lab, lo, hi in zip(labels, pop["lower"], pop["upper"])})
     kinds = {H0_LABEL: ["uniform", None, None]}
     kinds.update(dict(zip(labels, pop["prior_kinds"])))
+    if dark:
+        fiducials.update({n: SURVEY_FIDUCIALS[n] for n in survey_labels})
+        bounds.update({n: list(SURVEY_BOUNDS[n]) for n in survey_labels})
+        kinds.update({n: list(SURVEY_PRIOR_KINDS[n]) for n in survey_labels})
 
-    sampled = ([H0_LABEL] if p["sample_H0"] else []) + pop_sampled
-    full_order = list(COSMOLOGY_ORDER) + list(labels)
+    sampled = ([H0_LABEL] if p["sample_H0"] else []) + pop_sampled + survey_sampled
+    full_order = list(COSMOLOGY_ORDER) + list(labels) + survey_labels
     fixed = {n: fiducials[n] for n in full_order if n not in sampled}
-    return {
+    if survey_fixed_override:
+        if not dark or survey_sampled:
+            raise ValueError(f"survey_fixed_override needs a dark plan with a FIXED survey block; "
+                             f"{name!r} is not one")
+        unknown = set(survey_fixed_override) - set(survey_labels)
+        if unknown:
+            raise ValueError(f"survey_fixed_override: unknown survey labels {sorted(unknown)}")
+        fixed.update({n: float(v) for n, v in survey_fixed_override.items()})
+    out = {
         "name": name,
         "target": p["target"],
         "population_model": p["population_model"],
@@ -208,6 +327,45 @@ def resolve_plan(name: str) -> dict:
         "H0_fiducial": H0_FIDUCIAL,
         "fixed_cosmology": dict(FIXED_COSMOLOGY),
     }
+    if dark:
+        out.update({
+            "universe": "dark",
+            "sample_survey": ks,
+            "survey_labels": survey_labels,
+            "survey_lower": [SURVEY_BOUNDS[n][0] for n in survey_labels],
+            "survey_upper": [SURVEY_BOUNDS[n][1] for n in survey_labels],
+            "survey_prior_kinds": [list(SURVEY_PRIOR_KINDS[n]) for n in survey_labels],
+            "survey_fiducials": [SURVEY_FIDUCIALS[n] for n in survey_labels],
+            "survey_fixed_override": dict(survey_fixed_override or {}),
+            "log10n0_prior": {k2: list(v[:2]) for k2, v in LOG10N0_PRIOR.items()},
+            # The decoded full vector reports n0 = 10**log10n0 (both decoders
+            # return n0, not its log): ``decoded_order`` names that slot.
+            "decoded_order": [("n0" if n == "log10n0" else n) for n in full_order],
+        })
+    return out
+
+
+def label_bounds(plan: dict, label: str) -> list:
+    """[lower, upper] of any sampleable label of a resolved plan."""
+    if label == H0_LABEL:
+        return list(plan["H0_bounds"])
+    if label in plan["population_labels"]:
+        i = plan["population_labels"].index(label)
+        return [plan["population_lower"][i], plan["population_upper"][i]]
+    if label in plan.get("survey_labels", ()):
+        i = plan["survey_labels"].index(label)
+        return [plan["survey_lower"][i], plan["survey_upper"][i]]
+    raise KeyError(label)
+
+
+def label_kind(plan: dict, label: str) -> list:
+    if label == H0_LABEL:
+        return ["uniform", None, None]
+    if label in plan["population_labels"]:
+        return list(plan["population_prior_kinds"][plan["population_labels"].index(label)])
+    if label in plan.get("survey_labels", ()):
+        return list(plan["survey_prior_kinds"][plan["survey_labels"].index(label)])
+    raise KeyError(label)
 
 
 def plan_summary(name: str) -> dict:
@@ -217,6 +375,7 @@ def plan_summary(name: str) -> dict:
         "sampled": r["sampled"],
         "fixed": r["fixed"],
         "model": r["population_model"],
+        "universe": r.get("universe", "spectral"),
         "fiducials": r["fiducials"],
         "H0_bounds": r["H0_bounds"],
     }
