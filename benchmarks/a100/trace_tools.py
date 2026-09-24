@@ -182,6 +182,15 @@ def summarize_trace_file(path, top_n=25, annotation=ANNOTATION):
                and "::" not in e["name"] and " " not in e["name"] and "(" not in e["name"]
                and not e["name"].startswith("$") and _HLO_NAME.fullmatch(e["name"])]
         src = "CPU XLA executor threads (tf_XLA*), HLO-instruction-named events"
+        if gpu_pids and not ops:
+            # A GPU run whose device line is empty: the device tracer (CUPTI) recorded
+            # nothing, so there is no op-level device time at all. Say so instead of
+            # reporting an empty CPU table (js2a100's vGPU: cuptiSubscribe fails with
+            # CUPTI_ERROR_NOT_INITIALIZED in the process's stderr).
+            mode = "gpu_no_device_activity"
+            src = ("none: the /device:GPU process has no events (device tracer / CUPTI "
+                   "recorded no activity; check the process stderr for cupti errors). Only the "
+                   "host-side breakdown (host_side) is available")
     by_thread = {}
     for e in ops:
         by_thread.setdefault((e["pid"], e["tid"]), []).append(e)
@@ -252,6 +261,7 @@ def summarize_trace_file(path, top_n=25, annotation=ANNOTATION):
     for r in top_cats:
         r["kind"] = kind(r["name"])
     gl = [g["duration_us"] for g in gaps]
+    host_side = _host_side(X, pname, windows)
     return {
         "schema": SUMMARY_SCHEMA,
         "all_ops_self_s": {k: v["self_us"] * 1e-6 for k, v in rows.items()},
@@ -294,7 +304,40 @@ def summarize_trace_file(path, top_n=25, annotation=ANNOTATION):
             "gt_1ms": sum(g > 1000 for g in gl), "total_s": sum(gl) * 1e-6,
             "top": sorted(gaps, key=lambda g: -g["duration_us"])[:10],
         },
+        "host_side": host_side,
     }
+
+
+#: host-side (python thread) events of one jitted call: the PJRT execute (enqueue of the
+#: executable on the device stream) and the wait in block_until_ready.
+_ENQUEUE_NAMES = ("PJRT_LoadedExecutable_Execute", "PjRtStreamExecutorLoadedExecutable::Execute",
+                  "PjRtCpuExecutable::Execute", "TfrtCpuExecutable::Execute")
+
+
+def _host_side(X, pname, windows):
+    """Per annotated call: host enqueue time and the block_until_ready wait (mean, s).
+
+    Backend-neutral and independent of the device tracer. With an asynchronous GPU
+    dispatch, call window - enqueue ~ time the host waits for the device."""
+    host = {p for p, n in pname.items() if str(n).startswith("/host:CPU")}
+    hx = [e for e in X if e["pid"] in host]
+    enq_name = next((n for n in _ENQUEUE_NAMES if any(e["name"] == n for e in hx)), None)
+    out = {"enqueue_event": enq_name, "n_windows": len(windows)}
+    if not windows:
+        return out
+    enq, blk = [], []
+    for w0, w1 in windows:
+        inside = [e for e in hx if float(e["ts"]) >= w0 and float(e["ts"]) + float(e["dur"]) <= w1]
+        enq.append(sum(float(e["dur"]) for e in inside if e["name"] == enq_name) if enq_name else 0.0)
+        bl = [float(e["dur"]) for e in inside if e["name"].endswith(" block_until_ready")]
+        blk.append(max(bl) if bl else 0.0)
+    n = len(windows)
+    out.update(enqueue_mean_s=sum(enq) / n * 1e-6, block_until_ready_mean_s=sum(blk) / n * 1e-6,
+               window_mean_s=sum(w1 - w0 for w0, w1 in windows) / n * 1e-6,
+               note=("enqueue = the PJRT execute call on the host; block_until_ready = the host "
+                     "wait for the result (python tracer events); on an asynchronous GPU "
+                     "the wait is the device time not overlapped with the enqueue"))
+    return out
 
 
 def summarize_trace_dir(trace_dir, top_n=25, annotation=ANNOTATION):
@@ -314,6 +357,9 @@ def summary_markdown(s, title=None):
              f"{_f(d['op_self_total_s'])} s, mean concurrency {_f(d['mean_concurrency'])}",
              f"* gaps: {s['gaps']['count']} (> 10 us: {s['gaps']['gt_10us']}, > 100 us: "
              f"{s['gaps']['gt_100us']}, > 1 ms: {s['gaps']['gt_1ms']}), total {_f(s['gaps']['total_s'])} s",
+             f"* host side: enqueue ({(s.get('host_side') or {}).get('enqueue_event')}) mean "
+             f"{_f((s.get('host_side') or {}).get('enqueue_mean_s'))} s, block_until_ready wait mean "
+             f"{_f((s.get('host_side') or {}).get('block_until_ready_mean_s'))} s per call",
              "", "| rank | op | category | kind | count | self s | share | mean us | HLO shape (axis) | "
              "fused source lines (HLO) |",
              "|---|---|---|---|---|---|---|---|---|---|"]
@@ -361,8 +407,8 @@ def write_summary(summary, json_path=None, md_path=None, title=None):
 
 
 def compact(summary, n=10):
-    out = {k: summary[k] for k in ("mode", "op_source", "n_op_events", "windows", "device_time",
-                                   "by_kind", "gaps")} | {"top_ops": summary["top_ops"][:n],
+    out = {k: summary.get(k) for k in ("mode", "op_source", "n_op_events", "windows", "device_time",
+                                       "by_kind", "gaps", "host_side")} | {"top_ops": summary["top_ops"][:n],
                                                           "trace_file": summary["trace_file"]}
     if summary.get("hlo_annotation"):
         ha = summary["hlo_annotation"]

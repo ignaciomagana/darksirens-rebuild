@@ -116,6 +116,29 @@ def test_trace_parser_gpu_prefers_xla_ops_line(tmp_path):
     assert s["gaps"]["count"] == 1 and s["gaps"]["top"][0]["duration_us"] == pytest.approx(10.0)
 
 
+def test_trace_parser_gpu_without_device_activity(tmp_path):
+    """A GPU trace whose device line is empty (no CUPTI activity) is labelled, not 'cpu'."""
+    d = tmp_path / "tr"
+    p = d / "plugins" / "profile" / "s" / "h.trace.json.gz"
+    procs = {1: "/device:GPU:0", 7: "/host:CPU"}
+    threads = {(7, 1): "python", (7, 2): "tf_pjrt_thread_pool/1"}
+    events = [_x(7, 1, "bench_call", 0.0, 100.0),
+              _x(7, 1, "PjRtStreamExecutorLoadedExecutable::Execute", 5.0, 20.0),
+              _x(7, 1, "$api.py:2721 block_until_ready", 30.0, 60.0),
+              _x(7, 1, "bench_call", 200.0, 100.0),
+              _x(7, 1, "PjRtStreamExecutorLoadedExecutable::Execute", 205.0, 10.0),
+              _x(7, 1, "$api.py:2721 block_until_ready", 220.0, 70.0)]
+    _write_trace(str(p), events, procs, threads)
+    s = trace_tools.summarize_trace_dir(str(d))
+    assert s["mode"] == "gpu_no_device_activity" and s["n_op_events"] == 0
+    h = s["host_side"]
+    assert h["enqueue_event"] == "PjRtStreamExecutorLoadedExecutable::Execute"
+    assert h["enqueue_mean_s"] == pytest.approx(15e-6)
+    assert h["block_until_ready_mean_s"] == pytest.approx(65e-6)
+    assert h["window_mean_s"] == pytest.approx(100e-6)
+    assert "host side" in trace_tools.summary_markdown(s)
+
+
 def test_trace_parser_gpu_stream_lines_use_hlo_op(tmp_path):
     d = tmp_path / "tr"
     p = d / "plugins" / "profile" / "s" / "h.trace.json.gz"
