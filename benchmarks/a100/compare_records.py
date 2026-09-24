@@ -18,7 +18,6 @@ tolerances), mask equality or repeat consistency failed; 0 otherwise.
 from __future__ import annotations
 
 import argparse
-import json
 import math
 import os
 import sys
@@ -203,9 +202,17 @@ def compare(A, B, rtol, atol):
         masks_equal &= row["guard_pass"] and row["total_finite"]
         row["counts_A"] = {k: pa["masks"][k]["count_true"] for k in MASK_KEYS}
         mask_rows.append(row)
-    summary["masks"] = {"all_equal": bool(masks_equal), "per_coord": mask_rows,
+    order_ok = all(
+        rec.get("mask_order", {}).get("pe_dL_equals_file") is True
+        and rec.get("mask_order", {}).get("sel_dL_equals_file") is True
+        for rec in (A, B))
+    masks_equal = bool(masks_equal and order_ok)
+    summary["masks"] = {"all_equal": masks_equal, "order_verified_both": bool(order_ok),
+                        "per_coord": mask_rows,
                         "note": "mask equality = identical length, count and sha256 of the "
-                                "uint8 mask; guard verdict and finiteness of the total also"}
+                                "uint8 mask in FILE order (each record verifies its order "
+                                "against the HDF5 dL datasets); guard verdict and finiteness "
+                                "of the total must also agree"}
 
     summary["repeat_consistency"] = {
         "A": {"bitwise": A["repeat_consistency"]["bitwise"],

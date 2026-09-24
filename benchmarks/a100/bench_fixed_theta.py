@@ -23,7 +23,8 @@ writes ONE record JSON (schema in README.md). Order of work:
 
 Exit status: 0 = record written and the plan assertions held; 3 = plan
 assertion failed (record still written with ``status: plan_mismatch``);
-2 = usage / input error.
+4 = the implementation refused to load or build (record written with
+``status: build_error`` and the exception); 2 = usage / input error.
 """
 
 from __future__ import annotations
@@ -211,7 +212,6 @@ def main(argv=None):
     import jax
 
     counter = bc.CompileCounter().install()
-    import jax.numpy as jnp  # noqa: F401
     t_import_jax = time.perf_counter() - t0
 
     t0 = time.perf_counter()
@@ -264,7 +264,25 @@ def main(argv=None):
     # ---- load + build ------------------------------------------------------
     clock.mark("build_start")
     snap = counter.snapshot()
-    adapter.build()
+    try:
+        adapter.build()
+    except Exception as exc:
+        import traceback
+
+        record["status"] = "build_error"
+        record["build_error"] = {
+            "type": type(exc).__name__,
+            "message": str(exc),
+            "traceback_tail": traceback.format_exc()[-4000:],
+            "stage_timing": dict(adapter.timing),
+        }
+        if a.impl == "legacy":
+            record["build_error"]["legacy_cli_args"] = adapter.cli_argv
+            adapter.remove_save_dir()
+        record["finished_utc"] = bc.utc_now()
+        bc.write_json(a.out, record)
+        print(f"BUILD ERROR ({a.impl}, plan {a.plan}): {type(exc).__name__}: {exc}", file=sys.stderr)
+        return 4
     compile_build = counter.delta(snap)
     clock.mark("build_end")
     mem.append(bc.memory_checkpoint("after_build"))
@@ -421,6 +439,23 @@ def main(argv=None):
             "timed_values_hex": timed_hex[i],
         })
     mem.append(bc.memory_checkpoint("after_diagnostics"))
+
+    # ---- masks are reported in FILE order: prove it against the HDF5 datasets --
+    import h5py
+
+    pe_dL, sel_dL = adapter.mask_order_dL()
+    with h5py.File(a.pe, "r") as f:
+        file_pe_dL = np.asarray(f["dL"][()], dtype=np.float64)
+    with h5py.File(a.sel, "r") as f:
+        file_sel_dL = np.asarray(f["dL"][()], dtype=np.float64)
+    record["mask_order"] = {
+        "order": "file order of the PE and selection HDF5 datasets",
+        "pe_dL_equals_file": bool(np.array_equal(pe_dL, file_pe_dL)),
+        "sel_dL_equals_file": bool(np.array_equal(sel_dL, file_sel_dL)),
+    }
+    if not (record["mask_order"]["pe_dL_equals_file"] and record["mask_order"]["sel_dL_equals_file"]):
+        record["gaps"].append("mask order could not be verified against the file order "
+                              "(dL arrays differ): mask sha256 comparisons are not meaningful")
 
     # ---- repeat consistency ---------------------------------------------------
     rep_pairs = [(int(k), int(v)) for k, v in (coords_doc.get("repeat_of") or {}).items()]

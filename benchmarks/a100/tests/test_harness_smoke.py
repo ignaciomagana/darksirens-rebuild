@@ -134,6 +134,8 @@ def test_record_schema_and_invariants(smoke, plan, impl, jit):
     for pc in rec["values"]["per_coord"]:
         for k in REQUIRED_PER_COORD:
             assert k in pc, k
+    assert rec["mask_order"]["pe_dL_equals_file"] is True
+    assert rec["mask_order"]["sel_dL_equals_file"] is True
     assert rec["repeat_consistency"]["bitwise"] is True
     assert rec["repeat_consistency"]["timed_loop_bitwise_consistent"] is True
     assert rec["timing"]["warm"]["n"] == 20

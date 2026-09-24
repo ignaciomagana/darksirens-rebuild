@@ -363,6 +363,12 @@ class CoreAdapter:
         b = self.bound
         return run(b.gw_pe, int(b.gw_pe.dL.shape[0])), run(b.gw_selection, self.dims()["n_injections"])
 
+    def mask_order_dL(self):
+        """(PE dL, selection dL) in the order the masks are reported."""
+        b = self.bound
+        return (np.asarray(b.gw_pe.dL, dtype=np.float64),
+                np.asarray(b.gw_selection.dL, dtype=np.float64)[: self.dims()["n_injections"]])
+
     # ----------------------------------------------------------- jit evidence
     def jit_evidence(self, coord_np):
         from bench_common import aot_report, jaxpr_const_report

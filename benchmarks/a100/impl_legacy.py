@@ -108,7 +108,6 @@ class LegacyAdapter:
 
     # ------------------------------------------------------------------ build
     def build(self):
-        import jax  # noqa: F401
         from darksirens.cli import inference as cli
 
         os.makedirs(self.save_dir, exist_ok=True)
@@ -150,7 +149,47 @@ class LegacyAdapter:
         self.pe_event_block = opts.pe_event_block
         self.max_likelihood_variance = float(opts.max_likelihood_variance)
         self.soft_guard = bool(getattr(opts, "selection_neff_soft_guard", False))
+        self._injection_order()
         self._build_diag_fns()
+
+    def _injection_order(self):
+        """Legacy's build-time injection permutation, recovered and verified.
+
+        ``make_likelihood`` stably sorts the injections by their catalog pixel
+        (``darksirens/likelihood/factory.py:1140-1163``, applied at
+        ``:2687-2693``); a spectral run has no catalog and gets nside-1 pixels,
+        so the selection arrays inside the kernel are a permutation of the file
+        order that core keeps. Selection masks are mapped back to file order
+        with this permutation, verified bit for bit against the loaded ``dLsels``.
+        """
+        import hashlib
+
+        from darksirens.likelihood.factory import _injection_pixel_order
+
+        n = self.n_injections
+        pix = np.asarray(self.data["pixels_sel"])
+        order = _injection_pixel_order(pix)
+        permuted = order is not None
+        if order is None:
+            order = np.arange(n)
+        order = np.asarray(order, dtype=np.int64)
+        file_dL = np.asarray(self.data["dLsels"], dtype=np.float64)
+        int_dL = np.asarray(self.gw_sel.dL, dtype=np.float64)[:n]
+        verified = bool(np.array_equal(int_dL, file_dL[order]))
+        if not verified:
+            raise RuntimeError("could not reproduce legacy's injection permutation; "
+                               "selection masks cannot be mapped to file order")
+        self.sel_order = order
+        self.injection_order_info = {
+            "permuted": permuted,
+            "n_unique_pixels_sel": int(np.unique(pix).size),
+            "nside": self.data.get("nside"),
+            "source": ("darksirens/likelihood/factory.py:1140-1163 _injection_pixel_order"
+                       "(data['pixels_sel']), applied at :2687-2693"),
+            "verified_internal_dL_equals_file_dL_permuted": verified,
+            "order_sha256": hashlib.sha256(order.tobytes()).hexdigest(),
+            "masks_reported_in": "file order (permutation undone)",
+        }
 
     def operands_for_sync(self):
         lk = self.likelihood
@@ -187,6 +226,7 @@ class LegacyAdapter:
             "population_fiducials": getattr(o, "population_fiducials", None),
             "sampler_seed": getattr(o, "seed", None),
             "plan_adapter": None,
+            "legacy_injection_order": self.injection_order_info,
         }
 
     def dims(self):
@@ -447,7 +487,20 @@ class LegacyAdapter:
             return [np.concatenate([o[i] for o in outs]) for i in range(3)]
 
         pe = run(self.gw_pe, int(self.gw_pe.dL.shape[0]), False)
-        sel = run(self.gw_sel, self.n_injections, True)  # unpadded prefix only
+        sel_internal = run(self.gw_sel, self.n_injections, True)  # unpadded prefix only
+        sel = []
+        for m in sel_internal:  # internal row j is file row sel_order[j]
+            f = np.empty_like(m)
+            f[self.sel_order] = m
+            sel.append(f)
+        return pe, sel
+
+    def mask_order_dL(self):
+        """(PE dL, selection dL) in the order the masks are reported."""
+        pe = np.asarray(self.gw_pe.dL, dtype=np.float64)
+        internal = np.asarray(self.gw_sel.dL, dtype=np.float64)[: self.n_injections]
+        sel = np.empty_like(internal)
+        sel[self.sel_order] = internal
         return pe, sel
 
     # ----------------------------------------------------------- jit evidence
