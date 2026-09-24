@@ -315,6 +315,40 @@ def _nvidia_smi():
         return None
 
 
+def _nvidia_smi_extra():
+    """Optional GPU details; any failure (old driver, unknown field) returns None."""
+    out = {}
+    try:
+        r = subprocess.run(
+            ["nvidia-smi", "--query-gpu=compute_cap,pci.bus_id,persistence_mode,mig.mode.current,"
+             "clocks.max.sm,clocks.max.memory,power.limit,ecc.mode.current",
+             "--format=csv,noheader"], capture_output=True, text=True, timeout=20)
+        if r.returncode == 0:
+            keys = ("compute_cap", "pci_bus_id", "persistence_mode", "mig_mode", "clocks_max_sm",
+                    "clocks_max_memory", "power_limit", "ecc_mode")
+            out["gpus"] = [dict(zip(keys, [p.strip() for p in line.split(",")]))
+                           for line in r.stdout.strip().splitlines()]
+    except Exception:
+        pass
+    try:
+        r = subprocess.run(["nvidia-smi"], capture_output=True, text=True, timeout=20)
+        m = re.search(r"CUDA Version:\s*([0-9.]+)", r.stdout)
+        out["driver_cuda_version"] = m.group(1) if m else None
+    except Exception:
+        pass
+    return out or None
+
+
+def _platform_version():
+    """XLA backend platform version (e.g. the CUDA runtime jaxlib was built against)."""
+    try:
+        from jax.lib import xla_bridge
+
+        return str(xla_bridge.get_backend().platform_version)
+    except Exception:
+        return None
+
+
 def _cpu_model():
     try:
         with open("/proc/cpuinfo") as f:
@@ -340,6 +374,7 @@ def device_fingerprint(requested: str) -> dict:
         "x64": bool(jax.config.jax_enable_x64),
         "matmul_precision": str(jax.config.jax_default_matmul_precision),
         "xla_cache_dir": jax.config.jax_compilation_cache_dir,
+        "platform_version": _platform_version(),
         "cpu": {"model": _cpu_model(), "os_cpu_count": os.cpu_count(),
                 "affinity": len(os.sched_getaffinity(0)) if hasattr(os, "sched_getaffinity") else None},
         "gpu": None,
@@ -352,6 +387,8 @@ def device_fingerprint(requested: str) -> dict:
             stats = None
         out["gpu"] = {
             "nvidia_smi": _nvidia_smi(),
+            "nvidia_smi_extra": _nvidia_smi_extra(),
+            "compute_capability": [getattr(d, "compute_capability", None) for d in devs],
             "bytes_limit": (stats or {}).get("bytes_limit"),
         }
     return out

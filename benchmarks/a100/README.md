@@ -237,8 +237,10 @@ and `known_digest_match`: sha256 over the git blob ids of the package's `*.py` f
 matched to c042527 / core 88004d9 / core pin 8bf2bec5, so a non-editable install is
 still tied to a commit), `env` (python, jax, jaxlib, numpy, scipy, h5py, astropy,
 equinox, gwcat versions, CUDA wheels, `JAX_*`/`XLA_*`/`DARKSIRENS_*` variables),
-`device` (backend, devices, kind, x64, matmul precision, XLA cache dir, CPU model,
-GPU name/VRAM/driver via nvidia-smi), `inputs.{pe,sel}` (path, bytes, sha256,
+`device` (backend, devices, kind, x64, matmul precision, XLA cache dir, XLA platform
+version, CPU model; on GPU: name/VRAM/driver/uuid via nvidia-smi, plus, best effort,
+compute capability, PCI bus id, persistence/MIG/ECC mode, max clocks, power limit
+and the driver's CUDA version), `inputs.{pe,sel}` (path, bytes, sha256,
 `format_version`, `parameter_space`, `spin_basis`, `contract_hash`, `nobs`, `nsamp`,
 `ndraw`, `n_detected`, `T_obs_yr`, fit/advisory columns), `plan` (the resolved plan),
 `config` (kernel, jit mode, legacy CLI args, requested/resolved blocks, guard,
