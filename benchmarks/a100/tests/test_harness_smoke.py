@@ -17,7 +17,16 @@ Configuration (environment):
   BENCH_CORE_PYTHON    interpreter with darksirens-core (default: the review venv)
   BENCH_CORE_REPO      darksirens-core checkout providing tools/make_gw_fixtures.py
   BENCH_SMOKE_PLANS    comma-separated subset of plans (default: the four ordinary plans)
+  BENCH_DARK_FIXTURE   dark-siren mock fixture directory with galaxy_density.json (default:
+                       the campaign's fixture T on Hildafs); the dark tests skip without it
+  BENCH_SMOKE_DARK_PLANS  comma-separated subset of dark plans (default: all six)
 Run with JAX_PLATFORMS=cpu; the subprocesses force it.
+
+The dark-siren part runs every dark plan on fixture T (8 events x 64 samples,
+19,943 injections, nside 16) for legacy, core whole and core asis, with 5 timed
+calls (timing is not what it checks), and asserts the record schema, the fixture
+pre-flight, the catalog-side diagnostics and legacy-vs-core parity at rtol 1e-12
+including the catalog structure, the empty-row sets and the catalog-side values.
 """
 
 from __future__ import annotations
@@ -25,6 +34,7 @@ from __future__ import annotations
 import concurrent.futures as cf
 import copy
 import json
+import math
 import os
 import subprocess
 import sys
@@ -46,6 +56,9 @@ CORE_PY = os.environ.get(
     "review-state/venv/bin/python")
 CORE_REPO = os.environ.get("BENCH_CORE_REPO", "/hildafs/projects/phy230014p/magana/darksirens-core")
 PLANS = [p for p in os.environ.get("BENCH_SMOKE_PLANS", ",".join(plans.ORDINARY_PLANS)).split(",") if p]
+DARK_FIXTURE = os.environ.get("BENCH_DARK_FIXTURE", f"{_LOCAL}/mock/fixtures/T")
+DARK_PLANS = [p for p in os.environ.get("BENCH_SMOKE_DARK_PLANS", ",".join(plans.DARK_PLANS)).split(",")
+              if p]
 SEED = 20260924
 
 REQUIRED_TOP = ("schema", "status", "label", "implementation", "command_line", "package", "env",
@@ -189,3 +202,189 @@ def test_likelihood_settings_are_the_dynesty_defaults(smoke, plan, impl, jit):
     cfg = smoke["records"][(plan, impl, jit)]["config"]
     assert cfg["max_likelihood_variance"] == 1.0
     assert cfg["selection_neff_soft_guard"] is False
+
+
+# ---------------------------------------------------------------------------
+# Dark sirens on the campaign's mock fixture T
+# ---------------------------------------------------------------------------
+def _dark_inputs(fixture_dir):
+    with open(os.path.join(fixture_dir, "galaxy_density.json")) as f:
+        sc = json.load(f)
+    hi = sc["harness_inputs"]
+    return (os.path.join(fixture_dir, hi["pe"]), os.path.join(fixture_dir, hi["sel"]),
+            os.path.join(fixture_dir, hi["catalog"]), sc)
+
+
+@pytest.fixture(scope="session")
+def dark_smoke(tmp_path_factory):
+    for p in (LEGACY_PY, CORE_PY, os.path.join(DARK_FIXTURE, "galaxy_density.json")):
+        _need(p)
+    pe, sel, cat, sc = _dark_inputs(DARK_FIXTURE)
+    work = str(tmp_path_factory.mktemp("bench_dark_smoke"))
+    jobs = {}
+    for plan in DARK_PLANS:
+        coords = os.path.join(work, f"coords_{plan}.json")
+        r = _run([sys.executable, os.path.join(BENCH, "make_coords.py"), "--plan", plan,
+                  "--seed", str(SEED), "--n", "4", "--out", coords], work)
+        assert r["rc"] == 0, r
+        for impl, jit, py in (("legacy", "whole", LEGACY_PY), ("core", "whole", CORE_PY),
+                              ("core", "asis", CORE_PY)):
+            out = os.path.join(work, f"{plan}_{impl}_{jit}.json")
+            cmd = [py, os.path.join(BENCH, "bench_fixed_theta.py"), "--impl", impl, "--pe", pe,
+                   "--sel", sel, "--catalog", cat, "--plan", plan, "--coords", coords,
+                   "--out", out, "--n-calls", "5", "--warmup", "1", "--jit", jit,
+                   "--sel-batch", "none", "--pe-block", "none", "--seed", str(SEED),
+                   "--label", f"dark_smoke_{plan}_{impl}_{jit}", "--device", "cpu"]
+            jobs[(plan, impl, jit)] = (cmd, out)
+    results = {}
+    with cf.ThreadPoolExecutor(max_workers=min(len(jobs), max(2, (os.cpu_count() or 4) // 2))) as ex:
+        futs = {ex.submit(_run, cmd, work): key for key, (cmd, _out) in jobs.items()}
+        for fut in cf.as_completed(futs):
+            results[futs[fut]] = fut.result()
+    records = {}
+    for key, (_cmd, out) in jobs.items():
+        assert results[key]["rc"] == 0, results[key]
+        with open(out) as f:
+            records[key] = json.load(f)
+            records[key]["_path"] = out
+    return {"work": work, "records": records, "sidecar": sc, "inputs": (pe, sel, cat)}
+
+
+@pytest.mark.parametrize("plan", DARK_PLANS)
+@pytest.mark.parametrize("impl,jit", [("legacy", "whole"), ("core", "whole"), ("core", "asis")])
+def test_dark_record_schema_and_invariants(dark_smoke, plan, impl, jit):
+    rec = dark_smoke["records"][(plan, impl, jit)]
+    for k in REQUIRED_TOP + ("fixture_preflight", "catalog_arrays"):
+        assert k in rec, k
+    assert rec["status"] == "ok"
+    assert rec["plan"]["universe"] == "dark"
+    assert rec["plan_assertions"]["registry"] == "ok"
+    assert rec["plan_assertions"]["decode"] == "ok"
+    assert rec["fixture_preflight"]["status"] == "ok"
+    assert rec["fixture_preflight"]["log10n0"] == -3.0
+    assert all(rec["fixture_preflight"]["inside_prior"].values())
+    cat = rec["dims"]["catalog"]
+    assert cat["present"] is True and cat["nside"] == dark_smoke["sidecar"]["nside"]
+    for k in ("n_rows", "n_max", "n_rows_occupied", "n_rows_empty", "z_depth", "union_pixels_sha256"):
+        assert k in cat, k
+    npz = os.path.join(os.path.dirname(rec["_path"]), rec["catalog_arrays"]["file"])
+    assert os.path.isfile(npz)
+    assert compare_records.bc.sha256_file(npz) == rec["catalog_arrays"]["sha256"]
+    for pc in rec["values"]["per_coord"]:
+        for k in REQUIRED_PER_COORD + ("catalog",):
+            assert k in pc, k
+        assert len(pc["catalog"]["event_log_evidence_catalog_branch"]["hex"]) == rec["dims"]["n_events"]
+    assert rec["mask_order"]["pe_dL_equals_file"] is True
+    assert rec["mask_order"]["sel_dL_equals_file"] is True
+    assert rec["repeat_consistency"]["bitwise"] is True
+    assert rec["repeat_consistency"]["timed_loop_bitwise_consistent"] is True
+    assert rec["timing"]["compile"]["hook_selftest"]["ok"] is True
+    # decoded vector: n0 = 10**log10n0 in the survey slot
+    names = rec["values"]["per_coord"][0]["decoded_full"]["names"]
+    assert names[-3:] == ["n0", "delta", "sigma_kde"]
+    if rec["plan"]["sample_survey"] == "none":
+        n0 = float.fromhex(rec["values"]["per_coord"][0]["decoded_full"]["hex"][-3])
+        assert abs(n0 - 1.0e-3) <= 1e-18
+    if (impl, jit) != ("core", "asis"):
+        assert rec["timing"]["compile"]["timed_loop"]["requests"] == 0
+        assert rec["jit_evidence"]["jaxpr"]["embeds_data_literal"] is False
+    if impl == "legacy":
+        assert rec["package"]["known_digest_match"]["sha"].startswith("c042527")
+        res = rec["config"]["dark_settings"]["resolved"]
+        assert res["catalog_sky_weighting"] == "conditional"
+        assert res["kde_window_resolved"] is None and res["frozen_redshift_prior"] is False
+        assert res["c_mode"] == "per_pixel" and res["use_LSS"] is False
+        assert res["drop_full_catalog"] is False
+        assert all(pc["kernel_vs_diag_total"]["bitwise"] for pc in rec["values"]["per_coord"])
+    else:
+        assert rec["config"]["universe_model"].startswith("dark_sirens")
+
+
+@pytest.mark.parametrize("plan", DARK_PLANS)
+@pytest.mark.parametrize("jit", ["whole", "asis"])
+def test_dark_legacy_core_parity_1e12(dark_smoke, plan, jit):
+    A = dark_smoke["records"][(plan, "legacy", "whole")]
+    B = dark_smoke["records"][(plan, "core", jit)]
+    s = compare_records.compare(A, B, rtol=1e-12, atol=0.0)
+    assert s["status"] == "compared", s.get("refusal_reasons")
+    bad = {f: v for f, v in s["fields"].items() if not v["pass"]}
+    assert not bad, bad
+    assert s["masks"]["all_equal"] is True
+    assert s["catalog"]["structure_equal"] is True
+    assert s["catalog"]["row_empty_equal"] is True
+    assert s["catalog"]["arrays_compared"] is True
+    assert s["verdict"]["catalog_values_pass"] is True, {
+        f: v["max_rel"] for f, v in s["catalog_fields"].items() if not v["pass"]}
+    assert s["verdict"]["overall_pass"] is True
+    assert s["fields"]["decoded_full_parameter_vector"]["bitwise"] is True
+
+
+def test_dark_compare_refuses_other_catalog(dark_smoke):
+    plan = DARK_PLANS[0]
+    A = dark_smoke["records"][(plan, "legacy", "whole")]
+    B = copy.deepcopy(dark_smoke["records"][(plan, "core", "whole")])
+    B["inputs"]["catalog"]["sha256"] = "0" * 64
+    s = compare_records.compare(A, B, 1e-12, 0.0)
+    assert s["status"] == "refused" and any("catalog" in r for r in s["refusal_reasons"])
+    B = copy.deepcopy(dark_smoke["records"][(plan, "core", "whole")])
+    B["plan"]["universe"] = "spectral"
+    s = compare_records.compare(A, B, 1e-12, 0.0)
+    assert s["status"] == "refused"
+
+
+def _bench_rc(py, args, work):
+    return _run([py, os.path.join(BENCH, "bench_fixed_theta.py")] + args, work)
+
+
+def test_dark_preflight_refusals(dark_smoke, tmp_path):
+    pe, sel, cat, sc = dark_smoke["inputs"] + (dark_smoke["sidecar"],)
+    work = str(tmp_path)
+    coords = os.path.join(work, "coords.json")
+    r = _run([sys.executable, os.path.join(BENCH, "make_coords.py"), "--plan", "dark_H0",
+              "--seed", str(SEED), "--n", "2", "--out", coords], work)
+    assert r["rc"] == 0, r
+    base = ["--impl", "core", "--pe", pe, "--sel", sel, "--plan", "dark_H0", "--coords", coords,
+            "--out", os.path.join(work, "x.json"), "--jit", "whole", "--sel-batch", "none",
+            "--pe-block", "none", "--seed", str(SEED), "--label", "refuse", "--device", "cpu"]
+    # 1. dark plan without a catalog
+    r = _bench_rc(CORE_PY, base, work)
+    assert r["rc"] == 2 and "needs --catalog" in r["stderr"], r
+    # 2. a fixture whose recorded density is outside the log10n0 prior (the PR-6a 5e-5)
+    fx = os.path.join(work, "fixture_out_of_prior")
+    os.makedirs(fx)
+    for name in (sc["harness_inputs"]["pe"], sc["harness_inputs"]["sel"], sc["harness_inputs"]["catalog"]):
+        os.symlink(os.path.join(DARK_FIXTURE, name), os.path.join(fx, name))
+    bad = dict(sc, n0=5e-5, n0_arg="5e-5", log10n0=math.log10(5e-5),
+               log10n0_hex=math.log10(5e-5).hex())
+    with open(os.path.join(fx, "galaxy_density.json"), "w") as f:
+        json.dump(bad, f)
+    args = base[:]
+    args[args.index("--pe") + 1] = os.path.join(fx, sc["harness_inputs"]["pe"])
+    args[args.index("--sel") + 1] = os.path.join(fx, sc["harness_inputs"]["sel"])
+    r = _bench_rc(CORE_PY, args + ["--catalog", os.path.join(fx, sc["harness_inputs"]["catalog"])], work)
+    assert r["rc"] == 2 and "FIXTURE PREFLIGHT REFUSED" in r["stderr"], r
+    assert "outside the legacy log10n0 prior" in r["stderr"] and "outside the core log10n0 prior" in r["stderr"]
+    # 3. inputs that are not the sidecar's bytes (the fixture's PE swapped for its selection file)
+    fx2 = os.path.join(work, "fixture_wrong_bytes")
+    os.makedirs(fx2)
+    for name in (sc["harness_inputs"]["sel"], sc["harness_inputs"]["catalog"], "galaxy_density.json"):
+        os.symlink(os.path.join(DARK_FIXTURE, name), os.path.join(fx2, name))
+    os.symlink(os.path.join(DARK_FIXTURE, sc["harness_inputs"]["sel"]),
+               os.path.join(fx2, sc["harness_inputs"]["pe"]))
+    args = base[:]
+    args[args.index("--pe") + 1] = os.path.join(fx2, sc["harness_inputs"]["pe"])
+    r = _bench_rc(CORE_PY, args + ["--catalog", os.path.join(fx2, sc["harness_inputs"]["catalog"])], work)
+    assert r["rc"] == 2 and "is not the fixture's" in r["stderr"], r
+    # 4. a catalog-free plan refuses --catalog
+    sp_coords = os.path.join(work, "coords_sp.json")
+    r = _run([sys.executable, os.path.join(BENCH, "make_coords.py"), "--plan", "spectral_H0",
+              "--seed", str(SEED), "--n", "2", "--out", sp_coords], work)
+    args = base[:]
+    args[args.index("--plan") + 1] = "spectral_H0"
+    args[args.index("--coords") + 1] = sp_coords
+    r = _bench_rc(CORE_PY, args + ["--catalog", cat], work)
+    assert r["rc"] == 2 and "catalog-free" in r["stderr"], r
+    # 5. an out-of-prior FIXED survey override needs the explicit flag
+    r = _bench_rc(CORE_PY, base + ["--catalog", cat, "--survey-fixed-override",
+                                   json.dumps({"log10n0": math.log10(5e-5)})], work)
+    assert r["rc"] == 2 and "allow-out-of-prior-fixed-survey" in r["stderr"], r

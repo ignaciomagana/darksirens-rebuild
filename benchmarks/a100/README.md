@@ -21,7 +21,9 @@ parity probes already use), and sets `sys.dont_write_bytecode`.
 | `bench_common.py` | compile hooks, fingerprints, encoding, jaxpr/AOT evidence, nvidia-smi join |
 | `compare_records.py` | parity verdicts (bitwise, max abs, max rel), masks, repeat flags, speed ratios |
 | `run_matrix.py` | convenience driver: plans x {legacy, core whole, core asis} + all comparisons |
-| `tests/test_harness_smoke.py` | tiny-fixture smoke test: schema, invariants, parity at 1e-12 |
+| `dark_fixture.py` | dark-siren mock fixtures: `galaxy_density.json` sidecar writer/verifier and the pre-flight |
+| `dark_diag.py` | implementation-neutral catalog-side summaries (branch evidences, per-row/per-sample arrays) |
+| `tests/test_harness_smoke.py` | smoke test: tiny spectral fixtures and dark fixture T; schema, invariants, parity at 1e-12 |
 
 ## Target definitions (Fable-owned; do not change here without the orchestrator)
 
@@ -82,6 +84,112 @@ non-sampled parameters inserted at their fiducials by the harness
 (`config.plan_adapter`). The insertion is part of the kernel. Both implementations
 use the hard selection guard and `max_likelihood_variance = 1.0` (their defaults
 for dynesty).
+
+## Dark sirens (`dark_*` plans, `--catalog`)
+
+### Fixtures
+The fixtures are made with the LEGACY mock machinery, unmodified
+(`scripts/mock_dark_sirens/generate_mock_data.py` and `run_mock_data_test.sh` of
+c042527, copied byte-identically) with an explicit `--n0 1e-3`
+(log10n0 = -3, inside U(-4, -1) in both codes), never `--n-galaxies`, and
+`RUN_INFERENCE=0` (generation and the legacy ingestion check only). Products:
+`mock_gw_events.h5` (`gwcat-1.0` PE), `mock_gw_selection.h5` (`gwcat-selection-1.0`),
+`catalog_pixelated_nside_N.h5` (attr `nside`; `zgals`/`dzgals`/`wgals` padded
+`(n_pix, n_max)`, `ngals`; no `z_depth` attr), plus the complete catalog and the raw
+survey. The generator records no density, so
+
+```bash
+python dark_fixture.py write --fixture-dir DIR --name T --generate-log DIR/generate.log \
+    --generator-copy GEN --wrapper-copy RUN --reference-generator REF_GEN \
+    --reference-wrapper REF_RUN --reference-sha c042527... --invocation "env ... sh -x RUN"
+python dark_fixture.py verify --fixture-dir DIR     # SHA256SUMS + pre-flight
+```
+
+writes `galaxy_density.json` (n0, log10n0, zmax, delta, sigma_kde, n_complete, H0,
+units, seed, generator sha256, the generator command parsed from the wrapper's
+`sh -x` trace, the generator's stdout facts, both codes' log10n0 priors, every
+product's sha256) and `SHA256SUMS`.
+
+**Pre-flight.** Every dark record runs `dark_fixture.preflight` before JAX is
+imported and exits 2 when the fixture's log10n0 lies outside the log10n0 prior of
+either implementation (`plans.LOG10N0_PRIOR`), differs from the plans' survey
+fiducial, was generated with `--n-galaxies`, or when the PE / selection / catalog
+files are not the bytes the sidecar lists. The record keeps the evidence under
+`fixture_preflight`.
+
+### Plans
+| plan | sampled | fixed |
+|---|---|---|
+| `dark_H0` | H0 | Om0, w0, wa; population; survey |
+| `dark_pop` | the 12 population parameters | H0 = 67.74, Om0, w0, wa; survey |
+| `dark_survey` | log10n0, delta, sigma_kde | H0, Om0, w0, wa; population |
+| `dark_joint_cosmo_pop` | H0, `$v_1$`, `$\alpha_{\rm PL}$`, `$m_{\min,\rm PL}$` | Om0, w0, wa; other 9 population; survey |
+| `dark_joint_cosmo_survey` | H0, log10n0, delta, sigma_kde | Om0, w0, wa; population |
+| `dark_full` | H0 + population + survey | Om0, w0, wa |
+
+Survey fiducials: log10n0 = -3 (the fixture density), delta = 0, sigma_kde = 0 (the
+shared defaults; each record asserts both registries still give these defaults and
+the bounds log10n0 [-4, -1], delta [-3, 3], sigma_kde [0, 0.05]).
+`--survey-fixed-override '{"log10n0": X}'` replaces a FIXED survey value (plans whose
+survey block is fixed only); a value outside either log10n0 prior additionally needs
+`--allow-out-of-prior-fixed-survey` and is recorded as a gap (the PR-6a 5e-5 density
+is checked this way, at fixed coordinates only).
+
+### Configuration at identical semantics
+Core: `ds.model(cosmology, population, catalog=ds.load_catalog(CAT))` (the incomplete
+conditional model, core's only dark estimand) and `bind_analysis` as for spectral.
+Core always samples the catalog block, so a plan that fixes it (or part of the
+population) runs through the harness embedding (`config.plan_adapter`). In `--jit
+whole` the compact catalog and the observed-density cache are jit arguments.
+
+Legacy: `--universe_model dark_sirens --survey_path CAT` plus, for the knobs core does
+not have, the values that reproduce core's semantics (`impl_legacy.LEGACY_DARK_SETTINGS`,
+recorded in `config.dark_settings`): `--catalog_sky_weighting conditional` (the CLI
+default is field), `--kde_window 0` (full-row KDE), `--freeze_redshift_prior false`
+(per-proposal prior), `--row_chunk auto`, `--kernel_gl_nodes 24 --kernel_gl_domain cdf`,
+`--drop_full_catalog false` (one PE-union-selection table, as core), `--c_mode per_pixel`,
+`--use_lss false`; a fixed survey is pinned individually in `--fixed_parameter_values`
+(`--fix_survey true` would pin the registry's log10n0 = -2). Legacy behaviour with NO
+knob, recorded per record: the build-time **H0 kernel pin** (active whenever none of
+Om0, w0, wa, delta, sigma_kde is sampled: the per-galaxy quadrature is evaluated once
+at H0 = 67.74 and shifted by 3 ln(H0/67.74)), the **empty-row sample routing** (per
+side, when that side is one block and >= 10% of its samples sit on galaxy-free rows),
+the injection pixel sort, and the PE/selection prior-state sharing. They are exact
+analytically and move only the last bits.
+
+### Catalog-side diagnostics
+Per coordinate (`values.per_coord[].catalog`): per-event log evidences of the
+catalog-host branch (`log N_obs + log p_cat - log Z`) and of the missing-host branch
+(`log dN_miss - log Z`) of the prior, and of the full prior (`_harness`), the same
+three log_mu, the sum of N_miss, sums/digests of the per-row arrays, empty-row counts.
+The branch terms are reduced by `dark_diag.py` (numpy, identical code in both
+processes) from each implementation's own per-sample masked log weights, so any
+difference is the implementations'. The record's `<record>.catalog.npz` holds, per
+coordinate, the per-row arrays (log N_obs, log Z, N_miss, f, log depth mass, empty
+rows; union compact rows) and the per-sample log p(z|row) of the PE samples and the
+injections in FILE order. `dims.catalog`: nside, npix, apix, z_depth, n_rows,
+n_max (row width), occupied/empty rows and pixels, galaxy counts, sha256 of the union
+pixel ids, row counts, real-galaxy tables and sample-to-row maps, and the number of PE
+samples / injections on empty rows.
+
+`compare_records.py` refuses dark records built on different catalog files. The
+catalog structure (all of the above) and the empty-row sets must be equal (they
+enter `masks_equal`); the catalog-side values are compared at the same rtol under
+`verdict.catalog_values_pass` / `catalog_fields` / `catalog_max_rel_by_field`, so the
+gate fields and `max_rel_by_field` keep their spectral definition. `rows_f` (f = 1 -
+N_miss/N_exp, a diagnostic in both codes, not a likelihood input) is informational:
+it cancels catastrophically on nearly empty rows (one ulp of N_miss reads as ~1e-10
+relative there).
+
+```bash
+python make_coords.py --plan dark_full --seed 20260924 --n 8 --out coords.json
+JAX_PLATFORMS=cpu $LEGACY_PY bench_fixed_theta.py --impl legacy --pe DIR/mock_gw_events.h5 \
+    --sel DIR/mock_gw_selection.h5 --catalog DIR/catalog_pixelated_nside_16.h5 --plan dark_full \
+    --coords coords.json --out legacy.json --n-calls 20 --warmup 3 --jit whole \
+    --sel-batch none --pe-block none --seed 20260924 --label L --device cpu
+python run_matrix.py ... --catalog DIR/catalog_pixelated_nside_16.h5 \
+    --plans dark_H0,dark_pop,dark_survey,dark_joint_cosmo_pop,dark_joint_cosmo_survey,dark_full
+```
 
 ## Kernel modes (`--jit`)
 
@@ -261,7 +369,10 @@ and the driver's CUDA version), `inputs.{pe,sel}` (path, bytes, sha256,
 max variance, plan adapter, seed, n_calls, warmup), `dims` (`n_events`, `nsamp`,
 `n_pe_samples`, `n_injections`, `n_injections_padded`, `ndraw`, `T_obs_yr`,
 `n_coords`, and `catalog`: whether a galaxy catalog enters the kernel and its
-shape; absent for every spectral plan), `coords` (names, implementation labels, values and `float.hex`,
+shape; absent for every spectral plan, the full catalog dimensions for a dark plan),
+dark records also `inputs.catalog`, `fixture_preflight`, `catalog_arrays` (the
+`.catalog.npz` sidecar) and `values.per_coord[].catalog`,
+`coords` (names, implementation labels, values and `float.hex`,
 source sha256, seed, repeat map), `timing` (above), `jit_evidence`,
 `values.per_coord[]` (per coordinate: `total_logL`, `total_finite`,
 `diag_total_logL`, `kernel_vs_diag_total`, `event_log_evidence`, `event_mc_variance`,
