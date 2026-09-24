@@ -59,6 +59,7 @@ def main(argv=None):
     ap.add_argument("--parallel", type=int, default=1)
     ap.add_argument("--wrap", default=None)
     ap.add_argument("--impls", default="legacy:whole,core:whole,core:asis")
+    ap.add_argument("--util-window-s", type=float, default=0.0)
     a = ap.parse_args(argv)
 
     os.makedirs(a.outdir, exist_ok=True)
@@ -88,7 +89,8 @@ def main(argv=None):
                    "--pe", a.pe, "--sel", a.sel, "--plan", plan, "--coords", coords,
                    "--out", out, "--n-calls", str(a.n_calls), "--warmup", str(a.warmup),
                    "--jit", jit, "--sel-batch", a.sel_batch, "--pe-block", a.pe_block,
-                   "--seed", str(a.seed), "--label", name, "--device", a.device]
+                   "--seed", str(a.seed), "--label", name, "--device", a.device,
+                   "--util-window-s", str(a.util_window_s)]
             if a.wrap:
                 smi = os.path.join(a.outdir, name + ".smi.csv")
                 cmd = shlex.split(a.wrap.replace("{smi}", smi)) + cmd + ["--smi-log", smi]

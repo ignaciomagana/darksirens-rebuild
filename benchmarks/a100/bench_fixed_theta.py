@@ -5,7 +5,7 @@
         --plan spectral_full --coords coords.json --out record.json \\
         --n-calls 20 --warmup 3 --jit whole|asis --sel-batch N|none|default \\
         --pe-block N|none|default --seed S --label L [--device gpu|cpu] \\
-        [--mask-chunk 131072] [--smi-log PATH]
+        [--mask-chunk 131072] [--smi-log PATH] [--util-window-s 0]
 
 One process evaluates ONE implementation (both install as ``darksirens``) and
 writes ONE record JSON (schema in README.md). Order of work:
@@ -81,6 +81,10 @@ def parse_args(argv=None):
                     help="samples per chunk for the (untimed) per-sample mask pass")
     ap.add_argument("--smi-log", default=None,
                     help="gpu_run.sh nvidia-smi log to join over the timed loop (best effort)")
+    ap.add_argument("--util-window-s", type=float, default=0.0,
+                    help="after the timed loop, keep calling the kernel for this many seconds "
+                         "(untimed per call) so a 1 Hz nvidia-smi sampler sees the steady state; "
+                         "0 = off. The timed loop itself is usually far shorter than 1 s.")
     return ap.parse_args(argv)
 
 
@@ -375,6 +379,27 @@ def main(argv=None):
     compile_loop = counter.delta(snap)
     mem.append(bc.memory_checkpoint("after_timed_loop"))
 
+    # ---- optional utilisation window (steady-state calls for the 1 Hz sampler) --
+    util_window = None
+    if a.util_window_s > 0:
+        snap = counter.snapshot()
+        clock.mark("util_window_start")
+        t0 = time.perf_counter()
+        n_u = 0
+        while True:
+            v = adapter.timed_call(coords[n_u % n_coords])
+            jax.block_until_ready(v)
+            n_u += 1
+            if time.perf_counter() - t0 >= a.util_window_s:
+                break
+        wall_u = time.perf_counter() - t0
+        clock.mark("util_window_end")
+        util_window = {"seconds_requested": a.util_window_s, "wall_s": wall_u, "n_calls": n_u,
+                       "mean_call_s": wall_u / n_u, "compile": counter.delta(snap),
+                       "note": "back-to-back kernel calls cycling the coordinates, each "
+                               "block_until_ready; values not recorded (same kernel as the "
+                               "timed loop)"}
+
     # ---- untimed: hook self-test, jit evidence ------------------------------
     selftest = bc.compile_hook_selftest(counter)
     try:
@@ -559,8 +584,18 @@ def main(argv=None):
         record["timing"]["gpu_util_timed_loop"] = bc.smi_window_stats(
             a.smi_log, clock.stamps["timed_loop_start"]["unix"],
             clock.stamps["timed_loop_end"]["unix"])
+        if util_window is not None:
+            util_window["smi"] = bc.smi_window_stats(
+                a.smi_log, clock.stamps["util_window_start"]["unix"],
+                clock.stamps["util_window_end"]["unix"])
+        if record["timing"]["gpu_util_timed_loop"].get("rows", 0) < 3 and (
+                util_window is None or util_window["smi"].get("rows", 0) < 3):
+            record["gaps"].append("fewer than 3 nvidia-smi rows fall inside the timed loop and no "
+                                  "--util-window-s window covers the steady state: GPU "
+                                  "utilisation is not measured by this record")
     else:
         record["timing"]["gpu_util_timed_loop"] = None
+    record["timing"]["util_window"] = util_window
 
     record["jit_evidence"] = jit_ev
     record["diagnostics_provenance"] = adapter.diag_provenance

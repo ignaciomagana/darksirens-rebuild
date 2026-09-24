@@ -143,7 +143,13 @@ $ROOT/bin/gpu_run.sh RUN.smi.csv bash -c "source $ROOT/envs/env_core.sh; cd RUND
 ```
 
 `--smi-log` joins the gpu_run.sh nvidia-smi log over the timed loop (best effort;
-`rows == 0` if the sampler had not flushed). `run_matrix.py --wrap
+`rows == 0` if the sampler had not flushed). The sampler runs at 1 Hz and a timed
+loop of 20 calls usually lasts well under a second, so that join is mostly empty:
+pass `--util-window-s S` (e.g. 15) to keep calling the kernel back to back for S
+seconds after the timed loop and join the log over that window
+(`timing.util_window.smi`). The record lists a gap when neither window holds 3
+sampler rows. The nvidia-smi timestamps are parsed in the local time zone of the
+benchmark process, which must be the sampler's host (UTC on js2a100). `run_matrix.py --wrap
 "$ROOT/bin/gpu_run.sh {smi}" --parallel 1` does the same per run, but then the
 env script has to be sourced by the caller.
 
