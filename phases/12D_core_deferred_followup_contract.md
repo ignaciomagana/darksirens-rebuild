@@ -340,3 +340,39 @@ changed by this record.
 follow-up. Acceptance requires the ordered merges, the recorded merge SHAs and
 trees, and green push-triggered gates on the merged head, listed under the pin
 decision.
+
+## Status note, 2026-09-24: merged as a proposed record
+
+This record was merged into `darksirens-rebuild` on the owner's decision as
+the proposed contract, without promotion. The header status and the pin
+decision above are unchanged: the active production core pin is still
+`8bf2bec53ff7b557c6b930d4044008cb72008f61`.
+
+What has happened in core since the record was drafted:
+
+- Conditions 1 and 2 of the pin decision are now met. #17 through #23 were
+  squash-merged to core `main` in order on 2026-09-23 (17:52 to 17:54 UTC),
+  tree identity checked after each; core `main` became
+  `c3bc005b41be7f24e2baa202bafa717f2237f1b3` (tree `ad4ab934`), linear from
+  the Phase-12C pin. The three push-triggered workflows on that head are
+  green: `reference-integrity` 35898821948, `real-backends` 35898822004
+  (75 passed, 0 skipped), `phase8d-release-contract` 35898822026.
+- The first item under "Left open on purpose" is closed: core PR #24 sets
+  `pipefail` in the `real-backends` step, so a pytest failure behind `tee`
+  now fails the job. Squash-merged as core `main`
+  `88004d96ddeee37c47abc1d2dfd1c6fc3c203dfd` (tree `00e4b9e5`) on
+  2026-09-24 with all 36 PR checks green. It changes no source or test.
+- Condition 3, promotion to an acceptance record with a new pin, is still
+  open. A post-12D pin, if adopted, should be `88004d96` or later, not
+  `c3bc005b`, so that the workflow fix is part of the accepted tree.
+
+Consumer side: `desi_darksirens_selection` PR #9 (adopt the Phase-12C pin
+`8bf2bec5`, no consumer code change) was merged on 2026-09-24 as
+`cc030f023f5fdee00caeada3af02566865dfcc72` without its `phase12-contract`
+workflow having run: that repository is private and GitHub Actions is blocked
+by a billing failure (every run on the branch and on the merged head ended
+with zero steps). The job's commands were run locally on the merged tree with
+the job's interpreter and package set (Python 3.12.14, numpy 2.5.3,
+pytest 8.4.2): `compileall` clean, 36 passed, 1 skipped by design. The
+workflow must be re-run there once Actions is unblocked. The consumer's
+production pin is therefore `8bf2bec5`, consistent with this record.
