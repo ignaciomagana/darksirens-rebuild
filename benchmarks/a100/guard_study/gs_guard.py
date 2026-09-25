@@ -166,7 +166,7 @@ def coord_rows(r, caps):
             "log_mu": lm, "n_eff": ne, "N2_over_neff": (n * n / ne) if ne else math.inf,
             "sigma2_pe": pv, "sigma2_lnL": pv + ((n * n / ne) if ne else math.inf),
             "sum_event_log_evidence": se, "unguarded_correction": ug,
-            "unguarded_total": ug_total,
+            "unguarded_total": ug_total, "unguarded_total_finite": bool(math.isfinite(ug_total)),
             "record_total_logL": val(pc["total_logL"]),
             "record_guard_pass": pc.get("guard_pass"),
             "caps": {},
@@ -185,7 +185,8 @@ def coord_rows(r, caps):
                 "hard_pass": bool(ne > T), "hard_total": se + hard_correction(n, lm, ne, T),
                 "soft_wall": wall, "soft_taylor_delta": taylor_delta, "soft_penalty": pen,
                 "soft_total": soft_total,
-                "soft_unpenalised_bitwise": bool(soft_total == ug_total),
+                # a -inf per-event term makes every total -inf: never read that as "unpenalised"
+                "soft_unpenalised_bitwise": bool(math.isfinite(ug_total) and soft_total == ug_total),
                 "penalty_share_of_total": (pen / soft_total) if (math.isfinite(pen) and soft_total
                                                                  and math.isfinite(soft_total)) else None,
             }
@@ -428,7 +429,8 @@ def cmd_curves(a):
         L = ["# Guard study: per-coordinate guard quantities", "",
              f"Caps: {', '.join(fmt(c) for c in caps)}. soft penalty = soft total - unguarded "
              "(wall + Taylor freeze), nats; 'none' = the soft total equals the unguarded total "
-             "bitwise.", ""]
+             "bitwise; 'total -inf (events)' = a per-event term is -inf, so every total is -inf "
+             "whatever the guard.", ""]
         for t in table:
             m = t["meta"]
             L += [f"## {m['code']} | {m['plan']} | {m['pe']} + {m['sel']} "
@@ -443,7 +445,8 @@ def cmd_curves(a):
                          f"{fmt(row['N2_over_neff'])} | {fmt(row['sigma2_pe'])} | "
                          f"{fmt(row['sigma2_lnL'])} | " +
                          " | ".join("pass" if c["hard_pass"] else "-inf" for c in cs) + " | " +
-                         " | ".join("none" if c["soft_unpenalised_bitwise"] else fmt(c["soft_penalty"], 4)
+                         " | ".join("total -inf (events)" if not row["unguarded_total_finite"] else
+                                    "none" if c["soft_unpenalised_bitwise"] else fmt(c["soft_penalty"], 4)
                                     for c in cs) + " |")
             L.append("")
         if sep:

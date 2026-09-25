@@ -48,6 +48,7 @@ PLANS = {"spectral_full_gwtc5": {"coords_tag": "gwtc5c05", "coords_args": ["--ce
                            "coords_dst": "coords/spectral_full.json"}}
 POISON = ["--center", "none"]   # make_coords refuses: a missing study coordinate file fails loudly
 TIMEOUT_S = 7200
+LOCAL_CLONE = "/hildafs/projects/phy230014p/magana/darksirens_benchmark_local/darksirens-rebuild"
 
 
 def sha256(path):
@@ -260,6 +261,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--gs", default=f"{ROOT}/benchmarks/guard_study")
     ap.add_argument("--dry-run-check", action="store_true")
+    ap.add_argument("--page-url", default=None)
     a = ap.parse_args()
     GS = a.gs
     sub = lambda s: s.replace("@GS", GS)  # noqa: E731
@@ -341,11 +343,15 @@ def main():
     p0 = [
      {"id": "P0.1", "what": "harness at the study head (tools present), clean tree", "when": {},
       "cmd": f"cd {REPO} && git pull --rebase origin bench/a100-campaign && test -z \"$(git status --porcelain)\" && test -f {T}/gs_guard.py && git rev-parse HEAD | tee {GS}/harness_head.txt"},
-     {"id": "P0.2", "what": "observation-only non-finite counter in infer_ladder.py (Q6-A): apply, CPU smoke, commit, push", "when": when(Q6="A"),
+     {"id": "P0.2a", "what": "observation-only non-finite counter in infer_ladder.py (Q6-A): apply, CPU ladder smoke, commit on js2a100", "when": when(Q6="A"), "host": "js2a100",
       "cmd": (f"cd {REPO} && (grep -q 'self.nonfinite = {{}}' benchmarks/a100/infer_ladder.py || "
               f"(git apply {T}/infer_ladder_nonfinite.patch && cd {H} && {smoke_env} {ROOT}/envs/env_core_o1/bin/python -m pytest -q tests/test_ladder_smoke.py --basetemp={GS}/_smoke_tmp "
-              f"&& cd {REPO} && git add benchmarks/a100/infer_ladder.py && git commit -m 'bench/a100: infer_ladder counts non-finite eager likelihood values per phase (likelihood_calls.nonfinite; observation only) for the guard study' "
-              f"&& git pull --rebase origin bench/a100-campaign && git push origin bench/a100-campaign)) && git rev-parse HEAD | tee {GS}/harness_head_inference.txt")},
+              f"&& cd {REPO} && git add benchmarks/a100/infer_ladder.py && git -c user.name='Ignacio Magana' -c user.email=magana@miko.ib.vera.psc.edu commit -m 'bench/a100: infer_ladder counts non-finite eager likelihood values per phase (likelihood_calls.nonfinite; observation only) for the guard study')) "
+              f"&& git rev-parse HEAD | tee {GS}/harness_head_inference.txt")},
+     {"id": "P0.2b", "what": "push the counter commit (js2a100 has no GitHub credentials: relay through the Hildafs clone), then resync js2a100", "when": when(Q6="A"), "host": "Hildafs",
+      "cmd": (f"cd {LOCAL_CLONE} && git fetch -q js2a100:{REPO} bench/a100-campaign && git merge --ff-only FETCH_HEAD && "
+              f"git pull --rebase origin bench/a100-campaign && git push origin bench/a100-campaign && "
+              f"ssh -o BatchMode=yes js2a100 'cd {REPO} && git pull --rebase -q origin bench/a100-campaign && git log --oneline -1'")},
      {"id": "P0.3", "what": "input checksums", "when": {}, "cmd": f"sha256sum -c {GS}/inputs.sha256"},
      {"id": "P0.4", "what": "coordinates of record copied into the curve campaign directory (never regenerated)", "when": {},
       "cmd": " && ".join([f"mkdir -p {GS}/curves/coords"] +
@@ -427,7 +433,7 @@ def main():
      "rules": ["every GPU process through bin/gpu_run.sh (flock; one GPU job at a time; wait for the lock)",
                "no XLA compiler flags; env scripts only (env_legacy.sh, env_core_o1.sh); env_core.sh is never used",
                "cold XLA cache per GPU process at xla_cache/runs/<id> (campaign_run.py cold mode / the run command's mkdir)",
-               "no git push to main; harness changes only on bench/a100-campaign, pull --rebase before push, never force-push",
+               "no git push to main; harness changes only on bench/a100-campaign, pull --rebase before push, never force-push; js2a100 cannot push (no GitHub credentials): push from the Hildafs clone",
                "execute entries whose 'when' matches 'selected'; an entry with an empty 'when' always runs",
                "where an entry has cmd_when_<Q>_<opt> and that option is selected, run that command instead of cmd"],
      "codes": {"legacy": {"label": "legacy", "package": PKG["legacy"], "env_script": ENV["legacy"], "jit": "whole (= the as-shipped factory jit)", "arm": ARM["legacy"]},
@@ -435,7 +441,8 @@ def main():
      "inputs": inputs, "coordinates": coords,
      "decisions": DECISIONS,
      "selected": {d["id"]: d["recommended"] for d in DECISIONS},
-     "selection_source": "the page's db collection 'decisions' (doc id = Q1..Q10, field 'choice'); read with ArtifactData list",
+     "selection_source": {"page": a.page_url, "how": "the page's db collection 'decisions' (doc id = Q1..Q10, fields 'choice' and 'note'); read with ArtifactData list; an absent doc means the recommended option"},
+     "harness_head_at_design": subprocess.run(["git", "-C", REPO, "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip(),
      "naming": {
        "curve": "GS_C_<code>_<jit>_<plan>_bbh259_<pe>_<sel>_hard1",
        "soft_check": "GS_K_<code>_<jit>_<plan>_bbh259_n4096_full_soft<cap>",
