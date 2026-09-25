@@ -1,0 +1,46 @@
+--- a/benchmarks/a100/infer_ladder.py
++++ b/benchmarks/a100/infer_ladder.py
+@@ -339,6 +339,9 @@
+         self.fn = fn
+         self.phase = "init"
+         self.counts = {}
++        # eager calls whose value is not finite (the hard guard's -inf wall, or NaN), per
++        # (phase, kind); read after block_until_ready, the sampler still receives `out` itself
++        self.nonfinite = {}
+         # (t_start, t_end) perf_counter of the first EAGER_LOG_CAP eager calls of the sampling
+         # phase (preflight + initial live points); each eager result is block_until_ready'd
+         # inside the wrapper so t_end includes the device work (the samplers convert every
+@@ -357,8 +360,17 @@
+         out = jax.block_until_ready(self.fn(theta))
+         if self.phase == "sampling" and len(self.eager_log) < self.EAGER_LOG_CAP:
+             self.eager_log.append((t0, time.perf_counter()))
++        try:
++            v = float(np.asarray(out))
++        except (TypeError, ValueError):
++            v = None
++        if v is not None and not math.isfinite(v):
++            self.nonfinite[key] = self.nonfinite.get(key, 0) + 1
+         return out
+ 
++    def nonfinite_table(self):
++        return {f"{p}:{k}": v for (p, k), v in sorted(self.nonfinite.items())}
++
+     def count(self, phase=None, kind=None):
+         return sum(v for (p, k), v in self.counts.items()
+                    if (phase is None or p == phase) and (kind is None or k == kind))
+@@ -1361,7 +1373,14 @@
+     pre_key = "sampler_run_entry" if a.sampler == "tinyns" else "sampler_construct_entry"
+     pre_eager = probe.events.get(pre_key, {})
+     record["likelihood_calls"] = {"by_phase_kind": lk.table(),
+-                                  "preflight_eager_calls": pre_eager.get("eager_calls_so_far")}
++                                  "preflight_eager_calls": pre_eager.get("eager_calls_so_far"),
++                                  "nonfinite": {
++                                      "by_phase_kind": lk.nonfinite_table(),
++                                      "sampling_eager_total": lk.nonfinite.get(("sampling", "eager"), 0),
++                                      "note": ("eager likelihood calls returning -inf or NaN (the hard "
++                                               "selection guard's wall), counted by the wrapper after "
++                                               "block_until_ready; dynesty: preflight draws + initial "
++                                               "live-point draws + rejected proposals; observation only")}}
+     if a.smi_log:
+         record["timing"]["gpu_util_sampling"] = bc.smi_window_stats(a.smi_log, t_s0_unix, t_s1_unix)
+     if sampler_error is not None:
