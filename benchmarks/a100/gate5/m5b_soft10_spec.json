@@ -1,0 +1,210 @@
+[
+ {
+  "record_id": "M5B_legacy_whole_default_spectral_H0_gwtc5_bbh259_n4096_full_soft10",
+  "matrix": "M5B",
+  "env": "legacy",
+  "impl": "legacy",
+  "jit": "whole",
+  "blocks": "default",
+  "sel_batch": "default",
+  "pe_block": "default",
+  "plan": "spectral_H0_gwtc5",
+  "pe": "/media/volume/tbs/darksirens_benchmark/data/gwcat/exports/A_pe_chieff_bbh259_n4096_v20.h5",
+  "sel": "/media/volume/tbs/darksirens_benchmark/data/gwcat/exports/A_sel_chieffref_o3o4ab_v20.h5",
+  "pe_label": "bbh259_n4096",
+  "sel_label": "full",
+  "n_calls": 20,
+  "warmup": 3,
+  "util_window_s": 10,
+  "cache": "cold",
+  "compare_to": [],
+  "flags": {
+   "guard_variant": "soft10",
+   "decision": "D-ladder parity precondition"
+  },
+  "coords_tag": "gwtc5c05",
+  "coords_args": [
+   "--center",
+   "gwtc5",
+   "--spread",
+   "0.05"
+  ],
+  "guard": "soft",
+  "max_variance": 10.0
+ },
+ {
+  "record_id": "M5B_core_whole_default_spectral_H0_gwtc5_bbh259_n4096_full_soft10",
+  "matrix": "M5B",
+  "env": "core",
+  "impl": "core",
+  "jit": "whole",
+  "blocks": "default",
+  "sel_batch": "default",
+  "pe_block": "default",
+  "plan": "spectral_H0_gwtc5",
+  "pe": "/media/volume/tbs/darksirens_benchmark/data/gwcat/exports/A_pe_chieff_bbh259_n4096_v20.h5",
+  "sel": "/media/volume/tbs/darksirens_benchmark/data/gwcat/exports/A_sel_chieffref_o3o4ab_v20.h5",
+  "pe_label": "bbh259_n4096",
+  "sel_label": "full",
+  "n_calls": 20,
+  "warmup": 3,
+  "util_window_s": 10,
+  "cache": "cold",
+  "compare_to": [
+   "M5B_legacy_whole_default_spectral_H0_gwtc5_bbh259_n4096_full_soft10"
+  ],
+  "flags": {
+   "guard_variant": "soft10",
+   "decision": "D-ladder parity precondition"
+  },
+  "coords_tag": "gwtc5c05",
+  "coords_args": [
+   "--center",
+   "gwtc5",
+   "--spread",
+   "0.05"
+  ],
+  "guard": "soft",
+  "max_variance": 10.0
+ },
+ {
+  "record_id": "M5B_core_asis_default_spectral_H0_gwtc5_bbh259_n4096_full_soft10",
+  "matrix": "M5B",
+  "env": "core",
+  "impl": "core",
+  "jit": "asis",
+  "blocks": "default",
+  "sel_batch": "default",
+  "pe_block": "default",
+  "plan": "spectral_H0_gwtc5",
+  "pe": "/media/volume/tbs/darksirens_benchmark/data/gwcat/exports/A_pe_chieff_bbh259_n4096_v20.h5",
+  "sel": "/media/volume/tbs/darksirens_benchmark/data/gwcat/exports/A_sel_chieffref_o3o4ab_v20.h5",
+  "pe_label": "bbh259_n4096",
+  "sel_label": "full",
+  "n_calls": 20,
+  "warmup": 3,
+  "util_window_s": 10,
+  "cache": "cold",
+  "compare_to": [
+   "M5B_legacy_whole_default_spectral_H0_gwtc5_bbh259_n4096_full_soft10",
+   "M5B_core_whole_default_spectral_H0_gwtc5_bbh259_n4096_full_soft10"
+  ],
+  "flags": {
+   "guard_variant": "soft10",
+   "decision": "D-ladder parity precondition"
+  },
+  "coords_tag": "gwtc5c05",
+  "coords_args": [
+   "--center",
+   "gwtc5",
+   "--spread",
+   "0.05"
+  ],
+  "guard": "soft",
+  "max_variance": 10.0
+ },
+ {
+  "record_id": "M5B_legacy_whole_default_spectral_full_gwtc5_bbh259_n4096_full_soft10",
+  "matrix": "M5B",
+  "env": "legacy",
+  "impl": "legacy",
+  "jit": "whole",
+  "blocks": "default",
+  "sel_batch": "default",
+  "pe_block": "default",
+  "plan": "spectral_full_gwtc5",
+  "pe": "/media/volume/tbs/darksirens_benchmark/data/gwcat/exports/A_pe_chieff_bbh259_n4096_v20.h5",
+  "sel": "/media/volume/tbs/darksirens_benchmark/data/gwcat/exports/A_sel_chieffref_o3o4ab_v20.h5",
+  "pe_label": "bbh259_n4096",
+  "sel_label": "full",
+  "n_calls": 20,
+  "warmup": 3,
+  "util_window_s": 10,
+  "cache": "cold",
+  "compare_to": [],
+  "flags": {
+   "guard_variant": "soft10",
+   "decision": "D-ladder parity precondition"
+  },
+  "coords_tag": "gwtc5c05",
+  "coords_args": [
+   "--center",
+   "gwtc5",
+   "--spread",
+   "0.05"
+  ],
+  "guard": "soft",
+  "max_variance": 10.0
+ },
+ {
+  "record_id": "M5B_core_whole_default_spectral_full_gwtc5_bbh259_n4096_full_soft10",
+  "matrix": "M5B",
+  "env": "core",
+  "impl": "core",
+  "jit": "whole",
+  "blocks": "default",
+  "sel_batch": "default",
+  "pe_block": "default",
+  "plan": "spectral_full_gwtc5",
+  "pe": "/media/volume/tbs/darksirens_benchmark/data/gwcat/exports/A_pe_chieff_bbh259_n4096_v20.h5",
+  "sel": "/media/volume/tbs/darksirens_benchmark/data/gwcat/exports/A_sel_chieffref_o3o4ab_v20.h5",
+  "pe_label": "bbh259_n4096",
+  "sel_label": "full",
+  "n_calls": 20,
+  "warmup": 3,
+  "util_window_s": 10,
+  "cache": "cold",
+  "compare_to": [
+   "M5B_legacy_whole_default_spectral_full_gwtc5_bbh259_n4096_full_soft10"
+  ],
+  "flags": {
+   "guard_variant": "soft10",
+   "decision": "D-ladder parity precondition"
+  },
+  "coords_tag": "gwtc5c05",
+  "coords_args": [
+   "--center",
+   "gwtc5",
+   "--spread",
+   "0.05"
+  ],
+  "guard": "soft",
+  "max_variance": 10.0
+ },
+ {
+  "record_id": "M5B_core_asis_default_spectral_full_gwtc5_bbh259_n4096_full_soft10",
+  "matrix": "M5B",
+  "env": "core",
+  "impl": "core",
+  "jit": "asis",
+  "blocks": "default",
+  "sel_batch": "default",
+  "pe_block": "default",
+  "plan": "spectral_full_gwtc5",
+  "pe": "/media/volume/tbs/darksirens_benchmark/data/gwcat/exports/A_pe_chieff_bbh259_n4096_v20.h5",
+  "sel": "/media/volume/tbs/darksirens_benchmark/data/gwcat/exports/A_sel_chieffref_o3o4ab_v20.h5",
+  "pe_label": "bbh259_n4096",
+  "sel_label": "full",
+  "n_calls": 20,
+  "warmup": 3,
+  "util_window_s": 10,
+  "cache": "cold",
+  "compare_to": [
+   "M5B_legacy_whole_default_spectral_full_gwtc5_bbh259_n4096_full_soft10",
+   "M5B_core_whole_default_spectral_full_gwtc5_bbh259_n4096_full_soft10"
+  ],
+  "flags": {
+   "guard_variant": "soft10",
+   "decision": "D-ladder parity precondition"
+  },
+  "coords_tag": "gwtc5c05",
+  "coords_args": [
+   "--center",
+   "gwtc5",
+   "--spread",
+   "0.05"
+  ],
+  "guard": "soft",
+  "max_variance": 10.0
+ }
+]
