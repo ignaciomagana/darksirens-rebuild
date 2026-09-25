@@ -477,7 +477,7 @@ def main():
        "fixed_coordinate_record_s": "40-60 (M5b walls 40-62 s with 20 calls and a 10 s window; H0 scan and weight records longer)",
        "rung1_run_s": "~345 (Gate 5 legacy/O1 dynesty rung 1 soft@10: 344.9 / 343.7 s total)",
        "rung3_run_s": "~830 (Gate 5 legacy dynesty rung 3 soft@10: 826 s)",
-       "recommended_total_gpu_h": "about 3.4 (curves ~0.3, inference ~2.9, posterior means ~0.1); upper bound ~19 h if every run reaches the 3600 s wall",
+       "recommended_total_gpu_h": "about 3.2 (curves ~0.3, inference ~2.8, posterior means ~0.1); upper bound ~19 h if every run reaches the 3600 s wall",
        "disk_gb": "~5 (cold caches ~0.1 GB per GPU process, weight npz ~0.2 GB)"},
     }
     spec["audit_criteria"] = [
