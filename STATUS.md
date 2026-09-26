@@ -283,8 +283,10 @@ Why:
 
 The acceptance criterion is re-expressed. The soft cap-10 penalty must be
 exactly zero, as measured, at the P12.4 anchor, the posterior mean and the
-posterior median, and at the P12.2 anchor H0 = 67.74. Probes with a nonzero
-penalty are reported, not failed.
+posterior median, at the P12.3 grid maximum and grid posterior mean, and at the
+P12.2 anchor H0 = 67.74. The soft and hard terms are compared in one float64
+arithmetic. Probes and grid points with a nonzero penalty are reported, not
+failed.
 
 Unchanged: the population preset, the DESI calibration block, the
 magnitude-selection model, the footprint, the catalog, the sky weighting, the

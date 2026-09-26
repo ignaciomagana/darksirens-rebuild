@@ -212,6 +212,15 @@ exactly: their float64 difference is 0.0 and the hard term is finite. Every
 gate records at its points: N_eff, sum sigma_i^2, N^2/N_eff, sigma^2_lnL,
 T(10), N_eff/T(10) and the penalty in nats.
 
+"Same data and settings" means one arithmetic. Both terms are evaluated from
+the ln mu, N_eff and sum sigma_i^2 that the stage's likelihood returns at
+theta, and the likelihood's own selection term must also be finite. A jitted
+likelihood can round the same term one ulp differently from an eager
+evaluation. The 12F review measured this on CPU (`p12f_review/jit_check/`):
+the jitted DESI target of consumer main `5efa8da` differed from the eager hard
+term by one ulp at 2 of 20 points of a synthetic fixture, at N_eff/T about
+6.2. Compared that way, those points would read as penalised.
+
 - **P12.2 exit criterion.**
   - Unchanged checks, at every probe: the exact event count, finite event
     evidences, a finite ln mu, N_eff > 5 N, and nonzero cosmology support for
@@ -608,4 +617,5 @@ Added by the 12F review (2026-09-26). Paths are relative to the campaign mirror
 ```text
 30587e56e391aeee218798d109c2bcd1368371799346a0672d35f315fd55d4b3  reports/p12f_consumer.md
 cf25b2fb0a359b5fa78dee07544a8c3f368b92175502ec4ee88832e3c7e7c564  p12f_review/fixed_coord/fixed_coord_review.json
+c5a842e9654069a8ba7d5dbd7c3bdb10fa908543f3f93a9c784502c3a5862112  p12f_review/jit_check/jit_unpenalised_check.json
 ```
