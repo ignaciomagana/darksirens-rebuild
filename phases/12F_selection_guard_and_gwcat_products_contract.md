@@ -509,8 +509,22 @@ To accept this contract change:
      N_eff, sum sigma_i^2, sigma^2_lnL, T(10) and N_eff/T(10) recorded.
    - If the rebuilt products are byte-identical to the reference build, the
      P12.2 spectral probe at H0 = 67.74 must also reproduce the Product A
-     values at the consumer's settings to 1e-12: N_eff 12,837.83, sum
-     sigma_i^2 0.146951, sigma^2_lnL 5.372 (`consumer_jit_target.md:139`).
+     values at the consumer's settings (Om0 0.3089, `DARKSIRENS_ZMAX` 6.0,
+     blocks 131072/32, core 8bf2bec5) to 1e-12 relative.
+   - The comparison uses the full-precision values
+     (`p12f_consumer.md:201-209`; the 12F review reproduced them bitwise on
+     CPU with jax 0.4.34):
+
+     ```text
+     total ln L, soft cap 10 (= hard cap 10)   -765.1371043921606
+     N_eff                                     12837.827176048291
+     sum sigma_i^2                             0.1469512815852833
+     sigma^2_lnL                               5.372212463255803
+     N_eff / T(10)                             1.8856566927176437
+     ```
+
+     The rounded values of `consumer_jit_target.md:139` (12,837.83, 0.146951,
+     5.372) cannot be compared at 1e-12.
 6. **Promotion.** This record is promoted to an acceptance record listing the
    consumer merge SHAs and trees, the CI run IDs, the product sha256 values and
    the P12.1-P12.3 record hashes.
@@ -586,4 +600,12 @@ a5320df32920e2fcdb8cbc2f250a9fa9cbecc12f611318375a233d12940421bb  consumer_jit_t
 20c1e548e8f1f4b858c9ef51fb7d59571251e37d93e0421d4a31d0b80afa9a39  phase1_gwcat_ingest.md
 9b20122db1a03ff842e6bd4d14303ca4a24ba891da52862f180e7d358d491af1  FINAL_REPORT.md
 4d494efee2a1d8bdc6a9ee707a2915882c6e3e4e6f41286bfe956ce511be73e0  REAL_DARK_READY.md
+```
+
+Added by the 12F review (2026-09-26). Paths are relative to the campaign mirror
+`/hildafs/projects/phy230014p/magana/darksirens_benchmark_local/`:
+
+```text
+30587e56e391aeee218798d109c2bcd1368371799346a0672d35f315fd55d4b3  reports/p12f_consumer.md
+cf25b2fb0a359b5fa78dee07544a8c3f368b92175502ec4ee88832e3c7e7c564  p12f_review/fixed_coord/fixed_coord_review.json
 ```
