@@ -212,8 +212,8 @@ consumer main       2668ae7e2eb9325910e1a8bec9b7228003cb4942
 - [x] Phase 12F contract-change record written (proposed, not accepted; pin unchanged)
 - [ ] owner accepts or rejects `phases/12F_selection_guard_and_gwcat_products_contract.md`
 - [ ] consumer `phase12-contract` CI able to run (Actions billing)
-- [ ] consumer PR #10 (jit the P12.4 target) merged under green contract CI
-- [ ] consumer PR implementing 12F merged under green contract CI (soft cap 10 in P12.2/P12.3/P12.4; dynesty; pinned product sha256, format and spin basis; contract tests updated)
+- [x] consumer PR #10 (jit the P12.4 target) merged 2026-09-26 as `5efa8da`, without contract CI (owner's decision)
+- [ ] consumer PR implementing 12F (desi_darksirens_selection PR #11) merged under green contract CI on its head and on the merged main (soft cap 10 in P12.2/P12.3/P12.4; dynesty; pinned product sha256, format and spin basis; contract tests updated)
 - [ ] PE and selection products rebuilt with gwcat 8f9e2f1 in the Product A definition; `gwcat validate --strict` 84/84; compared with the reference build (a24a5903 / bab92bab)
 - [ ] P12.4 builder shown to accept the rebuilt chieff / chieff_reference 2.0 pair
 - [ ] P12.1, resolved inputs, P12.2, P12.2b and P12.3 regenerated with the rebuilt products and accepted under the 12F criterion

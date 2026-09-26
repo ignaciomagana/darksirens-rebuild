@@ -116,7 +116,13 @@ GW product writer:
 
 consumer:
   ignaciomagana/desi_darksirens_selection main cc030f023f5fdee00caeada3af02566865dfcc72
-  open PR #10 (jit the P12.4 target once): head 898a119abdbff13059bac4d8a555adcfcc962354
+    (the consumer file references below)
+  PR #10 (jit the P12.4 target once), head 898a119abdbff13059bac4d8a555adcfcc962354:
+    squash-merged 2026-09-26T03:45:49Z as main 5efa8da8c10a16c908fd5231b8b4da078f9f3b56
+    (tree d96c33051730e0c5da8320e64a0054ca3506b9fe, the PR head's tree), without
+    contract CI, on the owner's decision (recorded in the merge commit message)
+  PR #11 (implements this record; proposed, open):
+    branch phase12f/soft-guard-and-gwcat-products
 ```
 
 Consumer file references below are to `main` `cc030f02`.
@@ -449,13 +455,16 @@ injection rows themselves are unchanged (`consumer_jit_target_review.md:103`,
 To accept this contract change:
 
 1. **Consumer PRs merged under contract CI.**
-   - Two PRs must be merged, each with a green `phase12-contract` run on its
-     exact head and on the merged `main`:
-     - `desi_darksirens_selection` PR #10 (jit the P12.4 target), head
-       `898a119`;
-     - a consumer PR implementing this record: soft cap 10 in P12.2, P12.3 and
-       P12.4; the new input contract with pinned product sha256, format and
-       basis; the dynesty configuration; and the updated contract tests.
+   - `desi_darksirens_selection` PR #10 (jit the P12.4 target), head
+     `898a119`, was squash-merged on 2026-09-26 as `main` `5efa8da` without
+     contract CI, on the owner's decision. A run on its exact head can no
+     longer be made. The green run on the merged `main` below covers its change.
+   - The consumer PR implementing this record (`desi_darksirens_selection`
+     PR #11) must be merged with a green `phase12-contract` run on its exact
+     head and on the merged `main`. It carries soft cap 10 in P12.2, P12.3 and
+     P12.4; the new input contract with pinned product sha256, format and
+     basis; the dynesty configuration; and the updated contract tests. At the
+     2026-09-26 review, PR #11 does not yet carry the dynesty configuration.
    - The workflow cannot run today: the private repository's GitHub Actions is
      blocked by billing, and runs 36190414909 and 36193148216 ended with 0 steps
      (`consumer_jit_target_review.md:147`).

@@ -291,8 +291,10 @@ magnitude-selection model, the footprint, the catalog, the sky weighting, the
 event policy and the pins.
 
 Acceptance requires, in the consumer and in this repository:
-- the consumer PRs merged under contract CI (blocked by the Actions billing
-  failure);
+- the consumer PR implementing 12F (desi_darksirens_selection PR #11) merged
+  under contract CI, with a green run on the merged main (blocked by the
+  Actions billing failure); consumer PR #10 (jit the P12.4 target) was merged
+  on 2026-09-26 as `5efa8da` without contract CI, on the owner's decision;
 - the products rebuilt and validated against the reference build;
 - P12.1-P12.3 regenerated;
 - a fixed-coordinate check that the DESI field target's soft cap-10 total is
@@ -307,9 +309,10 @@ next admissible action is therefore no longer a run from consumer main
 `cc030f023f5fdee00caeada3af02566865dfcc72`. It is instead:
 
 1. the owner accepts or rejects the Phase 12F contract change;
-2. if accepted, the consumer PRs (desi_darksirens_selection PR #10, which jits
-   the P12.4 target, and a PR implementing 12F) are merged under contract CI
-   once Actions runs;
+2. if accepted, the consumer PR implementing 12F (desi_darksirens_selection
+   PR #11) is merged under contract CI once Actions runs, with a green run on
+   the merged main that also covers PR #10 (jit the P12.4 target), which was
+   merged on 2026-09-26 as `5efa8da` without contract CI;
 3. the GW products are rebuilt with gwcat 8f9e2f1 and validated against the
    reference build;
 4. the chain is run on Hildafs with the exact package pins above and the
