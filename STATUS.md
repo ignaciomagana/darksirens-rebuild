@@ -90,7 +90,7 @@ arrival time.
 
 ## Post-reconstruction Phase 12 — first production consumer
 
-Status: **PHASE 12C CORE ACCEPTED / CONSUMER ON THE 12C PIN (MERGED WITHOUT CONTRACT CI, SEE 12C CONSUMER) / PHASE 12D PROPOSED, NOT ACCEPTED / HILDAFS NUMERICAL RUN READY**
+Status: **PHASE 12C CORE ACCEPTED / CONSUMER ON THE 12C PIN (MERGED WITHOUT CONTRACT CI, SEE 12C CONSUMER) / PHASE 12D PROPOSED, NOT ACCEPTED / PHASE 12E CAMPAIGN RECORD PROPOSED (REBUILD PR #10, NOT ON MAIN) / PHASE 12F GUARD AND GW-PRODUCT CONTRACT CHANGE PROPOSED, NOT ACCEPTED / ACCEPTED CHAIN STOPS AT P12.2 ON ITS OWN INPUTS**
 
 **No new H0 result is accepted yet.**
 
@@ -238,16 +238,89 @@ Conditions 1 and 2 of the record's pin decision are met; condition 3
 record's first "left open" item: the `real-backends` job now fails when pytest
 fails behind `tee`. A post-12D pin, if adopted, should be `88004d96` or later.
 
+### Phase 12E — A100 benchmark campaign record (PROPOSED / REBUILD PR #10 OPEN / NOT ON MAIN)
+
+```text
+record:        phases/12E_a100_benchmark_campaign_record.md (on branch record/a100-benchmark-campaign)
+control PR:    ignaciomagana/darksirens-rebuild #10, head d91ec93, open
+production pin: UNCHANGED, 8bf2bec5
+```
+
+The campaign compared darksirens-core with the frozen darksirens on a Jetstream2
+A100, from fixed-coordinate kernels to full sampler runs on the real GWTC
+product. It found parity everywhere it compared the codes. It also found that
+the P12.4 hard guard at cap 1.0 admits no finite likelihood on the campaign's
+real product. On the owner's decision, TinyNS is considered broken until
+ignaciomagana/darksirens#462 is debugged. The record is not merged into this
+repository's `main`.
+
+### Phase 12F — selection guard and GW input products (PROPOSED CONTRACT CHANGE / NOT ACCEPTED)
+
+```text
+record:           phases/12F_selection_guard_and_gwcat_products_contract.md
+owner decisions:  2026-09-26
+guard:            hard, max_likelihood_variance 1.0  ->  soft, max_likelihood_variance 10
+                  (P12.2 probes, P12.3 grid, P12.4)
+GW products:      gwcat-1.0 PE + gwcat-selection-1.0 (chi_eff swap)  ->
+                  gwcat 8f9e2f1: chieff PE (gwcat-pe-2.0) + chieff_reference
+                  selection (gwcat-selection-2.0), strict validation 84/84
+reference build:  PE  a24a5903a7f7da6fdcdee22f58c4c0efa76447f2cf4d581dc19ec3e60ce478a5
+                  sel bab92babf2d6958a6ed04ee536c44fa533f5c4822ca9a22f934347a089d21ab5
+sampler:          P12.4 TinyNS bounded_multi -> dynesty (TinyNS under debug, darksirens#462)
+production pin:   UNCHANGED, 8bf2bec5; no core change required
+```
+
+Why:
+- P12.4's own GW inputs fail the accepted hard guard at all 14 P12.2 probes. At
+  H0 = 67.74, N_eff is 46,306 against 78,467 needed. By the consumer's own code
+  the chain stops at P12.2.
+- The guard study found that caps 10 and 20 leave the posteriors unchanged,
+  that cap 5 cuts them, and that the hard guard at cap 1 would need about 14-20
+  million detected injections.
+- The chi_eff-swap selection file gives 3.6 times the N_eff of the reference
+  reweighting on identical injection rows. The O4ab injected spins are not
+  isotropic, so the swap does not hold for them.
+
+The acceptance criterion is re-expressed. The soft cap-10 penalty must be
+exactly zero, as measured, at the P12.4 anchor, the posterior mean and the
+posterior median, and at the P12.2 anchor H0 = 67.74. Probes with a nonzero
+penalty are reported, not failed.
+
+Unchanged: the population preset, the DESI calibration block, the
+magnitude-selection model, the footprint, the catalog, the sky weighting, the
+event policy and the pins.
+
+Acceptance requires, in the consumer and in this repository:
+- the consumer PRs merged under contract CI (blocked by the Actions billing
+  failure);
+- the products rebuilt and validated against the reference build;
+- P12.1-P12.3 regenerated;
+- a fixed-coordinate check that the DESI field target's soft cap-10 total is
+  finite and unpenalised at the calibration point;
+- promotion of the record.
+
 ### Next admissible action
 
-Run the chain on Hildafs from consumer main
-`cc030f023f5fdee00caeada3af02566865dfcc72`, using the exact package pins above
-and the site-neutral Slurm/runbook already in the consumer repository.
+The accepted chain cannot pass P12.2 on its own GW inputs under the hard guard
+at cap 1.0. That was measured on 2026-09-25 and is recorded in Phase 12F. Its
+next admissible action is therefore no longer a run from consumer main
+`cc030f023f5fdee00caeada3af02566865dfcc72`. It is instead:
+
+1. the owner accepts or rejects the Phase 12F contract change;
+2. if accepted, the consumer PRs (desi_darksirens_selection PR #10, which jits
+   the P12.4 target, and a PR implementing 12F) are merged under contract CI
+   once Actions runs;
+3. the GW products are rebuilt with gwcat 8f9e2f1 and validated against the
+   reference build;
+4. the chain is run on Hildafs with the exact package pins above and the
+   site-neutral Slurm/runbook in the consumer repository, using dynesty.
 
 After the run:
 
 1. freeze P12.1/P12.2/P12.2b/P12.3/P12.4 numerical provenance;
-2. accept or reject the P12.4 posterior based on the hard diagnostics;
+2. accept or reject the P12.4 posterior on the reliability criterion of the
+   contract in force (the hard guard at cap 1.0 today; the Phase 12F criterion
+   if 12F is accepted);
 3. only then produce plots and begin the fixed-population robustness matrix.
 
 The legacy footprint-map caveat remains explicit: Phase 12B preserves the

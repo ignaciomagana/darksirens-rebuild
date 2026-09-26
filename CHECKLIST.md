@@ -201,6 +201,26 @@ consumer main       2668ae7e2eb9325910e1a8bec9b7228003cb4942
 - [ ] produce production plots only from accepted frozen numerical products
 - [ ] run fixed-population robustness matrix before headline interpretation
 
+### Phase 12E campaign record and Phase 12F guard / GW-product contract change
+
+- [x] A100 campaign measured that the hard guard at cap 1.0 has no finite likelihood on the campaign's real product (N_eff 12,819.5 against 78,639.9 at the GWTC-5 centre)
+- [ ] owner decision on the Phase 12E campaign record (darksirens-rebuild PR #10; open, not on `main`)
+- [x] guard study: caps 10 and 20 (soft or hard) leave the 1-D and 3-D posteriors unchanged; cap 5 cuts them; the hard guard at cap 1 needs about 14-20 M detected injections
+- [x] consumer re-check: P12.4's own GW inputs fail the hard guard at cap 1.0 at all 14 P12.2 probes (N_eff 46,306 against 78,467 at H0 67.74)
+- [x] chi_eff-swap and reference-reweighted selection files compared on identical injection rows (the swap gives 3.6x the N_eff)
+- [x] owner decisions of 2026-09-26 recorded: soft guard at cap 10; the P12.4 contract changes through a Phase 12 record; reference-reweighting products from gwcat 8f9e2f1
+- [x] Phase 12F contract-change record written (proposed, not accepted; pin unchanged)
+- [ ] owner accepts or rejects `phases/12F_selection_guard_and_gwcat_products_contract.md`
+- [ ] consumer `phase12-contract` CI able to run (Actions billing)
+- [ ] consumer PR #10 (jit the P12.4 target) merged under green contract CI
+- [ ] consumer PR implementing 12F merged under green contract CI (soft cap 10 in P12.2/P12.3/P12.4; dynesty; pinned product sha256, format and spin basis; contract tests updated)
+- [ ] PE and selection products rebuilt with gwcat 8f9e2f1 in the Product A definition; `gwcat validate --strict` 84/84; compared with the reference build (a24a5903 / bab92bab)
+- [ ] P12.4 builder shown to accept the rebuilt chieff / chieff_reference 2.0 pair
+- [ ] P12.1, resolved inputs, P12.2, P12.2b and P12.3 regenerated with the rebuilt products and accepted under the 12F criterion
+- [ ] fixed-coordinate check: DESI field target's soft cap-10 total finite and unpenalised at the calibration point and at the P12.3 MAP
+- [ ] P12.4 dynesty run converged; penalty measured exactly zero at the posterior mean and median
+- [ ] promote 12F to an acceptance record, or record why not
+
 No new H0 posterior is accepted at this checkpoint.
 
 Authoritative post-reconstruction records:
@@ -213,4 +233,5 @@ phases/12B_field_footprint_correction.md
 phases/12B_field_footprint_acceptance.md
 phases/12C_core_review_followup_contract.md
 phases/12C_core_review_followup_acceptance.md
+phases/12F_selection_guard_and_gwcat_products_contract.md   # proposed, not accepted
 ```
