@@ -9,6 +9,26 @@
         [--label L] [--arm A] [--parity-ref ID ...] [--policy-note TEXT]
         [--max-evals N] [--max-wall-s S] [--describe]
 
+    dark sirens (mock fixtures): --plan dark_H0|dark_full|... --catalog CAT.h5 in place of
+    --rung [--row-chunk auto|off|N  (legacy only)]
+
+Dark-siren plans (``--plan``, ``plans.PLANS`` with ``universe == "dark"``) are the plans of the
+fixed-coordinate harness (``bench_fixed_theta.py``), with the same settings in both codes:
+
+* legacy: ``--universe_model dark_sirens --survey_path CAT`` plus every knob of
+  ``impl_legacy.LEGACY_DARK_SETTINGS`` (conditional sky weighting, full-row KDE, per-proposal
+  redshift prior, auto row chunking unless ``--row-chunk`` passes legacy's own ``--row_chunk``,
+  24-node CDF kernel quadrature, one PE-union-selection table, per-pixel completeness, no LSS);
+  a FIXED survey block goes into ``--fixed_parameter_values`` at the plan's values (fixture
+  density log10n0 = -3, shared defaults delta = sigma_kde = 0), never ``--fix_survey``;
+* core: ``ds.model(..., catalog=ds.load_catalog(CAT))`` (the incomplete conditional model) with
+  ``required_fit_columns`` for the event / injection reads, as ``impl_core`` does; core always
+  samples the survey block, so a plan fixing it runs through the same ``InferenceTarget``
+  embedding as rungs 3 and 4 (the fixed survey values inserted at the plan's values);
+* the fixture pre-flight (``dark_fixture.preflight``: sidecar density inside both log10n0 priors
+  and equal to the plans' fiducial, the PE / selection / catalog bytes equal to the sidecar's)
+  runs before JAX is imported and refuses (exit 2) otherwise; its evidence is in the record.
+
 The rungs (``ladder_configs/rungs.json``, Fable-owned) are expressed in each code's own
 production path, with every sampler setting passed explicitly and identically:
 
@@ -185,6 +205,71 @@ def resolve_rung(rung_id: str, doc: dict | None = None) -> dict:
     }
 
 
+def resolve_dark_plan(name: str) -> dict:
+    """A dark-siren plan of ``plans.py`` in the rung layout this driver uses.
+
+    The sampled / fixed sets, bounds, kinds and fiducials are ``plans.resolve_plan(name)``
+    (the fixed-coordinate harness's own definition). ``expected_full_at_centre`` holds the
+    full vector H0, Om0, w0, wa, population, log10n0, delta, sigma_kde at the centre; the
+    decoders report n0 = 10**log10n0 in the survey slot, so the assertion applies each
+    implementation's ``pow10`` to index ``expected_full_pow10_index`` first.
+    """
+    p = plans.resolve_plan(name)
+    if not plans.is_dark(p):
+        raise ValueError(f"--plan {name!r} is not a dark-siren plan (spectral runs use --rung)")
+    pop = plans.population_spec(p["population_model"])
+    sampled = list(p["sampled"])
+    vals = dict(p["fiducials"])
+    vals.update(p["fixed"])
+    expected_constraints, skipped = [], []
+    for kind, members in pop.get("constraint_groups") or []:
+        if all(m in sampled for m in members):
+            expected_constraints.append([kind, [sampled.index(m) for m in members]])
+        else:
+            skipped.append([kind, list(members)])
+            if any(m in sampled for m in members):
+                raise ValueError(f"plan {name}: constraint {kind} {members} is partly sampled")
+    k = p["sample_population"]
+    return {
+        "rung": name,
+        "plan": name,
+        "universe": "dark",
+        "title": f"dark-siren plan {name} (plans.py; fixed-coordinate harness definition)",
+        "population_model": p["population_model"],
+        "population_preset": None,
+        "kernel_plan": name,
+        "sample_H0": bool(p["sample_H0"]),
+        "sample_population": k,
+        "sample_survey": p["sample_survey"],
+        "population_labels": list(p["population_labels"]),
+        "survey_labels": list(p["survey_labels"]),
+        "fiducial_set": p["fiducial_set"],
+        "shared_beta": p["shared_beta"], "shared_spin": p["shared_spin"],
+        "shared_gamma": p["shared_gamma"],
+        "sampled": sampled,
+        "sampled_lower": [p["sampled_bounds"][n][0] for n in sampled],
+        "sampled_upper": [p["sampled_bounds"][n][1] for n in sampled],
+        "sampled_prior_kinds": [list(p["sampled_prior_kinds"][n]) for n in sampled],
+        "fixed": dict(p["fixed"]),
+        "full_order": list(p["full_order"]),
+        "decoded_order": list(p["decoded_order"]),
+        "centre": [p["fiducials"][n] for n in sampled],
+        "expected_full_at_centre": [vals[n] for n in p["full_order"]],
+        "expected_full_pow10_index": list(p["full_order"]).index("log10n0"),
+        "expected_joint_constraints": expected_constraints,
+        "skipped_constraint_groups": skipped,
+        "H0_bounds": list(p["H0_bounds"]),
+        "fixed_cosmology": dict(p["fixed_cosmology"]),
+        "H0_fiducial": p["H0_fiducial"],
+        "core_population_fixed": True if k == "none" else None,
+        "log10n0_prior": p["log10n0_prior"],
+    }
+
+
+def _is_dark(rung) -> bool:
+    return rung.get("universe") == "dark"
+
+
 def _block(v):
     v = str(v).strip().lower()
     if v in ("none", "off"):
@@ -198,13 +283,24 @@ def _block(v):
 # ----------------------------------------------------------------------------
 # Invocations (the exact form each code is driven with)
 # ----------------------------------------------------------------------------
-def legacy_argv(rung, pe, sel, save_path, s):
-    """The ``darksirens_inference`` argument vector for one rung and the matched settings."""
+def legacy_argv(rung, pe, sel, save_path, s, catalog=None, row_chunk=None):
+    """The ``darksirens_inference`` argument vector for one rung and the matched settings.
+
+    Dark plans: ``--universe_model dark_sirens --survey_path CATALOG`` and every
+    ``impl_legacy.LEGACY_DARK_SETTINGS`` knob (``--row_chunk`` replaced by ``row_chunk`` when
+    given); a fixed survey block goes into ``--fixed_parameter_values``."""
+    import impl_legacy
+
     blk = {"none": "off"}
+    dark = _is_dark(rung)
+    if dark and not catalog:
+        raise ValueError("a dark-siren plan needs --catalog")
+    if row_chunk is not None and not dark:
+        raise ValueError("--row-chunk applies to dark-siren plans only")
     argv = [
         "--gw_path", pe,
         "--gwselection_path", sel,
-        "--universe_model", "spectral_sirens",
+        "--universe_model", "dark_sirens" if dark else "spectral_sirens",
         "--pop_model", rung["population_model"],
         "--sampler", s["sampler"],
         "--save_path", save_path,
@@ -224,6 +320,14 @@ def legacy_argv(rung, pe, sel, save_path, s):
         "--selection_neff_guard", s["guard"],
         "--max_likelihood_variance", repr(float(s["max_likelihood_variance"])),
     ]
+    if dark:
+        argv += ["--survey_path", catalog]
+        for flag, (value, _why) in impl_legacy.LEGACY_DARK_SETTINGS.items():
+            if flag == "--universe_model":
+                continue
+            if flag == "--row_chunk" and row_chunk is not None:
+                value = str(row_chunk)
+            argv += [flag, value]
     fixed_values = {}
     if rung["sample_H0"]:
         # H0 on the target box, Om0 pinned individually, (w0, wa) = the dark-energy block.
@@ -237,6 +341,11 @@ def legacy_argv(rung, pe, sel, save_path, s):
         argv += ["--fix_population", "true", "--population_fiducials", "legacy"]
     elif k != "all":
         for lab in rung["population_labels"][int(k):]:
+            fixed_values[lab] = rung["fixed"][lab]
+    if dark and rung.get("sample_survey", "none") == "none":
+        # the survey block fixed INDIVIDUALLY at the plan's values (fixture density, shared
+        # defaults); --fix_survey true would pin the registry's log10n0 = -2 instead
+        for lab in rung["survey_labels"]:
             fixed_values[lab] = rung["fixed"][lab]
     if fixed_values:
         argv += ["--fixed_parameter_values", json.dumps(fixed_values)]
@@ -259,8 +368,10 @@ def core_expression(rung, s):
             "checkpoint_interval_seconds=0.0, checkpoint_file_resolved=None, "
             "resume_from_resolved=None, dynesty_diagnostics=False")
     model = (f"analysis = ds.model(cosmology=ds.Cosmology(H0={h0}, Om0=0.3075, w0=-1.0, wa=0.0), "
-             f"population={pop})")
-    lk = (f"bind_analysis(analysis, events=ds.load_events(PE), injections=ds.load_injections(SEL), "
+             f"population={pop}" + (", catalog=ds.load_catalog(CAT))" if _is_dark(rung) else ")"))
+    fc = ", fit_columns=required_fit_columns(analysis)" if _is_dark(rung) else ""
+    lk = (f"bind_analysis(analysis, events=ds.load_events(PE{fc}), "
+          f"injections=ds.load_injections(SEL{fc}), "
           f"selection_neff_soft_guard={s['guard'] == 'soft'}, "
           f"max_likelihood_variance={float(s['max_likelihood_variance'])}, "
           f"sel_batch_size={None if s['sel_batch_size'] == 'none' else int(s['sel_batch_size'])}, "
@@ -709,11 +820,15 @@ class Tee:
 class LegacyRun:
     impl = "legacy"
 
-    def __init__(self, rung, settings, pe, sel, out_dir):
+    def __init__(self, rung, settings, pe, sel, out_dir, catalog=None, row_chunk=None):
         self.rung, self.s = rung, settings
+        self.dark = _is_dark(rung)
+        self.catalog, self.row_chunk = catalog, row_chunk
         self.save_path = os.path.join(out_dir, "legacy_run")
-        self.argv = legacy_argv(rung, pe, sel, self.save_path, settings)
+        self.argv = legacy_argv(rung, pe, sel, self.save_path, settings, catalog=catalog,
+                                row_chunk=row_chunk)
         self.timing = {}
+        self.dark_resolved = None
 
     def import_package(self):
         import darksirens
@@ -773,13 +888,79 @@ class LegacyRun:
         self.decoder = build_parameter_decoder(opts, pspace.pop_params_fid,
                                                fixed_parameter_values=self.fixed,
                                                wl_params=data.get("wl_params"))
+        if self.dark:
+            self.dark_resolved = self._dark_checks()
+
+    def _dark_checks(self):
+        """The dark-siren build state the parity target needs (as impl_legacy records it)."""
+        from darksirens.likelihood.factory import _resolve_redshift_prior_materialization
+        from darksirens.redshift import catalog as rcat
+
+        lk, opts = self.likelihood, self.opts
+        if lk.kde_window is not None:
+            raise RuntimeError(f"legacy KDE window resolved to {lk.kde_window}, not the full row")
+        if lk.frozen_redshift_prior:
+            raise RuntimeError("legacy froze the redshift prior; the plan needs per-proposal evaluation")
+        if getattr(opts, "catalog_sky_weighting", None) != "conditional":
+            raise RuntimeError(f"catalog_sky_weighting={opts.catalog_sky_weighting!r}, not conditional")
+        em_pe = lk.operands[1]
+        pin = getattr(em_pe, "pinned_kernels", None)
+        routing = lk.empty_row_routing
+
+        def _side(plan_):
+            if plan_ is None:
+                return None
+            tiers = tuple(plan_.tiers or ())
+            n_occ = (sum(int(t.idx.shape[0]) for t in tiers) if tiers
+                     else int(plan_.idx_occ.shape[0]))
+            return {"n_occupied": n_occ, "n_empty": int(plan_.idx_empty.shape[0])}
+
+        z = np.asarray(em_pe.zgals)
+        ng = np.asarray(em_pe.ngals).astype(np.int64)
+        return {
+            "universe_model": str(opts.universe_model),
+            "survey_path": getattr(opts, "survey_path", None),
+            "catalog_sky_weighting": opts.catalog_sky_weighting,
+            "kde_window_opt": getattr(opts, "kde_window", None),
+            "kde_window_resolved": lk.kde_window,
+            "freeze_redshift_prior_opt": bool(getattr(opts, "freeze_redshift_prior", True)),
+            "frozen_redshift_prior": bool(lk.frozen_redshift_prior),
+            "row_chunk_opt": getattr(opts, "row_chunk", None),
+            "row_chunk_module": rcat._ROW_CHUNK_MODE,
+            "row_chunk_effective": rcat._resolve_row_chunk(int(z.shape[0]), int(z.shape[1])),
+            "kernel_gl": {"nodes": rcat._GL_NODES, "domain": rcat._GL_DOMAIN},
+            "c_mode": getattr(opts, "c_mode", None),
+            "use_LSS": bool(getattr(opts, "use_LSS", False)),
+            "drop_full_catalog": bool(getattr(opts, "drop_full_catalog", False)),
+            "resolved_survey_z_depths": list(getattr(opts, "resolved_survey_z_depths", None) or []),
+            "materialize_redshift_prior_state": bool(_resolve_redshift_prior_materialization(opts)),
+            "kernel_pin": ({"active": True, "H0_ref": float(np.asarray(pin.H0_ref))}
+                           if pin is not None else {"active": False}),
+            "empty_row_routing": {"active": bool(routing),
+                                  "pe": _side(routing[0][0]) if routing else None,
+                                  "sel": _side(routing[0][1]) if routing else None},
+            "catalog_rows": {"n_rows": int(z.shape[0]), "n_max": int(z.shape[1]),
+                             "n_galaxies_rows": int(ng.sum()), "n_rows_empty": int((ng == 0).sum())},
+            "cli_knobs": {k: v for k, (v, _w) in __import__("impl_legacy").LEGACY_DARK_SETTINGS.items()},
+            "row_chunk_requested": self.row_chunk,
+        }
+
+    def pow10(self, x):
+        """``10.0 ** log10n0`` exactly as the legacy decoder spells it (eager jnp)."""
+        import jax.numpy as jnp
+
+        return float(10.0 ** jnp.asarray(x, dtype=jnp.float64))
 
     def decode(self, coord):
         import jax.numpy as jnp
 
-        cosmo, _survey, pop, _sky, _marks = self.decoder.decode(jnp.asarray(coord))
-        return ([float(np.asarray(getattr(cosmo, n))) for n in ("H0", "Om0", "w0", "wa")]
-                + [float(x) for x in np.asarray(pop, dtype=np.float64)])
+        cosmo, survey, pop, _sky, _marks = self.decoder.decode(jnp.asarray(coord))
+        out = ([float(np.asarray(getattr(cosmo, n))) for n in ("H0", "Om0", "w0", "wa")]
+               + [float(x) for x in np.asarray(pop, dtype=np.float64)])
+        if self.dark:
+            out += [float(np.asarray(survey.n0)), float(np.asarray(survey.delta)),
+                    float(np.asarray(survey.sigma_kde))]
+        return out
 
     def fixed_population_check(self):
         return None  # covered by the decoded vector at the centre
@@ -815,6 +996,8 @@ class LegacyRun:
 
         out["normalization_grid"] = _jsonable(normalization_grid_settings().to_dict())
         out["run_dir"] = self.run_dir
+        if self.dark:
+            out["dark_settings"] = _jsonable(self.dark_resolved)
         return out
 
     def invocation(self):
@@ -825,9 +1008,14 @@ class LegacyRun:
 class CoreRun:
     impl = "core"
 
-    def __init__(self, rung, settings, pe, sel, out_dir):
+    def __init__(self, rung, settings, pe, sel, out_dir, catalog=None, row_chunk=None):
+        if row_chunk is not None:
+            raise ValueError("--row-chunk is legacy's --row_chunk; core's row chunking is fixed")
         self.rung, self.s = rung, settings
-        self.pe, self.sel = pe, sel
+        self.dark = _is_dark(rung)
+        if self.dark and not catalog:
+            raise ValueError("a dark-siren plan needs --catalog")
+        self.pe, self.sel, self.catalog = pe, sel, catalog
         self.timing = {}
         self.expression = core_expression(rung, settings)
 
@@ -851,15 +1039,38 @@ class CoreRun:
         from darksirens.runtime_binding import bind_analysis
 
         r, s = self.rung, self.s
+        t_cat = 0.0
+        self.catalog_store = None
+        if self.dark:
+            tc = time.perf_counter()
+            self.catalog_store = ds.load_catalog(self.catalog)
+            t_cat = time.perf_counter() - tc
         t0 = time.perf_counter()
         h0 = tuple(r["H0_bounds"]) if r["sample_H0"] else r["H0_fiducial"]
         fc = r["fixed_cosmology"]
         cosmology = ds.Cosmology(H0=h0, Om0=fc["Om0"], w0=fc["w0"], wa=fc["wa"])
-        population = ds.Population(r["population_model"], fixed=r["core_population_fixed"])
-        analysis = ds.model(cosmology=cosmology, population=population)
+        if self.dark:
+            # as impl_core: shared flags explicit; completeness=None = the incomplete
+            # conditional model (analysis.py:187-188); fit columns from the analysis
+            from darksirens.runtime_binding import required_fit_columns
+
+            population = ds.Population(r["population_model"], fixed=r["core_population_fixed"],
+                                       shared_beta=r["shared_beta"], shared_spin=r["shared_spin"],
+                                       shared_gamma=r["shared_gamma"])
+            analysis = ds.model(cosmology=cosmology, population=population,
+                                catalog=self.catalog_store)
+            fit_columns = required_fit_columns(analysis)
+            self.fit_columns = tuple(fit_columns)
+        else:
+            population = ds.Population(r["population_model"], fixed=r["core_population_fixed"])
+            analysis = ds.model(cosmology=cosmology, population=population)
         t1 = time.perf_counter()
-        events = ds.load_events(self.pe)
-        injections = ds.load_injections(self.sel)
+        if self.dark:
+            events = ds.load_events(self.pe, fit_columns=fit_columns)
+            injections = ds.load_injections(self.sel, fit_columns=fit_columns)
+        else:
+            events = ds.load_events(self.pe)
+            injections = ds.load_injections(self.sel)
         t2 = time.perf_counter()
         self.soft = bool(dspub._resolve_selection_neff_soft_guard(s["guard"], s["sampler"]))
         bound = bind_analysis(
@@ -920,7 +1131,14 @@ class CoreRun:
         self.upper = [float(x) for x in self.plan.upper]
         self.prior_kinds = _kinds_norm(self.plan.prior_kinds)
         self.joint_constraints = _constraints_norm(self.plan.joint_constraints)
-        self.timing.update(t_config_s=t1 - t0, t_load_s=t2 - t1, t_build_s=t3 - t2)
+        self.timing.update(t_config_s=t1 - t0, t_load_s=(t2 - t1) + t_cat, t_build_s=t3 - t2,
+                           t_catalog_load_s=t_cat)
+
+    def pow10(self, x):
+        """``10.0 ** log10n0`` exactly as core's decoder spells it (eager jnp)."""
+        import jax.numpy as jnp
+
+        return float(10.0 ** jnp.asarray(x, dtype=jnp.float64))
 
     def decode(self, coord):
         import jax.numpy as jnp
@@ -932,9 +1150,14 @@ class CoreRun:
             base = np.asarray([self.rung["fixed"].get(n, np.nan) for n in self.full_labels])
             base[self.embedding["sampled_indices_in_core_plan"]] = np.asarray(coord)
             theta = jnp.asarray(base)
-        cosmo, pop, _cat, _ang = _decode_theta(self.analysis, theta, z_depth=None)
-        return ([float(np.asarray(getattr(cosmo, n))) for n in ("H0", "Om0", "w0", "wa")]
-                + [float(x) for x in np.asarray(pop, dtype=np.float64)])
+        z_depth = self.bound.z_depth if self.dark else None
+        cosmo, pop, cat, _ang = _decode_theta(self.analysis, theta, z_depth=z_depth)
+        out = ([float(np.asarray(getattr(cosmo, n))) for n in ("H0", "Om0", "w0", "wa")]
+               + [float(x) for x in np.asarray(pop, dtype=np.float64)])
+        if self.dark:
+            out += [float(np.asarray(cat.n0)), float(np.asarray(cat.delta)),
+                    float(np.asarray(cat.sigma_kde))]
+        return out
 
     def fixed_population_check(self):
         fp = self.analysis.parameters.fixed_population
@@ -980,6 +1203,24 @@ class CoreRun:
         out["normalization_grid"] = _jsonable(normalization_grid_settings().to_dict())
         out["core_expression"] = self.expression
         out["embedding"] = self.embedding
+        if self.dark:
+            b = self.bound
+            ng = np.asarray(b.catalog.ngals).astype(np.int64)
+            z = np.asarray(b.catalog.zgals)
+            n_rows, n_max = int(z.shape[0]), int(z.shape[1])
+            out["dark_settings"] = {
+                "universe_model": "dark_sirens (IncompleteCatalogRedshift)",
+                "catalog_path": self.catalog,
+                "estimand": "conditional (the only one core implements)",
+                "kde": "full row", "kernel_gl": "24-node CDF space (fixed)",
+                "row_chunk": "auto (fixed, no knob): 512 above n_rows*n_max > 2**25",
+                "row_chunk_effective": 512 if n_rows * n_max > 2 ** 25 else None,
+                "z_depth": b.z_depth,
+                "fit_columns": list(self.fit_columns),
+                "catalog_rows": {"n_rows": n_rows, "n_max": n_max,
+                                 "n_galaxies_rows": int(ng.sum()),
+                                 "n_rows_empty": int((ng == 0).sum())},
+            }
         return out
 
     def invocation(self):
@@ -993,7 +1234,16 @@ class CoreRun:
 def parse_args(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--impl", required=True, choices=("legacy", "core"))
-    ap.add_argument("--rung", required=True)
+    ap.add_argument("--rung", default=None, help="spectral ladder rung (ladder_configs/rungs.json)")
+    ap.add_argument("--plan", default=None,
+                    help="dark-siren plan of plans.py (dark_H0, dark_full, ...) in place of --rung; "
+                         "needs --catalog")
+    ap.add_argument("--catalog", default=None,
+                    help="pixelated galaxy catalog (catalog_pixelated_nside_N.h5) of a mock fixture "
+                         "carrying a galaxy_density.json sidecar (dark plans only)")
+    ap.add_argument("--row-chunk", default=None,
+                    help="legacy only (dark plans): legacy's own --row_chunk auto|off|N (unset = auto, "
+                         "the H2 setting); refused for core, whose row chunking is fixed")
     ap.add_argument("--sampler", required=True, choices=("tinyns", "dynesty"))
     ap.add_argument("--pe", required=True)
     ap.add_argument("--sel", required=True)
@@ -1092,15 +1342,41 @@ def main(argv=None):
             print(f"--device cpu but JAX_PLATFORMS={cur}", file=sys.stderr)
             return 2
         os.environ["JAX_PLATFORMS"] = "cpu"
-    try:
-        rung = resolve_rung(str(a.rung), load_rungs(a.rungs_file))
-    except (KeyError, ValueError) as exc:
-        print(f"rung: {exc}", file=sys.stderr)
+    if (a.rung is None) == (a.plan is None):
+        print("give exactly one of --rung (spectral ladder) or --plan (dark-siren plan)", file=sys.stderr)
         return 2
+    try:
+        rung = (resolve_rung(str(a.rung), load_rungs(a.rungs_file)) if a.rung is not None
+                else resolve_dark_plan(a.plan))
+    except (KeyError, ValueError) as exc:
+        print(f"rung/plan: {exc}", file=sys.stderr)
+        return 2
+    dark = _is_dark(rung)
     for f in (a.pe, a.sel):
         if not os.path.isfile(f):
             print(f"missing input {f}", file=sys.stderr)
             return 2
+    fixture_preflight = None
+    if dark:
+        if not a.catalog or not os.path.isfile(a.catalog):
+            print(f"plan {a.plan} is a dark-siren plan and needs --catalog (got {a.catalog!r})",
+                  file=sys.stderr)
+            return 2
+        import dark_fixture
+
+        try:
+            fixture_preflight = dark_fixture.preflight(a.catalog, a.pe, a.sel,
+                                                       plans.resolve_plan(a.plan))
+        except dark_fixture.FixturePreflightError as exc:
+            print(f"FIXTURE PREFLIGHT REFUSED: {exc}", file=sys.stderr)
+            return 2
+    elif a.catalog:
+        print("--catalog applies to dark-siren plans (--plan) only", file=sys.stderr)
+        return 2
+    if a.row_chunk is not None and (a.impl != "legacy" or not dark):
+        print("--row-chunk is legacy's --row_chunk for dark-siren plans; core's row chunking is "
+              "fixed (auto 512 above 2**25 elements) and has no knob", file=sys.stderr)
+        return 2
     out = os.path.abspath(a.out)
     if os.path.exists(os.path.join(out, "record.json")):
         print(f"{out} already holds a record.json", file=sys.stderr)
@@ -1114,6 +1390,9 @@ def main(argv=None):
         "sel_batch_size": a.sel_batch, "pe_event_block": a.pe_block,
         "guard": a.guard, "max_likelihood_variance": float(a.max_variance),
     }
+    if dark:
+        # informational (not a matched setting: legacy-only memory knob; core is fixed auto)
+        settings["legacy_row_chunk"] = a.row_chunk
 
     # ---- XLA persistent cache policy (before jax import) ---------------------------
     cache_info = {"mode": a.cache_mode, "requested_dir": a.cache_dir,
@@ -1149,8 +1428,9 @@ def main(argv=None):
 
     counter = TimedCompileCounter().install()
     t_import_jax = time.perf_counter() - t0
-    run = (LegacyRun if a.impl == "legacy" else CoreRun)(rung, settings, os.path.abspath(a.pe),
-                                                         os.path.abspath(a.sel), out)
+    run = (LegacyRun if a.impl == "legacy" else CoreRun)(
+        rung, settings, os.path.abspath(a.pe), os.path.abspath(a.sel), out,
+        catalog=os.path.abspath(a.catalog) if a.catalog else None, row_chunk=a.row_chunk)
     t0 = time.perf_counter()
     pkg = run.import_package()
     t_import_pkg = time.perf_counter() - t0
@@ -1170,7 +1450,7 @@ def main(argv=None):
     record = {
         "schema": SCHEMA,
         "status": "running",
-        "label": a.label or f"{a.impl}_r{a.rung}_{a.sampler}",
+        "label": a.label or (f"{a.impl}_{a.plan}_{a.sampler}" if dark else f"{a.impl}_r{a.rung}_{a.sampler}"),
         "implementation": a.impl,
         "arm": a.arm,
         "fixed_coordinate_parity_refs": list(a.parity_ref),
@@ -1196,6 +1476,14 @@ def main(argv=None):
         "gaps": [],
     }
     record["harness"]["git"].pop("known_digest_match", None)
+    if dark:
+        import dark_fixture
+
+        record["inputs"]["catalog"] = dict(dark_fixture.catalog_summary(a.catalog),
+                                           path=os.path.abspath(a.catalog),
+                                           bytes=os.path.getsize(a.catalog),
+                                           sha256=bc.sha256_file(a.catalog))
+        record["fixture_preflight"] = fixture_preflight
     record["invocation"] = run.invocation()
     mem = [bc.memory_checkpoint("after_import")]
     rec_path = os.path.join(out, "record.json")
@@ -1264,8 +1552,12 @@ def main(argv=None):
     decoded = None
     try:
         decoded = run.decode(centre)
-        if [bc.fhex(x) for x in decoded] != [bc.fhex(x) for x in rung["expected_full_at_centre"]]:
-            errs.append(f"decoded centre {decoded} != expected {rung['expected_full_at_centre']}")
+        exp_full = list(rung["expected_full_at_centre"])
+        if dark:  # the decoders report n0 = 10**log10n0 in the survey slot
+            i10 = rung["expected_full_pow10_index"]
+            exp_full[i10] = run.pow10(exp_full[i10])
+        if [bc.fhex(x) for x in decoded] != [bc.fhex(x) for x in exp_full]:
+            errs.append(f"decoded centre {decoded} != expected {exp_full}")
     except Exception as exc:  # noqa: BLE001
         errs.append(f"decode failed: {type(exc).__name__}: {exc}")
     fixed_pop = run.fixed_population_check()

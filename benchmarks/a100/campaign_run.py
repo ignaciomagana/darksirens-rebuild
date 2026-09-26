@@ -67,7 +67,9 @@ ENV_PY = {"legacy": f"{ROOT}/envs/env_legacy/bin/python", "core": f"{ROOT}/envs/
           "core_pin": f"{ROOT}/envs/env_core_pin/bin/python",
           "core_o1": f"{ROOT}/envs/env_core_o1/bin/python"}
 PKG_SHA = {"legacy": "c042527238bd71421b792936bc48c3b815b90d6d",
-           "core": "88004d96ddeee37c47abc1d2dfd1c6fc3c203dfd",
+           # core main after PR #25 (O1 merged, 2026-09-25; state/CORE_MAIN_POSTMERGE.txt);
+           # entries written before that carried 88004d96ddeee37c47abc1d2dfd1c6fc3c203dfd
+           "core": "43d273f92e0fad9ba88853c884a3913729cd93c1",
            "core_pin": "8bf2bec53ff7b557c6b930d4044008cb72008f61",
            "core_o1": "f825906278140b8bfd80a13007ddd0136db28d49"}
 OOM_RE = re.compile(r"RESOURCE_EXHAUSTED|[Oo]ut of memory|OOM|Failed to allocate|CUDA_ERROR_OUT_OF_MEMORY")

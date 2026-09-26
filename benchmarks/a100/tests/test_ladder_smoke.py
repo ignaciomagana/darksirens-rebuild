@@ -244,3 +244,63 @@ def test_preflight_abort_is_recorded(runs):
         assert "-inf on ALL 32" in rec["sampler_error"]["message"]
         assert rec["settings"]["resolved"]["selection_neff_soft_guard"] is False
         assert not rec["first_call"]["finite"]
+
+
+# ----------------------------------------------------------------------------
+# Dark-siren plans (--plan / --catalog; mock-proxy ladder)
+# ----------------------------------------------------------------------------
+FIXTURE_T = os.environ.get("BENCH_FIXTURE_T_DIR", f"{_LOCAL}/mock/fixtures/T")
+
+
+def test_dark_plans_resolve_and_legacy_argv():
+    import impl_legacy
+    import plans
+
+    for name in ("dark_H0", "dark_full"):
+        r = infer_ladder.resolve_dark_plan(name)
+        p = plans.resolve_plan(name)
+        assert r["sampled"] == p["sampled"] and r["universe"] == "dark"
+        assert r["full_order"][r["expected_full_pow10_index"]] == "log10n0"
+        argv = infer_ladder.legacy_argv(r, "PE", "SEL", "OUT", {
+            "sampler": "dynesty", "seed": 1, "nlive": 10, "dlogz": 1.0, "max_samples": 0,
+            "tinyns_preset": "recommended", "sampler_preflight": "on", "prior_transform_dispatch": "auto",
+            "sel_batch_size": "4096", "pe_event_block": "6", "guard": "soft",
+            "max_likelihood_variance": 10.0}, catalog="CAT", row_chunk="2048")
+        assert argv[argv.index("--universe_model") + 1] == "dark_sirens"
+        assert argv[argv.index("--survey_path") + 1] == "CAT"
+        assert argv[argv.index("--row_chunk") + 1] == "2048"
+        for flag, (value, _w) in impl_legacy.LEGACY_DARK_SETTINGS.items():
+            if flag not in ("--universe_model", "--row_chunk"):
+                assert argv[argv.index(flag) + 1] == value
+        fixed = json.loads(argv[argv.index("--fixed_parameter_values") + 1])
+        if name == "dark_H0":
+            assert fixed == {"Om0": 0.3075, "log10n0": -3.0, "delta": 0.0, "sigma_kde": 0.0}
+        else:
+            assert fixed == {"Om0": 0.3075}
+    with pytest.raises(ValueError):
+        infer_ladder.resolve_dark_plan("spectral_H0")
+
+
+@pytest.mark.parametrize("impl", ["legacy", "core"])
+def test_dark_describe_fixture_T(impl, tmp_path):
+    cat = os.path.join(FIXTURE_T, "catalog_pixelated_nside_16.h5")
+    _need(cat)
+    _need(PY[impl])
+    outs = {}
+    for plan in ("dark_H0", "dark_full"):
+        out = str(tmp_path / f"{impl}_{plan}")
+        cmd = [PY[impl], os.path.join(BENCH, "infer_ladder.py"), "--impl", impl, "--plan", plan,
+               "--catalog", cat, "--sampler", "dynesty", "--pe", os.path.join(FIXTURE_T, "mock_gw_events.h5"),
+               "--sel", os.path.join(FIXTURE_T, "mock_gw_selection.h5"), "--nlive", "20", "--dlogz", "2.0",
+               "--seed", str(SEED), "--guard", "soft", "--max-variance", "10", "--out", out,
+               "--device", "cpu", "--describe"]
+        r = subprocess.run(cmd, env=_env(), capture_output=True, text=True, timeout=1800)
+        assert r.returncode == 0, r.stderr[-3000:]
+        rec = json.load(open(os.path.join(out, "record.json")))
+        assert rec["status"] == "described" and rec["plan"]["assertions"]["ok"]
+        assert rec["fixture_preflight"]["status"] == "ok"
+        assert rec["inputs"]["catalog"]["sha256"]
+        assert rec["settings"]["resolved"]["dark_settings"]
+        outs[plan] = rec["first_call"]["logL_hex"]
+    # the plans share the centre (fiducial population, fixture survey values)
+    assert outs["dark_H0"] == outs["dark_full"]

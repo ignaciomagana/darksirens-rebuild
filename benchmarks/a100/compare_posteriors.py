@@ -92,8 +92,8 @@ def check_comparable(A, B, cross_sampler=False):
             why.append(f"setting {k}: {sa.get(k)!r} vs {sb.get(k)!r}")
     if sa.get("sampler") != sb.get("sampler") and not cross_sampler:
         why.append(f"sampler {sa.get('sampler')} vs {sb.get('sampler')} (pass --cross-sampler)")
-    for f in ("pe", "sel"):
-        if a["inputs"][f]["sha256"] != b["inputs"][f]["sha256"]:
+    for f in ("pe", "sel", "catalog"):
+        if (a["inputs"].get(f) or {}).get("sha256") != (b["inputs"].get(f) or {}).get("sha256"):
             why.append(f"input {f} sha256 differs")
     if A["posterior"] is None or B["posterior"] is None:
         why.append("posterior.npz missing")
@@ -278,7 +278,7 @@ def compare(A, B, cross_sampler=False, levels_frac=(0.25, 0.5, 0.75, 1.0)):
               "harness_sha": b["harness"]["git"].get("git_sha"), "backend": b["device"]["backend"]},
         "rung": a["rung"]["rung"], "labels": labels,
         "settings": {k: a["settings"]["requested"].get(k) for k in MATCHED_SETTINGS},
-        "inputs_sha256": {f: a["inputs"][f]["sha256"] for f in ("pe", "sel")},
+        "inputs_sha256": {f: a["inputs"][f]["sha256"] for f in ("pe", "sel", "catalog") if f in a["inputs"]},
         "ess_A": essA, "ess_B": essB,
         "n_samples": [int(pa["samples"].shape[0]), int(pb["samples"].shape[0])],
     }

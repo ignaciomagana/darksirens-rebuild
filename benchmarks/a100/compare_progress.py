@@ -59,8 +59,8 @@ def main(argv=None):
     for k in MATCHED:
         if ra["settings"]["requested"].get(k) != rb["settings"]["requested"].get(k):
             errs.append(f"setting {k} differs")
-    for k in ("pe", "sel"):
-        if ra["inputs"][k].get("sha256") != rb["inputs"][k].get("sha256"):
+    for k in ("pe", "sel", "catalog"):
+        if (ra["inputs"].get(k) or {}).get("sha256") != (rb["inputs"].get(k) or {}).get("sha256"):
             errs.append(f"input {k} sha256 differs")
     if errs:
         print("REFUSED: " + "; ".join(errs), file=sys.stderr)
