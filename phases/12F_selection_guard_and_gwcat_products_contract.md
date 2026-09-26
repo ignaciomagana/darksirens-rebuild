@@ -352,10 +352,28 @@ Properties of the reference build that carry into the rebuilt products
 
 **Rebuild rule.** P12.4's products are rebuilt with the commands above, and the
 result is compared with the reference build. A re-export of the 256-sample PE
-file was byte-identical (`phase1_gwcat_exports.md:114`). Rebuilding from the
-same store with gwcat installed from an archive of 8f9e2f1 is therefore
-expected to reproduce the reference sha256 [inference]. An install from a git
-checkout stamps `writer_commit` and so changes the bytes [inference].
+file was byte-identical (`phase1_gwcat_exports.md:114`). Two attributes of the
+PE file depend on how the export is run, not on the data:
+- `event_list_filter` and `selection_spec` store the `--event-list` argument
+  string verbatim (gwcat `catalog.py:797-800` at 8f9e2f1). The reference build
+  passed
+  `/hildafs/projects/phy230014p/magana/darksirens_benchmark_local/gwcat/population_events.txt`
+  (read from its attributes). The PE command above, with a relative
+  `population_events.txt`, writes a different string.
+- `writer_commit` is `git -C <installed gwcat package directory> rev-parse
+  HEAD`, or `unknown` when that fails (gwcat `validation_summary.py:80-112`).
+  An editable install, or a run from the checkout, stamps the commit. A
+  non-editable install, like the reference build's, records `unknown`.
+
+The selection file stores no path. Of the two, only `writer_commit` applies to
+it (attributes read from the reference build).
+- Expected to reproduce both reference sha256 values [inference]: a rebuild
+  from the same store, with the reference build's `--event-list` string and a
+  non-editable install of 8f9e2f1. The same HDF5, h5py and zlib builds may
+  also be needed (campaign environment `$LOCAL/envs/gwcat311.freeze.txt`:
+  h5py 3.16.0, numpy 2.3.5).
+- Any other rebuild can at best be dataset-identical. The consumer's pinned
+  sha256 must then be re-pinned by a reviewed change (gate 2).
 
 **Provenance to regenerate.** Every P12.1, resolved-input, P12.2, P12.2b and
 P12.3 record made with the gwcat-1.0 files is stale. P12.2b's PE footprint
