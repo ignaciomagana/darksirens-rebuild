@@ -213,8 +213,8 @@ def parity_rows():
         return out
     ind = json.load(open(idx))["runs"]
     for rid, e in sorted(ind.items()):
-        if not rid.startswith("MPP_core_"):
-            continue
+        if not rid.startswith("MPP_core_") or (rid + "_diagjit") in ind:
+            continue  # a record superseded by its --diag-mode jit rerun is listed via the rerun
         sp = e["spec"]
         s = f"{MP}/parity/summaries/{rid}.json"
         d = json.load(open(s)) if os.path.isfile(s) else {}
@@ -225,7 +225,10 @@ def parity_rows():
                     "status_legacy": ind.get(sp["compare_to"][0], {}).get("status"),
                     "overall_pass": (d.get("verdict") or {}).get("overall_pass"), "summary": s,
                     "worst_field": worst[0], "max_rel": worst[1], "max_rel_by_field": mr,
-                    "verdict": d.get("verdict")})
+                    "verdict": d.get("verdict"),
+                    "superseded_attempt": (rid[:-len("_diagjit")] if rid.endswith("_diagjit") else None),
+                    "superseded_attempt_status": (ind.get(rid[:-len("_diagjit")], {}).get("status")
+                                                  if rid.endswith("_diagjit") else None)})
     return out
 
 

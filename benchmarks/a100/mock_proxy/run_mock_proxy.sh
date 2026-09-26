@@ -21,7 +21,10 @@ run() {  # arm fixture plan
   case $fx in R1) cat=catalog_pixelated_nside_64.h5; blk="--sel-batch none --pe-block none";;
               R2) cat=catalog_pixelated_nside_128.h5; blk="--sel-batch 4096 --pe-block 6"; [ $arm = legacy ] && rc_arg="--row-chunk 2048";; esac
   local blocks=single; [ $fx = R2 ] && blocks=b4096x6
-  local pr="--parity-ref mock_proxy/parity/records/MPP_legacy_whole_${blocks}_${plan}_${fx}_soft10 --parity-ref mock_proxy/parity/records/MPP_core_asis_${blocks}_${plan}_${fx}_soft10"
+  # R2 core parity record: the rerun with jitted (untimed) diagnostics; the as-shipped eager diagnostic
+  # pass of the first attempt ran out of device memory after the timed kernel had run (kernel unchanged)
+  local csuf=""; [ $fx = R2 ] && csuf=_diagjit
+  local pr="--parity-ref mock_proxy/parity/records/MPP_legacy_whole_${blocks}_${plan}_${fx}_soft10 --parity-ref mock_proxy/parity/records/MPP_core_asis_${blocks}_${plan}_${fx}_soft10${csuf}"
   local D=$R/data/mock/$fx name; name=$(nm $arm $fx $plan)
   local cdir=$R/xla_cache/runs/$name out=$MP/runs/$name
   if [ -e "$cdir" ] || [ -e "$out/record.json" ]; then echo "$(date -u +%FT%TZ) $name: cache or record exists, skipped"; return; fi
