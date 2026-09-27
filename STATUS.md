@@ -90,7 +90,7 @@ arrival time.
 
 ## Post-reconstruction Phase 12 — first production consumer
 
-Status: **PHASE 12C CORE ACCEPTED / CONSUMER ON THE 12C PIN (MERGED WITHOUT CONTRACT CI, SEE 12C CONSUMER) / PHASE 12D PROPOSED, NOT ACCEPTED / PHASE 12E CAMPAIGN RECORD PROPOSED (REBUILD PR #10, NOT ON MAIN) / PHASE 12F GUARD AND GW-PRODUCT CONTRACT CHANGE PROPOSED, NOT ACCEPTED / ACCEPTED CHAIN STOPS AT P12.2 ON ITS OWN INPUTS**
+Status: **PHASE 12C CORE ACCEPTED / CONSUMER ON THE 12C PIN (MERGED WITHOUT CONTRACT CI, SEE 12C CONSUMER) / PHASE 12D PROPOSED, NOT ACCEPTED / PHASE 12E CAMPAIGN RECORD MERGED AS PROPOSED (d6b63f7) / PHASE 12F GUARD AND GW-PRODUCT CONTRACT CHANGE PROPOSED, NOT ACCEPTED / ACCEPTED CHAIN STOPS AT P12.2 ON ITS OWN INPUTS**
 
 **No new H0 result is accepted yet.**
 
@@ -238,11 +238,11 @@ Conditions 1 and 2 of the record's pin decision are met; condition 3
 record's first "left open" item: the `real-backends` job now fails when pytest
 fails behind `tee`. A post-12D pin, if adopted, should be `88004d96` or later.
 
-### Phase 12E — A100 benchmark campaign record (PROPOSED / REBUILD PR #10 OPEN / NOT ON MAIN)
+### Phase 12E — A100 benchmark campaign record (PROPOSED RECORD / MERGED AS PROPOSED d6b63f7 / NOT ACCEPTED)
 
 ```text
-record:        phases/12E_a100_benchmark_campaign_record.md (on branch record/a100-benchmark-campaign)
-control PR:    ignaciomagana/darksirens-rebuild #10, head d91ec93, open
+record:        phases/12E_a100_benchmark_campaign_record.md (on main since d6b63f7, 2026-09-27)
+control PR:    darksirens-rebuild #10, merged as proposed d6b63f7 (2026-09-27)
 production pin: UNCHANGED, 8bf2bec5
 ```
 
@@ -251,8 +251,7 @@ A100, from fixed-coordinate kernels to full sampler runs on the real GWTC
 product. It found parity everywhere it compared the codes. It also found that
 the P12.4 hard guard at cap 1.0 admits no finite likelihood on the campaign's
 real product. On the owner's decision, TinyNS is considered broken until
-ignaciomagana/darksirens#462 is debugged. The record is not merged into this
-repository's `main`.
+ignaciomagana/darksirens#462 is debugged. The record was merged into this repository's `main` as a proposed record (d6b63f7, 2026-09-27); it is not accepted and the production pin is unchanged.
 
 ### Phase 12F — selection guard and GW input products (PROPOSED CONTRACT CHANGE / NOT ACCEPTED)
 
