@@ -937,6 +937,18 @@ class LegacyAdapter:
         sel[self.sel_order] = internal
         return pe, sel
 
+    def compiled_memory(self, coord_np):
+        """--mem-phases: memory_analysis of likelihood.jitted_body (the timed kernel)."""
+        import jax.numpy as jnp
+
+        from bench_common import compiled_memory
+
+        lk = self.likelihood
+        args = (jnp.asarray(coord_np), lk.operands, lk.distance_table, lk.smoothing_operator)
+        out = compiled_memory(lk.jitted_body, args, {}, self.counter)
+        out["kernel"] = "likelihood.jitted_body"
+        return out
+
     # ----------------------------------------------------------- jit evidence
     def jit_evidence(self, coord_np):
         import jax.numpy as jnp

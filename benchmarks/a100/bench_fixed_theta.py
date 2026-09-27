@@ -118,6 +118,11 @@ def parse_args(argv=None):
                          "the catalog kernel at bind time when Om0, w0, wa, delta and sigma_kde "
                          "are fixed; off keeps the per-call quadrature. Omitted: not passed (the "
                          "installed core's default)")
+    ap.add_argument("--mem-phases", action="store_true",
+                    help="record device memory around the build (before_build; core also "
+                         "before_bind / after_bind) and the timed kernel executable's XLA "
+                         "memory_analysis (untimed, after the jit evidence) in "
+                         "record['memory_phases']; off by default")
     ap.add_argument("--survey-fixed-override", default=None,
                     help="JSON {label: value} replacing FIXED survey values of a dark plan whose "
                          "survey block is fixed (fixed-coordinate checks only, e.g. the PR-6a "
@@ -544,6 +549,9 @@ def main(argv=None):
                           **adapter_kw)
 
     # ---- load + build ------------------------------------------------------
+    adapter.mem_phases = bool(a.mem_phases)
+    if a.mem_phases:
+        mem.append(bc.memory_checkpoint("before_build"))
     clock.mark("build_start")
     snap = counter.snapshot()
     try:
@@ -700,6 +708,14 @@ def main(argv=None):
     except Exception as exc:  # evidence must not kill the record
         jit_ev = {"error": f"{type(exc).__name__}: {exc}"}
     mem.append(bc.memory_checkpoint("after_jit_evidence"))
+    mem_phases = None
+    if a.mem_phases:
+        mem_phases = {"bind": getattr(adapter, "mem_bind", None)}
+        try:
+            mem_phases["timed_kernel_memory_analysis"] = adapter.compiled_memory(coords[0])
+        except Exception as exc:  # evidence must not kill the record
+            mem_phases["timed_kernel_memory_analysis"] = {"error": f"{type(exc).__name__}: {exc}"}
+        mem.append(bc.memory_checkpoint("after_compiled_memory"))
 
     # ---- per-coordinate values -----------------------------------------------
     bc.partial_stage("diagnostics")
@@ -981,6 +997,8 @@ def main(argv=None):
     record["xla_cache"] = cache_info
 
     record["jit_evidence"] = jit_ev
+    if mem_phases is not None:
+        record["memory_phases"] = mem_phases
     record["diagnostics_provenance"] = adapter.diag_provenance
     record["values"] = {"per_coord": per_coord}
     record["gaps"].extend(adapter.gaps)

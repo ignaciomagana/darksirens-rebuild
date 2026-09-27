@@ -563,6 +563,27 @@ def aot_report(jitted, args, kwargs, counter: CompileCounter) -> dict:
     }
 
 
+def compiled_memory(jitted, args, kwargs, counter: CompileCounter) -> dict:
+    """``--mem-phases``: XLA's own memory analysis of the timed kernel's executable.
+
+    Lowers and compiles ``jitted`` for the same operands as the timed calls (served
+    from the persistent cache when present) and returns ``compiled.memory_analysis()``.
+    ``memory_stats()['peak_bytes_in_use']`` is cumulative and cannot be reset in
+    jaxlib 0.4.34, so when the bind peak exceeds the per-call peak the per-call peak is
+    bounded by resident bytes after the build + temp + output of this executable.
+    """
+    snap = counter.snapshot()
+    t0 = time.perf_counter()
+    compiled = jitted.lower(*args, **kwargs).compile()
+    ma = compiled.memory_analysis()
+    out = {k: int(getattr(ma, k)) for k in (
+        "argument_size_in_bytes", "output_size_in_bytes", "temp_size_in_bytes",
+        "alias_size_in_bytes", "generated_code_size_in_bytes") if hasattr(ma, k)}
+    out["t_lower_compile_s"] = time.perf_counter() - t0
+    out["compile_counter_delta"] = counter.delta(snap)
+    return out
+
+
 # ----------------------------------------------------------------------------
 # nvidia-smi log join (gpu_run.sh writes timestamp, memory.used, utilization.gpu)
 # ----------------------------------------------------------------------------

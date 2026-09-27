@@ -170,11 +170,18 @@ class CoreAdapter:
         t2 = time.perf_counter()
         guard_kw = {} if self.max_variance is None else {
             "max_likelihood_variance": self.max_variance}
+        if getattr(self, "mem_phases", False):  # --mem-phases (bench_fixed_theta.py)
+            import bench_common as _bc
+
+            self.mem_bind = [_bc.memory_checkpoint("before_bind")]
+            t2 = time.perf_counter()  # the checkpoint is not part of t_build
         bound = bind_analysis(
             analysis, events=events, injections=injections,
             selection_neff_soft_guard=(self.guard == "soft"),
             sel_batch_size=self.sel_batch_req, pe_event_block=self.pe_block_req, **guard_kw)
         t3 = time.perf_counter()
+        if getattr(self, "mem_phases", False):
+            self.mem_bind.append(_bc.memory_checkpoint("after_bind"))
         self.analysis, self.events, self.injections, self.bound = analysis, events, injections, bound
         self.fit_columns = tuple(fit_columns)
         self.labels = [str(x) for x in analysis.parameters.labels]
@@ -764,6 +771,34 @@ class CoreAdapter:
         rep["jaxpr"] = jaxpr_const_report(self._whole.jitted, args, kwargs, data_arrays)
         rep["aot"] = aot_report(self._whole.jitted, args, kwargs, self.counter)
         return rep
+
+    def compiled_memory(self, coord_np):
+        """--mem-phases: memory_analysis of the timed kernel's executable (whole: the
+        harness jit; asis: the binding's own bind-time jit, BoundAnalysis._log_likelihood)."""
+        from bench_common import compiled_memory
+        from darksirens.cosmology import distances as D
+
+        jnp = self._jnp
+        b = self.bound
+        kwargs = {"distance_table": D.distance_table(),
+                  "_ambient_extras": tuple(res() for res, _ in D._AMBIENT_JIT_CHANNELS)}
+        if self.jit_mode == "whole":
+            args = (jnp.asarray(coord_np), b.gw_pe, b.gw_selection)
+            if self.dark:
+                args = args + (b.catalog, b.observed_density_cache, self.pin)
+            out = compiled_memory(self._whole.jitted, args, kwargs, self.counter)
+            out["kernel"] = "harness whole jit"
+            return out
+        fn = getattr(b, "_log_likelihood", None)
+        if fn is None or not hasattr(fn, "jitted"):
+            return {"kernel": "eager BoundAnalysis: no single executable"}
+        theta = jnp.asarray(self.embed(jnp.asarray(coord_np)))
+        args = (theta, b.gw_pe, b.gw_selection, b.catalog, b.observed_density_cache)
+        if self.pin is not None:
+            args = args + (self.pin,)
+        out = compiled_memory(fn.jitted, args, kwargs, self.counter)
+        out["kernel"] = "BoundAnalysis._log_likelihood (bind-time jit)"
+        return out
 
     def cleanup(self):
         return []

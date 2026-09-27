@@ -62,16 +62,20 @@ ROOT = "/media/volume/tbs/darksirens_benchmark"
 ENV_SCRIPTS = {"legacy": f"{ROOT}/envs/env_legacy.sh", "core": f"{ROOT}/envs/env_core.sh",
                "core_pin": f"{ROOT}/envs/env_core_pin.sh",
                # Gate 4 experimental arm: darksirens-core perf/jit-bound-analysis (not merged)
-               "core_o1": f"{ROOT}/envs/env_core_o1.sh"}
+               "core_o1": f"{ROOT}/envs/env_core_o1.sh",
+               # darksirens-core PR #28 (feat/h0-kernel-pin) at its reviewed head (not merged)
+               "core_h0pin": f"{ROOT}/envs/env_core_h0pin.sh"}
 ENV_PY = {"legacy": f"{ROOT}/envs/env_legacy/bin/python", "core": f"{ROOT}/envs/env_core/bin/python",
           "core_pin": f"{ROOT}/envs/env_core_pin/bin/python",
-          "core_o1": f"{ROOT}/envs/env_core_o1/bin/python"}
+          "core_o1": f"{ROOT}/envs/env_core_o1/bin/python",
+          "core_h0pin": f"{ROOT}/envs/env_core_h0pin/bin/python"}
 PKG_SHA = {"legacy": "c042527238bd71421b792936bc48c3b815b90d6d",
            # core main after PR #25 (O1 merged, 2026-09-25; state/CORE_MAIN_POSTMERGE.txt);
            # entries written before that carried 88004d96ddeee37c47abc1d2dfd1c6fc3c203dfd
            "core": "43d273f92e0fad9ba88853c884a3913729cd93c1",
            "core_pin": "8bf2bec53ff7b557c6b930d4044008cb72008f61",
-           "core_o1": "f825906278140b8bfd80a13007ddd0136db28d49"}
+           "core_o1": "f825906278140b8bfd80a13007ddd0136db28d49",
+           "core_h0pin": "2db3290e1fbbeb0455cf9295f3d062d7cb2e7c58"}
 OOM_RE = re.compile(r"RESOURCE_EXHAUSTED|[Oo]ut of memory|OOM|Failed to allocate|CUDA_ERROR_OUT_OF_MEMORY")
 
 
