@@ -251,8 +251,7 @@ A100, from fixed-coordinate kernels to full sampler runs on the real GWTC
 product. It found parity everywhere it compared the codes. It also found that
 the P12.4 hard guard at cap 1.0 admits no finite likelihood on the campaign's
 real product. On the owner's decision, TinyNS is considered broken until
-ignaciomagana/darksirens#462 is debugged. The record is not merged into this
-repository's `main`.
+ignaciomagana/darksirens#462 is debugged. The record was merged into this repository's `main` as a proposed record (d6b63f7, 2026-09-27); it is not accepted and the production pin is unchanged.
 
 ### Phase 12F — selection guard and GW input products (PROPOSED CONTRACT CHANGE / NOT ACCEPTED)
 
