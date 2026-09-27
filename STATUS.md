@@ -90,7 +90,7 @@ arrival time.
 
 ## Post-reconstruction Phase 12 — first production consumer
 
-Status: **PHASE 12C CORE ACCEPTED / CONSUMER ON THE 12C PIN (MERGED WITHOUT CONTRACT CI, SEE 12C CONSUMER) / PHASE 12D PROPOSED, NOT ACCEPTED / PHASE 12E CAMPAIGN RECORD MERGED AS PROPOSED (d6b63f7) / PHASE 12F GUARD AND GW-PRODUCT CONTRACT CHANGE PROPOSED, NOT ACCEPTED / ACCEPTED CHAIN STOPS AT P12.2 ON ITS OWN INPUTS**
+Status: **PHASE 12C CORE ACCEPTED / PHASE 12D PROPOSED ACCEPTANCE THROUGH 12H / PHASE 12E CAMPAIGN RECORD MERGED AS PROPOSED (d6b63f7) / PHASE 12F CONTRACT CHANGE PROPOSED, NOT ACCEPTED (consumer change merged without contract CI, 2026-09-27; acceptance status record drafted) / PHASE 12H CORE REPIN TO a46dec7 PROPOSED ACCEPTANCE (consumer on it since e72c24a, 2026-09-27) / FIRST PRODUCTION CHAIN EXECUTION STOPS AT THE INPUT STAGE ON THE FOOTPRINT RULE (56 occupied pixels with f_p = 0)**
 
 **No new H0 result is accepted yet.**
 
@@ -102,7 +102,8 @@ before an H0 run. Phase 12B corrects and supersedes that pre-correction target.
 ### Active Phase-12 package pins
 
 ```text
-darksirens-core     8bf2bec53ff7b557c6b930d4044008cb72008f61   (Phase 12C; consumer adopted it in cc030f02 on 2026-09-24)
+darksirens-core     8bf2bec53ff7b557c6b930d4044008cb72008f61   (Phase 12C, accepted)
+                    a46dec7929c7343fef61e68b7c0c5f2c205daa0e   (Phase 12H, proposed acceptance; the consumer pins it since e72c24a, 2026-09-27)
 darksirens-surveys  f027aef02d342041ce7259cdbf47fe689e6462f2
 darksirens-lss      3429bb2f420239bc731cc9e73e50bf5351181c14
 darksirens-lensing  43c450742b733d7b8d938116021e8ca52a31226e
@@ -219,7 +220,7 @@ must be re-run on consumer `main` once Actions is unblocked before the CI line
 above can be replaced by a run ID. P12.1 will still verify the installed pins
 exactly at run time.
 
-### Phase 12D — core deferred follow-up (PROPOSED / MERGED AS A RECORD / NOT ACCEPTED)
+### Phase 12D — core deferred follow-up (PROPOSED ACCEPTANCE THROUGH 12H; record drafted)
 
 ```text
 contract record:    phases/12D_core_deferred_followup_contract.md
@@ -233,8 +234,10 @@ push gates on 88004d96: reference-integrity 35954407573, real-backends 359544076
 production pin:     UNCHANGED, 8bf2bec5
 ```
 
-Conditions 1 and 2 of the record's pin decision are met; condition 3
-(promotion to an acceptance record with a new pin) is open. Core #24 closes the
+Conditions 1 and 2 of the record's pin decision are met; condition 3 is met
+by the Phase 12H pin `a46dec7`, which contains #17 through #24. The draft
+`phases/12D_core_deferred_followup_acceptance.md` proposes acceptance through
+12H; the owner's sign-off is pending. Core #24 closes the
 record's first "left open" item: the `real-backends` job now fails when pytest
 fails behind `tee`. A post-12D pin, if adopted, should be `88004d96` or later.
 
@@ -254,6 +257,13 @@ real product. On the owner's decision, TinyNS is considered broken until
 ignaciomagana/darksirens#462 is debugged. The record was merged into this repository's `main` as a proposed record (d6b63f7, 2026-09-27); it is not accepted and the production pin is unchanged.
 
 ### Phase 12F — selection guard and GW input products (PROPOSED CONTRACT CHANGE / NOT ACCEPTED)
+
+Acceptance status record: `phases/12F_selection_guard_and_gwcat_products_acceptance.md`
+(2026-09-27): gate 1 merged without contract CI on the owner's decision, gate 2
+met by consuming the pinned reference build, gates 3 to 6 open; the first
+production execution passed P12.1 and failed closed at the input stage (56
+occupied nside-64 pixels with f_p = 0, 941 galaxies, all children fully
+masked, LMC/SMC region), which needs a scientific contract before P12.2.
 
 ```text
 record:           phases/12F_selection_guard_and_gwcat_products_contract.md
@@ -309,6 +319,19 @@ Acceptance requires, in the consumer and in this repository:
 - a fixed-coordinate check that the DESI field target's soft cap-10 total is
   finite and unpenalised at the calibration point;
 - promotion of the record.
+
+### Phase 12H — core repin to a46dec7 (PROPOSED ACCEPTANCE / CONSUMER ON IT / CONTRACT CI WAIVED)
+
+```text
+record:          phases/12H_core_repin_a46dec7_acceptance.md (draft, 2026-09-27)
+core pin:        a46dec7929c7343fef61e68b7c0c5f2c205daa0e (tree 6cfb7198), contains #17-#30
+push gates:      reference-integrity 36336267952, real-backends 36336267935,
+                 phase8d-release-contract 36336267895 — all SUCCESS
+consumer:        PR #14 merged as e72c24a (2026-09-27), main 53ed335, without contract CI
+                 (private repository, Actions billing; owner's decision)
+core protection: main requires the real-backends check (`backends`), linear history (2026-09-27)
+P12.1 under it:  PASS (Hildafs Slurm 1340521); input stage failed closed on the footprint rule
+```
 
 ### Next admissible action
 

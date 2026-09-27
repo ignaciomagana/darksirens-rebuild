@@ -215,6 +215,13 @@ consumer main       2668ae7e2eb9325910e1a8bec9b7228003cb4942
 - [x] consumer PR #10 (jit the P12.4 target) merged 2026-09-26 as `5efa8da`, without contract CI (owner's decision)
 - [x] consumer PR implementing 12F (desi_darksirens_selection PR #11) merged, together with #12 (12G), #14 (12H repin to `a46dec7`) and #13 (script entry points), on 2026-09-27 without contract CI (owner's decision); consumer `main` `53ed335`; each merged tree checked against its PR head; stand-ins on `main`: CI-equivalent 250 passed / 7 skipped, frozen `a46dec7` environment 281 passed
 - [ ] green `phase12-contract` run on the merged consumer `main` once Actions is unblocked
+- [x] Phase 12D acceptance record drafted (`phases/12D_core_deferred_followup_acceptance.md`, proposed acceptance through 12H)
+- [x] Phase 12H acceptance record drafted (`phases/12H_core_repin_a46dec7_acceptance.md`): core pin a46dec7, consumer on it, contract CI waived by the owner
+- [x] Phase 12F acceptance status record drafted (`phases/12F_selection_guard_and_gwcat_products_acceptance.md`): gates 3 to 6 open
+- [x] real-backends made a required check on core main (branch protection, 2026-09-27)
+- [x] first production execution of the chain under a46dec7: P12.1 PASS (Slurm 1340521, 2026-09-27)
+- [ ] scientific contract for catalog rows in fully masked pixels (56 occupied nside-64 pixels with f_p = 0; 941 galaxies), then P12.1 to P12.3 re-run
+- [ ] owner sign-off on the 12D and 12H acceptance records (makes a46dec7 the active production pin)
 - [ ] PE and selection products rebuilt with gwcat 8f9e2f1 in the Product A definition; `gwcat validate --strict` 84/84; compared with the reference build (a24a5903 / bab92bab)
 - [ ] P12.4 builder shown to accept the rebuilt chieff / chieff_reference 2.0 pair
 - [ ] P12.1, resolved inputs, P12.2, P12.2b and P12.3 regenerated with the rebuilt products and accepted under the 12F criterion
