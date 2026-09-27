@@ -293,9 +293,17 @@ event policy and the pins.
 
 Acceptance requires, in the consumer and in this repository:
 - the consumer PR implementing 12F (desi_darksirens_selection PR #11) merged
-  under contract CI, with a green run on the merged main (blocked by the
-  Actions billing failure); consumer PR #10 (jit the P12.4 target) was merged
-  on 2026-09-26 as `5efa8da` without contract CI, on the owner's decision;
+  under contract CI, with a green run on the merged main. Status 2026-09-27:
+  the owner decided the consumer repository stays private (private material),
+  so PR #11, the 12G PR #12, the 12H repin PR #14 and the script entry-point
+  PR #13 were squash-merged without contract CI (consumer `main` `53ed335`,
+  tree of `52389c6` checked against each PR head); the stand-ins on that
+  `main` are the job's own commands in a matching Python 3.12 environment
+  (250 passed, 7 skipped) and the full suite in the frozen `a46dec7`
+  environment (281 passed). The green contract run on `main` is still owed
+  once Actions is unblocked. Consumer PR #10 (jit the P12.4 target) was
+  merged on 2026-09-26 as `5efa8da` without contract CI, on the owner's
+  decision;
 - the products rebuilt and validated against the reference build;
 - P12.1-P12.3 regenerated;
 - a fixed-coordinate check that the DESI field target's soft cap-10 total is
@@ -310,10 +318,11 @@ next admissible action is therefore no longer a run from consumer main
 `cc030f023f5fdee00caeada3af02566865dfcc72`. It is instead:
 
 1. the owner accepts or rejects the Phase 12F contract change;
-2. if accepted, the consumer PR implementing 12F (desi_darksirens_selection
-   PR #11) is merged under contract CI once Actions runs, with a green run on
-   the merged main that also covers PR #10 (jit the P12.4 target), which was
-   merged on 2026-09-26 as `5efa8da` without contract CI;
+2. the consumer PRs #11 (12F), #12 (12G), #14 (12H repin) and #13 were
+   merged on 2026-09-27 without contract CI (owner's decision; the repository
+   stays private); the green contract run on the merged consumer `main`
+   (`53ed335`) is still owed once Actions is unblocked, and it also covers
+   PR #10 (jit the P12.4 target), merged on 2026-09-26 as `5efa8da`;
 3. the GW products are rebuilt with gwcat 8f9e2f1 and validated against the
    reference build;
 4. the chain is run on Hildafs with the exact package pins above and the
