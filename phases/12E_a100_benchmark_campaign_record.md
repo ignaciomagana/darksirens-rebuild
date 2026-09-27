@@ -8,6 +8,8 @@ Previous core record: `phases/12D_core_deferred_followup_contract.md`
 
 Active production core pin (unchanged by this record): `8bf2bec53ff7b557c6b930d4044008cb72008f61`
 
+Update at merge (2026-09-27): the Phase 12F record (`phases/12F_selection_guard_and_gwcat_products_contract.md`, merged as proposed in e9dc0b1) supersedes this record's pending decisions; darksirens-core PR #25 merged as 43d273f9, #27 as d03d0cb and #29 as e412e92.
+
 ## Trigger
 
 Before any real-data production run, the campaign measured two things:
