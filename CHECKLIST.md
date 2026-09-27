@@ -204,7 +204,7 @@ consumer main       2668ae7e2eb9325910e1a8bec9b7228003cb4942
 ### Phase 12E campaign record and Phase 12F guard / GW-product contract change
 
 - [x] A100 campaign measured that the hard guard at cap 1.0 has no finite likelihood on the campaign's real product (N_eff 12,819.5 against 78,639.9 at the GWTC-5 centre)
-- [ ] owner decision on the Phase 12E campaign record (darksirens-rebuild PR #10; open, not on `main`)
+- [x] owner decision on the Phase 12E campaign record (darksirens-rebuild PR #10; merged as proposed d6b63f7 on 2026-09-27; not accepted)
 - [x] guard study: caps 10 and 20 (soft or hard) leave the 1-D and 3-D posteriors unchanged; cap 5 cuts them; the hard guard at cap 1 needs about 14-20 M detected injections
 - [x] consumer re-check: P12.4's own GW inputs fail the hard guard at cap 1.0 at all 14 P12.2 probes (N_eff 46,306 against 78,467 at H0 67.74)
 - [x] chi_eff-swap and reference-reweighted selection files compared on identical injection rows (the swap gives 3.6x the N_eff)
