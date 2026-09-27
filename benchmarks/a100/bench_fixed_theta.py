@@ -107,6 +107,17 @@ def parse_args(argv=None):
                          "(overrides the env script's value); recorded in xla_cache")
     ap.add_argument("--catalog", default=None,
                     help="pixelated galaxy catalog (catalog_pixelated_nside_N.h5) for dark_* plans")
+    ap.add_argument("--core-fixing", choices=("embed", "api"), default="embed",
+                    help="core only: how a plan that fixes part of the population or the survey "
+                         "block reaches core. embed (default, the campaign's records): the "
+                         "harness inserts the fixed values into core's full coordinate; api: "
+                         "core's public partial fixing, ds.Population(fixed={label: value}) and "
+                         "ds.model(fixed_survey={name: value}) (feat/partial-fixing)")
+    ap.add_argument("--core-kernel-pin", choices=("auto", "off"), default=None,
+                    help="core only: ds.model(..., kernel_pin=...) (feat/h0-kernel-pin): auto pins "
+                         "the catalog kernel at bind time when Om0, w0, wa, delta and sigma_kde "
+                         "are fixed; off keeps the per-call quadrature. Omitted: not passed (the "
+                         "installed core's default)")
     ap.add_argument("--survey-fixed-override", default=None,
                     help="JSON {label: value} replacing FIXED survey values of a dark plan whose "
                          "survey block is fixed (fixed-coordinate checks only, e.g. the PR-6a "
@@ -242,7 +253,7 @@ def check_plan_structure(adapter, plan) -> list:
         # Fixed survey values must be the plan's, in whichever form each side carries them.
         fixed_survey = {n: plan["fixed"][n] for n in plan["survey_labels"] if n in plan["fixed"]}
         got = (v.get("fixed_parameter_values") if adapter.impl == "legacy"
-               else (v.get("fixed_inserted") or {}))
+               else {**(v.get("fixed_survey") or {}), **(v.get("fixed_inserted") or {})})
         for n, want in fixed_survey.items():
             if n not in got or bc.fhex(got[n]) != bc.fhex(want):
                 errs.append(f"{adapter.impl} fixed survey {n}={got.get(n)!r} != plan {want!r}")
@@ -262,6 +273,14 @@ def check_plan_structure(adapter, plan) -> list:
             errs.append("core fixed_population set for a plan that samples the population")
         if list(v["population_labels"]) != plan["population_labels"]:
             errs.append("core population_labels differ from plan")
+        # Public partial fixing (--core-fixing api): the plan's fixed population
+        # values must be exactly the ones core carries.
+        got_pop = v.get("fixed_population_values") or {}
+        if got_pop:
+            want_pop = {n: plan["fixed"][n] for n in plan["population_labels"] if n in plan["fixed"]}
+            if set(got_pop) != set(want_pop) or any(
+                    bc.fhex(got_pop[n]) != bc.fhex(want_pop[n]) for n in want_pop):
+                errs.append(f"core fixed_population_values {got_pop} != plan {want_pop}")
     return errs
 
 
@@ -513,6 +532,11 @@ def main(argv=None):
         return 2
     if a.impl == "core":
         adapter_kw["diag_mode"] = a.diag_mode
+        adapter_kw["core_fixing"] = a.core_fixing
+        adapter_kw["kernel_pin"] = a.core_kernel_pin
+    elif a.core_fixing != "embed" or a.core_kernel_pin is not None:
+        print("--core-fixing and --core-kernel-pin are core options", file=sys.stderr)
+        return 2
     adapter = adapter_cls(plan, os.path.abspath(a.pe), os.path.abspath(a.sel),
                           sel_batch=a.sel_batch, pe_block=a.pe_block, jit_mode=a.jit,
                           seed=a.seed, save_dir=save_dir, counter=counter,

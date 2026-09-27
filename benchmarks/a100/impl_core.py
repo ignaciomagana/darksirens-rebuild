@@ -71,7 +71,16 @@ class CoreAdapter:
 
     def __init__(self, plan, pe_path, sel_path, *, sel_batch, pe_block, jit_mode, seed,
                  save_dir, counter, catalog_path=None, guard=None, max_variance=None,
-                 diag_mode="default"):
+                 diag_mode="default", core_fixing="embed", kernel_pin=None):
+        if core_fixing not in ("embed", "api"):
+            raise ValueError("--core-fixing must be embed or api")
+        # embed: the campaign's harness embedding (fixed values inserted into core's full
+        # coordinate); api: core's public partial fixing (feat/partial-fixing).
+        self.core_fixing = core_fixing
+        # ds.model(kernel_pin=...) (feat/h0-kernel-pin); None: not passed.
+        if kernel_pin not in (None, "auto", "off"):
+            raise ValueError("--core-kernel-pin must be auto or off")
+        self.kernel_pin_req = kernel_pin
         if jit_mode not in ("whole", "asis"):
             raise ValueError("--jit must be whole or asis")
         if diag_mode not in ("default", "jit"):
@@ -113,13 +122,29 @@ class CoreAdapter:
         # A plan with a population preset fixes it through core's public preset spelling
         # (M5: ds.Population(..., fixed="gwtc5"), src/darksirens/_specs.py:147-202).
         fixed = (p.get("core_population_fixed") or True) if k == "none" else None
+        fixed_survey = None
+        if self.core_fixing == "api":
+            # Public partial fixing: every population label the plan does not sample is
+            # fixed at the plan's value through ds.Population(fixed={label: value}); the
+            # survey labels it does not sample through ds.model(fixed_survey=...).
+            if p.get("population_preset"):
+                raise RuntimeError("--core-fixing api does not re-spell a population preset")
+            pop_fixed = {n: float(p["fixed"][n]) for n in p["population_labels"]
+                         if n in p["fixed"]}
+            fixed = pop_fixed or None
+            if self.dark:
+                fixed_survey = {n: float(p["fixed"][n]) for n in p["survey_labels"]
+                                if n in p["fixed"]} or None
         population = ds.Population(p["population_model"], fixed=fixed,
                                    shared_beta=p["shared_beta"], shared_spin=p["shared_spin"],
                                    shared_gamma=p["shared_gamma"])
         if self.dark:
             # completeness=None = the incomplete conditional model (analysis.py:187-188)
+            kw = {} if fixed_survey is None else {"fixed_survey": fixed_survey}
+            if self.kernel_pin_req is not None:
+                kw["kernel_pin"] = self.kernel_pin_req
             return ds.model(cosmology=cosmology, population=population,
-                            catalog=self.catalog_store)
+                            catalog=self.catalog_store, **kw)
         return ds.model(cosmology=cosmology, population=population)
 
     def build(self):
@@ -163,6 +188,9 @@ class CoreAdapter:
         # for --jit whole, one eager scatter for --jit asis).
         self.adapter_info = None
         full_names = self.labels
+        if full_names != list(p["sampled"]) and self.core_fixing == "api":
+            raise RuntimeError(f"--core-fixing api: core's plan {full_names} is not the plan's "
+                               f"sampled list {p['sampled']}")
         if full_names != list(p["sampled"]):
             missing = [n for n in p["sampled"] if n not in full_names]
             if missing:
@@ -204,13 +232,16 @@ class CoreAdapter:
         bound_ = bound
         embed_ = self.embed
 
+        pin_field = hasattr(bound_, "kernel_pin")
+
         @threads_distance_table()
-        def whole(theta, gw_pe, gw_sel, catalog=None, cache=None, distance_table=None):
+        def whole(theta, gw_pe, gw_sel, catalog=None, cache=None, pin=None, distance_table=None):
             if catalog is None:
                 b = dataclasses.replace(bound_, gw_pe=gw_pe, gw_selection=gw_sel)
-            else:  # dark: the compact catalog and its cache are jit ARGUMENTS too
+            else:  # dark: the compact catalog, its cache and the kernel pin are jit ARGUMENTS too
                 b = dataclasses.replace(bound_, gw_pe=gw_pe, gw_selection=gw_sel,
-                                        catalog=catalog, observed_density_cache=cache)
+                                        catalog=catalog, observed_density_cache=cache,
+                                        **({"kernel_pin": pin} if pin_field else {}))
             return b(embed_(theta))
 
         self._whole = whole
@@ -221,12 +252,17 @@ class CoreAdapter:
         self._build_diag_fns()
         self._jax, self._jnp = jax, jnp
 
+    @property
+    def pin(self):
+        """The binding's catalog kernel pin (feat/h0-kernel-pin), or None."""
+        return getattr(self.bound, "kernel_pin", None)
+
     def operands_for_sync(self):
         from darksirens.cosmology.distances import distance_table
 
         if self.dark:
             return (self.bound.gw_pe, self.bound.gw_selection, self.bound.catalog,
-                    self.bound.observed_density_cache, distance_table())
+                    self.bound.observed_density_cache, self.pin, distance_table())
         return (self.bound.gw_pe, self.bound.gw_selection, distance_table())
 
     def config(self):
@@ -254,6 +290,18 @@ class CoreAdapter:
             "population_fixed": self.analysis.population.fixed,
             "population_fiducial_set": self.analysis.population.fiducial_set,
             "plan_adapter": self.adapter_info,
+            "core_fixing": self.core_fixing,
+            "kernel_pin": {
+                "requested": self.kernel_pin_req,
+                "setting": getattr(self.analysis.parameters, "kernel_pin", None),
+                "active": bool(getattr(self.analysis.parameters, "kernel_pin_active", False)),
+                "bound_has_pin": self.pin is not None,
+                "pin_bytes": (None if self.pin is None else int(sum(
+                    np.asarray(x).nbytes for x in __import__("jax").tree_util.tree_leaves(self.pin)))),
+                "pin_leaves": (None if self.pin is None else {
+                    k: [list(np.shape(v)), str(np.asarray(v).dtype)]
+                    for k, v in self.pin._asdict().items()}),
+            },
             "bind_call": (f"bind_analysis(analysis, events, injections, selection_neff_soft_guard="
                           f"{self.guard == 'soft'}, sel_batch_size, pe_event_block"
                           + (f", max_likelihood_variance={self.max_variance!r})"
@@ -348,7 +396,7 @@ class CoreAdapter:
             return self.bound(self.embed(theta))
         if self.dark:
             return self._whole(theta, self.bound.gw_pe, self.bound.gw_selection,
-                               self.bound.catalog, self.bound.observed_density_cache)
+                               self.bound.catalog, self.bound.observed_density_cache, self.pin)
         return self._whole(theta, self.bound.gw_pe, self.bound.gw_selection)
 
     # -------------------------------------------------------- plan assertions
@@ -365,6 +413,10 @@ class CoreAdapter:
             "population_labels": list(pl.population_labels),
             "n_catalog": int(pl.n_catalog),
             "fixed_inserted": (self.adapter_info or {}).get("fixed_inserted"),
+            # Public partial fixing (feat/partial-fixing); absent on older core.
+            "fixed_population_values": {n: float(v) for n, v in
+                                        getattr(pl, "fixed_population_values", ())},
+            "fixed_survey": {n: float(v) for n, v in getattr(pl, "fixed_survey", ())},
         }
 
     def registry_view(self):
@@ -447,7 +499,7 @@ class CoreAdapter:
         dark = self.dark
         z_depth = b.z_depth
 
-        def diag_impl(theta, gw_pe, gw_sel, catalog=None, cache=None):
+        def diag_impl(theta, gw_pe, gw_sel, catalog=None, cache=None, pin=None):
             cosmo, pop_params, cat_params, ang = _decode_theta(analysis, embed(theta),
                                                                z_depth=z_depth)
             common = dict(
@@ -460,17 +512,20 @@ class CoreAdapter:
                 return_diagnostics=True)
             if dark:
                 # BoundAnalysis.__call__'s argument list (runtime_binding.py:269-284)
+                pin_kw = ({} if pin is None else
+                          {"pinned_kernel_pe": pin, "pinned_kernel_sel": pin})
                 return dark_siren_log_likelihood(
                     cosmo, cat_params, pop_params, gw_pe, catalog, cache, gw_sel, catalog,
-                    cache, b.n_events, b.nsamp, b.n_draw, **common)
+                    cache, b.n_events, b.nsamp, b.n_draw, **common, **pin_kw)
             return spectral_siren_log_likelihood(
                 cosmo, pop_params, gw_pe, gw_sel, b.n_events, b.nsamp, b.n_draw, **common)
 
         @threads_distance_table()
-        def diag_jit(theta, gw_pe, gw_sel, catalog=None, cache=None, distance_table=None):
-            return diag_impl(theta, gw_pe, gw_sel, catalog, cache)
+        def diag_jit(theta, gw_pe, gw_sel, catalog=None, cache=None, pin=None,
+                     distance_table=None):
+            return diag_impl(theta, gw_pe, gw_sel, catalog, cache, pin)
 
-        def _ctx(theta, catalog, cache):
+        def _ctx(theta, catalog, cache, pin=None):
             cosmo, pop_params, cat_params, _ang = _decode_theta(analysis, embed(theta),
                                                                 z_depth=z_depth)
             log_p_pop = pop_model_parser(pop_model=pop.model_name, shared_beta=pop.shared_beta,
@@ -486,7 +541,9 @@ class CoreAdapter:
                     eval_incomplete_catalog_prior_state_vmap,
                 )
 
-                state = build_incomplete_catalog_prior_state(cosmo, cat_params, catalog, cache)
+                state = build_incomplete_catalog_prior_state(
+                    cosmo, cat_params, catalog, cache,
+                    **({} if pin is None else {"pinned_kernel": pin}))
                 ctx["state"] = state
                 ctx["prior"] = (lambda z, pix, cat_:
                                 eval_incomplete_catalog_prior_state_vmap(z, pix, state, cat_))
@@ -506,8 +563,8 @@ class CoreAdapter:
         # Per-sample masks: hierarchical.py:131-163 (support + finite weight),
         # event.py:39,55 (valid & prior_wt > 0), selection/gw.py:564-565.
         @threads_distance_table()
-        def sample_masks(theta, gw, catalog=None, cache=None, distance_table=None):
-            ctx = _ctx(theta, catalog, cache)
+        def sample_masks(theta, gw, catalog=None, cache=None, pin=None, distance_table=None):
+            ctx = _ctx(theta, catalog, cache, pin)
             ldw, support = _ldw(ctx, gw, ctx["prior"], catalog)
             structural = gw.valid & (gw.prior_wt > 0.0)
             final = structural & jnp.isfinite(ldw)
@@ -560,8 +617,8 @@ class CoreAdapter:
             return cat_branch, miss_branch
 
         @threads_distance_table()
-        def catalog_rows(theta, catalog, cache, distance_table=None):
-            ctx = _ctx(theta, catalog, cache)
+        def catalog_rows(theta, catalog, cache, pin=None, distance_table=None):
+            ctx = _ctx(theta, catalog, cache, pin)
             st = ctx["state"]
             curves = completion_curves(ctx["cosmo"], ctx["cat_params"], catalog, cache)
             return {"log_Nobs": st.log_Nobs, "log_Z": st.log_Z, "N_miss": curves.N_miss,
@@ -569,8 +626,8 @@ class CoreAdapter:
                     "log_depth_mass": jnp.broadcast_to(st.kernels.log_depth_mass, st.log_Z.shape)}
 
         @threads_distance_table()
-        def sample_terms(theta, gw, catalog, cache, distance_table=None):
-            ctx = _ctx(theta, catalog, cache)
+        def sample_terms(theta, gw, catalog, cache, pin=None, distance_table=None):
+            ctx = _ctx(theta, catalog, cache, pin)
             cat_b, miss_b = _branches(ctx["state"])
             cap = {}
 
@@ -600,7 +657,7 @@ class CoreAdapter:
         jnp = self._jnp
         theta = jnp.asarray(coord_np)
         b = self.bound
-        extra = (b.catalog, b.observed_density_cache) if self.dark else ()
+        extra = (b.catalog, b.observed_density_cache, self.pin) if self.dark else ()
         if self._diag_eager:
             d = self._diag_impl(theta, b.gw_pe, b.gw_selection, *extra)
         else:
@@ -618,7 +675,7 @@ class CoreAdapter:
         jax, jnp = self._jax, self._jnp
         theta = jnp.asarray(coord_np)
         b = self.bound
-        extra = (b.catalog, b.observed_density_cache) if self.dark else ()
+        extra = (b.catalog, b.observed_density_cache, self.pin) if self.dark else ()
 
         def run(gw, n):
             outs = []
@@ -641,7 +698,8 @@ class CoreAdapter:
             for s in range(0, n, chunk):
                 e = min(n, s + chunk)
                 sub = jax.tree_util.tree_map(lambda a: a[s:e], gw)
-                d = self._sample_terms_fn(theta, sub, b.catalog, b.observed_density_cache)
+                d = self._sample_terms_fn(theta, sub, b.catalog, b.observed_density_cache,
+                                          self.pin)
                 outs.append({k: np.asarray(v) for k, v in d.items()})
             return {k: np.concatenate([o[k] for o in outs]) for k in outs[0]}
 
@@ -651,7 +709,8 @@ class CoreAdapter:
     def catalog_rows(self, coord_np):
         jnp = self._jnp
         b = self.bound
-        d = self._catalog_rows_fn(jnp.asarray(coord_np), b.catalog, b.observed_density_cache)
+        d = self._catalog_rows_fn(jnp.asarray(coord_np), b.catalog, b.observed_density_cache,
+                                  self.pin)
         return {k: np.asarray(v) for k, v in d.items()}
 
     def mask_order_dL(self):
@@ -677,7 +736,7 @@ class CoreAdapter:
         extras = tuple(res() for res, _ in D._AMBIENT_JIT_CHANNELS)
         args = (jnp.asarray(coord_np), b.gw_pe, b.gw_selection)
         if self.dark:
-            args = args + (b.catalog, b.observed_density_cache)
+            args = args + (b.catalog, b.observed_density_cache, self.pin)
         kwargs = {"distance_table": table, "_ambient_extras": extras}
         data_arrays = {
             "gw_pe.m1det": b.gw_pe.m1det, "gw_pe.dL": b.gw_pe.dL,
@@ -692,6 +751,9 @@ class CoreAdapter:
                 "catalog.wgals": b.catalog.wgals,
                 "cache.dN_obs_kde": b.observed_density_cache.dN_obs_kde,
             })
+            if self.pin is not None:
+                data_arrays.update({"kernel_pin.log_kw_eff": self.pin.log_kw_eff,
+                                    "kernel_pin.inv_sig_eff": self.pin.inv_sig_eff})
         for i, x in enumerate(extras):
             if hasattr(x, "shape"):
                 data_arrays[f"ambient_channel_{i}"] = x

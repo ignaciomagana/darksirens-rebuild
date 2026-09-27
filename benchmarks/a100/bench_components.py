@@ -494,6 +494,7 @@ class CoreComponents:
         peb, sbs, n_draw = b.pe_event_block, b.sel_batch_size, float(b.n_draw)
         soft, maxvar = b.selection_neff_soft_guard, b.max_likelihood_variance
         self.routing_active = False
+        self.pin = getattr(b, "kernel_pin", None)  # feat/h0-kernel-pin (None: unpinned)
 
         def decode(theta):
             return _decode_theta(an, embed(theta), z_depth=z_depth)
@@ -540,6 +541,9 @@ class CoreComponents:
                 eval_incomplete_catalog_prior_state_vmap,
             )
             from darksirens.catalog.redshift import build_catalog_kernel_state
+
+            if self.pin is not None:
+                from darksirens.catalog.redshift import pinned_catalog_kernel_state
 
         @tdt()
         def comp_w(theta, gw_pe, gw_sel, catalog, state, distance_table=None):
@@ -593,8 +597,10 @@ class CoreComponents:
                "w_weights": comp_w, "d_pe_reduce": comp_d, "e_sel_reduce": comp_e}
         if dark:
             @tdt()
-            def comp_f(theta, catalog, distance_table=None):
+            def comp_f(theta, catalog, pin=None, distance_table=None):
                 cosmo, _p, cat, _ang = decode(theta)
+                if pin is not None:  # the served state; its probe verdict is spent by fh
+                    return pinned_catalog_kernel_state(cosmo, cat, catalog, pin)[0]
                 return build_catalog_kernel_state(cosmo, cat, catalog)
 
             @tdt()
@@ -603,9 +609,10 @@ class CoreComponents:
                 return completion_curves(cosmo, cat, catalog, cache)
 
             @tdt()
-            def comp_state(theta, catalog, cache, distance_table=None):
+            def comp_state(theta, catalog, cache, pin=None, distance_table=None):
                 cosmo, _p, cat, _ang = decode(theta)
-                return build_incomplete_catalog_prior_state(cosmo, cat, catalog, cache)
+                return build_incomplete_catalog_prior_state(
+                    cosmo, cat, catalog, cache, **({} if pin is None else {"pinned_kernel": pin}))
 
             @tdt()
             def comp_g(z_pe, pix_pe, z_sel, pix_sel, state, catalog, distance_table=None):
@@ -653,7 +660,7 @@ class CoreComponents:
             if nd["A"]:
                 A[k] = fc["a_cosmology"](th(k), pe.dL, sel.dL)
             if self.dark and nd["S"]:
-                S[k] = fc["fh_prior_state"](th(k), cat, cache)
+                S[k] = fc["fh_prior_state"](th(k), cat, cache, self.pin)
             if nd["W"]:
                 W[k] = fc["w_weights"](th(k), pe, sel, cat, S.get(k))
                 Dd[k] = fc["d_pe_reduce"](W[k]["ldw_pe"], pe.valid, pe.prior_wt)
@@ -671,9 +678,9 @@ class CoreComponents:
             calls["c_pop_norm"] = lambda k: fc["c_pop_norm"](th(k), M1[k][0], M1[k][1])
         if self.dark:
             calls.update({
-                "f_kernel_state": lambda k: fc["f_kernel_state"](th(k), cat),
+                "f_kernel_state": lambda k: fc["f_kernel_state"](th(k), cat, self.pin),
                 "h_completion": lambda k: fc["h_completion"](th(k), cat, cache),
-                "fh_prior_state": lambda k: fc["fh_prior_state"](th(k), cat, cache),
+                "fh_prior_state": lambda k: fc["fh_prior_state"](th(k), cat, cache, self.pin),
                 "g_prior_eval": lambda k: fc["g_prior_eval"](A[k]["z_pe"], pe.pixels, A[k]["z_sel"],
                                                              sel.pixels, S[k], cat),
             })
@@ -691,9 +698,9 @@ class CoreComponents:
             args0["e_sel_reduce"] = ((W[0]["ldw_sel"], sel.valid, sel.prior_wt, PV[0]), {})
         if self.dark:
             args0.update({
-                "f_kernel_state": ((th(0), cat), {}),
+                "f_kernel_state": ((th(0), cat, self.pin), {}),
                 "h_completion": ((th(0), cat, cache), {}),
-                "fh_prior_state": ((th(0), cat, cache), {}),
+                "fh_prior_state": ((th(0), cat, cache, self.pin), {}),
             })
             if nd["A"] and nd["S"]:
                 args0["g_prior_eval"] = ((A[0]["z_pe"], pe.pixels, A[0]["z_sel"], sel.pixels, S[0], cat), {})
@@ -1166,7 +1173,8 @@ def _is_sel_key(key):
 
 def extract_outputs(name, out, sel_to_file):
     if name == "f_kernel_state":
-        d = {k: getattr(out, k) for k in KERNEL_STATE_FIELDS}
+        # A pinned core state carries no log_kw / sig_eff / log_sig_eff (None).
+        d = {k: getattr(out, k) for k in KERNEL_STATE_FIELDS if getattr(out, k) is not None}
     elif name == "h_completion":
         d = {k: getattr(out, k) for k in CURVE_FIELDS}
     elif name == "fh_prior_state":
@@ -1317,6 +1325,11 @@ def parse_args(argv=None):
                     help="delete the (large) *.xplane.pb after a successful parse; its size and "
                          "sha256 are recorded, the trace.json.gz and perfetto_trace.json.gz stay")
     ap.add_argument("--no-aot", action="store_true", help="skip the per-component AOT evidence")
+    ap.add_argument("--core-fixing", choices=("embed", "api"), default="embed",
+                    help="core only: as bench_fixed_theta.py --core-fixing")
+    ap.add_argument("--core-kernel-pin", choices=("auto", "off"), default=None,
+                    help="core only: as bench_fixed_theta.py --core-kernel-pin; with a pinned "
+                         "binding f_kernel_state and fh_prior_state serve the bind-time pin")
     ap.add_argument("--cache-dir", default=None)
     ap.add_argument("--cache-mode", choices=("cold", "warm", "env"), default="env")
     ap.add_argument("--survey-fixed-override", default=None)
@@ -1550,6 +1563,11 @@ def main(argv=None):
     save_dir = os.path.abspath(a.out) + ".legacy_save"
     adapter_cls = impl.LegacyAdapter if a.impl == "legacy" else impl.CoreAdapter
     adapter_kw = {"catalog_path": os.path.abspath(a.catalog)} if dark else {}
+    if a.impl == "core":
+        adapter_kw.update(core_fixing=a.core_fixing, kernel_pin=a.core_kernel_pin)
+    elif a.core_fixing != "embed" or a.core_kernel_pin is not None:
+        print("--core-fixing and --core-kernel-pin are core options", file=sys.stderr)
+        return 2
     adapter = adapter_cls(plan, os.path.abspath(a.pe), os.path.abspath(a.sel),
                           sel_batch=a.sel_batch, pe_block=a.pe_block, jit_mode=a.jit,
                           seed=seed, save_dir=save_dir, counter=counter,
