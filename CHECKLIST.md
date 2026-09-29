@@ -230,16 +230,17 @@ consumer main       2668ae7e2eb9325910e1a8bec9b7228003cb4942
 - [x] consumer 12L change merged (`c86629b`); chain re-run at cap 20 on the MIKO H100: P12.2 calibration 6e-16 / 7.1e-15; P12.4 anchor accepted; P12.4 converged and unpenalised (12F gate 7 met), 2026-09-29
 - [x] Phase 12K CUDA backend record (`phases/12K_cuda_environment_contract.md`), accepted by the owner 2026-09-28
 - [x] first GPU chain run agrees with the CPU run at the P12.2 calibration point (6.5e-16 / 3.7e-15 relative); P12.4 under 12F gate 7 met (2026-09-29)
-- [ ] owner accepts or rejects the P12.4 posterior as a result of record; 12F promotion (gate 6); green contract run once billing is fixed
+- [ ] green contract run on the consumer `main` once Actions billing is fixed
 - [x] owner sign-off on the 12D and 12H acceptance records (2026-09-28): a46dec7 is the active production pin
 - [x] PE and selection products: not rebuilt locally; the owner decided on 2026-09-28 that consuming the pinned reference build (a24a5903 / bab92bab) satisfies 12F gate 2 (the campaign's rebuild passed `gwcat validate --strict` 84/84)
 - [x] P12.4 builder shown to accept the chieff / chieff_reference 2.0 pair (the pinned Product A reference build; GPU chain 2026-09-29)
 - [x] P12.1, resolved inputs, P12.2, P12.2b and P12.3 regenerated with the Product A reference build and accepted under the 12F criterion (CPU at cap 10, Slurm 1346044; GPU at the 12L cap 20; 2026-09-29)
 - [x] fixed-coordinate check: the DESI field target's soft total finite and unpenalised at the calibration point and at the P12.3 MAP, at the 12L cap 20 (at cap 10 the P12.3 MAP H0 = 64.5 is penalised by 4.5e-9 nats: the 12L trigger), 2026-09-29
 - [x] P12.4 dynesty run converged (final dlogz 0.0999); penalty measured exactly zero at the posterior mean and median (GPU chain, cap 20, 2026-09-29)
-- [ ] promote 12F to an acceptance record, or record why not (owner; gate 1's green contract run is still owed)
+- [x] 12F promoted by the owner 2026-09-29 (gate 1's green contract run waived until Actions is unblocked)
+- [x] P12.4 posterior accepted as the result of record (Phase 12M, 2026-09-29); products frozen read-only with MANIFEST.sha256
 
-No new H0 posterior is accepted at this checkpoint.
+First H0 posterior of record: Phase 12M (2026-09-29).
 
 Authoritative post-reconstruction records:
 

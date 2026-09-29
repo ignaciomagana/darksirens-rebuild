@@ -2,10 +2,11 @@
 
 ## Status
 
-**NOT ACCEPTED (not promoted). Gates 2 to 5 and 7 met on the production path
-(2026-09-29); gate 1's green contract run still owed (billing); gate 6
-(promotion) is the owner's. The guard cap of this record (10) is superseded
-by Phase 12L (20).**
+**ACCEPTED (owner, 2026-09-29; promoted with contract CI waived, as for
+12H).** Gates 2 to 5 and 7 are met on the production path (2026-09-29). Gate
+1's green contract run stays owed until GitHub Actions is unblocked; the local
+stand-ins recorded here replace it. The guard cap of this record (10) is
+superseded by Phase 12L (20).
 
 Contract: `phases/12F_selection_guard_and_gwcat_products_contract.md`
 (merged as proposed, e9dc0b1, 2026-09-27). This record follows its acceptance
@@ -100,8 +101,8 @@ H0 = 67.74, M0hat = -20.309781546689074, sigma_M = 0.7144467727667887.
 
 ## Gate 6: promotion
 
-Open. Gates 4 and 5 are met; gate 1's green run is owed; promotion is the
-owner's decision.
+**Met (owner, 2026-09-29).** Promoted with gate 1's green run waived (owed
+once Actions is unblocked).
 
 ## Gate 7 (for a P12.4 result)
 
@@ -171,7 +172,7 @@ pipeline result. It is not a result of record until the owner accepts it.
 
 ## Verdict
 
-**Not accepted (not promoted).** The chain passes on the production assets
-(evidence above), with Product A inputs, dynesty 2.1.4 and the soft guard at
-the Phase 12L cap 20. The green contract run (gate 1) is still owed, and
-promotion (gate 6) is the owner's decision.
+**Accepted (owner, 2026-09-29).** The 12F settings are in force: Product A
+inputs, dynesty 2.1.4 and the soft guard, at the Phase 12L cap 20. The chain
+passes on the production assets (evidence above). The green contract run
+(gate 1) is still owed.
