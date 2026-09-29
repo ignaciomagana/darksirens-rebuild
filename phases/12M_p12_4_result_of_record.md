@@ -68,6 +68,25 @@ survey setting varied at a time) is the next step and is not part of this
 record. Consumer contract CI is waived until GitHub Actions is unblocked, as
 for 12H and 12F.
 
+## Caveat: catalog depth (owner, 2026-09-29)
+
+The result of record stands as computed, and it carries a systematic that
+the robustness matrix found (`phases/12N_fixed_population_robustness_declaration.md`,
+"Results"):
+
+```text
+z_depth 0.2   64.55   68% [61.23, 67.81]   -1.45 sd
+z_depth 0.3   71.07   68% [66.29, 75.13]   (this record)
+z_depth 0.4   67.66   68% [63.58, 73.00]   -0.76 sd
+```
+
+The catalog depth z_depth, carried over from the legacy line, moves H0 at
+the level of the statistical error and non-monotonically. The mask
+definition and the angular galaxy structure do not (at most 0.11 sd). No
+paper text quotes this result until the depth question is settled. The
+checks under way: the host prior at the depth cut, the catalog's
+completeness against redshift, and a smooth-n(z) control.
+
 ## Verdict
 
-**Accepted (owner, 2026-09-29).**
+**Accepted (owner, 2026-09-29), with the depth caveat above.**
