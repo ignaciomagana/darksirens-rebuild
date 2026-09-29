@@ -393,8 +393,9 @@ P12.1 to P12.4 under core `a46dec7`, with Phases 12I (catalog mask rule), 12J
 remains:
 
 1. robustness of the P12.4 posterior to the guard cap and the sampler seed:
-   diagnostic re-runs of P12.4 only, at caps 15 and 30 and at seeds other than
-   22, started 2026-09-29 (no contract change);
+   done 2026-09-29. Caps 15 and 30 and seeds 23 and 24 move the H0 median by
+   at most 0.05 (0.01 sd); see `phases/12L_selection_guard_cap_20_contract.md`,
+   "Robustness";
 2. the owner accepts or rejects the P12.4 posterior as a result of record, and
    promotes Phase 12F (its gate 6);
 3. the green contract run on the merged consumer `main`, owed once GitHub
