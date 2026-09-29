@@ -5,8 +5,8 @@
 **ACCEPTED CONTRACT CHANGE (owner, 2026-09-29).** Supersedes the cap 10 of
 Phase 12F for P12.2, P12.3 and P12.4; the guard stays soft and every other
 12F setting stands. Consumer implementation: `desi_darksirens_selection`
-PR (branch `phase12l/guard-cap-20`). Gates 2 to 4 are recorded when the chain
-has run at cap 20.
+PR #18, merged as `c86629b` (2026-09-29). **Gates 2 to 4 met (2026-09-29):
+see "Production-path evidence".**
 
 ## Trigger
 
@@ -97,6 +97,24 @@ detected injections (a new Product A build) and (c) keeping cap 10.
    total is cap-independent), P12.3 accepted with its maximum and mean
    unpenalised, and the P12.4 anchor accepted.
 4. P12.4 accepted under 12F gate 7.
+
+## Production-path evidence (2026-09-29)
+
+Gate 2: consumer #18 merged as `c86629b`. Stand-ins (billing): CI-equivalent
+261 passed, 9 skipped; CUDA environment on the H100 294 passed. Gates 3 and 4
+are shown by the GPU run:
+
+The full record of the run is in
+`phases/12F_selection_guard_and_gwcat_products_acceptance.md`, "Production-path
+evidence". At cap 20:
+
+- P12.2's calibration probe is 6e-16 (total ln L) and 7.1e-15 (N_eff) from
+  the 12F reference.
+- P12.3 has 0 of 241 points penalised; its maximum (64.5) and mean (64.643)
+  are unchanged from cap 10.
+- The P12.4 anchor has N_eff at 2.16 times the threshold, with penalty 0.
+- P12.4 converged (final dlogz 0.0999), unpenalised at the posterior mean
+  and median.
 
 ## Verdict
 

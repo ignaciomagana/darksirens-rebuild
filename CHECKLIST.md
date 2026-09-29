@@ -222,21 +222,22 @@ consumer main       2668ae7e2eb9325910e1a8bec9b7228003cb4942
 - [x] first production execution of the chain under a46dec7: P12.1 PASS (Slurm 1340521, 2026-09-27)
 - [x] scientific contract for catalog rows in fully masked pixels (56 occupied nside-64 pixels with f_p = 0; 941 galaxies): Phase 12I record (`phases/12I_masked_pixel_catalog_rows_contract.md`), rule accepted by the owner 2026-09-28 (remove rows in fully masked native pixels, 2,287 rows)
 - [x] consumer PR #15 merged 2026-09-28 (`3845085`)
-- [ ] input stage passes with the declared counts from the merged `main`
+- [x] input stage passes with the declared counts from the merged `main` (2026-09-29; CPU Slurm 1346044 and the GPU chain)
 - [x] Phase 12J run-setting record (`phases/12J_single_pass_blocks_contract.md`): single-pass likelihood sums, measured equal to the blocks (4e-16) and 1.4x faster on CPU; accepted by the owner 2026-09-28
 - [x] consumer PR #16 merged 2026-09-28 (consumer `main` `dc9c8a3`, after #15 as `3845085`)
 - [x] P12.1 to P12.3 at cap 10 from consumer `main` `dc9c8a3` under 12I and 12J: PASS (CPU, Hildafs Slurm 1346044, 2026-09-29; P12.2 calibration probe total ln L -765.1371043921606, bitwise the 12F reference)
 - [x] Phase 12L record (`phases/12L_selection_guard_cap_20_contract.md`): soft guard cap 20, accepted by the owner 2026-09-29
-- [ ] consumer 12L change merged; chain re-run at cap 20 (P12.2 calibration within 1e-12; P12.4 anchor accepted); P12.4 under 12F gate 7
+- [x] consumer 12L change merged (`c86629b`); chain re-run at cap 20 on the MIKO H100: P12.2 calibration 6e-16 / 7.1e-15; P12.4 anchor accepted; P12.4 converged and unpenalised (12F gate 7 met), 2026-09-29
 - [x] Phase 12K CUDA backend record (`phases/12K_cuda_environment_contract.md`), accepted by the owner 2026-09-28
 - [x] first GPU chain run agrees with the CPU run at the P12.2 calibration point (6.5e-16 / 3.7e-15 relative); P12.4 under 12F gate 7 met (2026-09-29)
+- [ ] owner accepts or rejects the P12.4 posterior as a result of record; 12F promotion (gate 6); green contract run once billing is fixed
 - [x] owner sign-off on the 12D and 12H acceptance records (2026-09-28): a46dec7 is the active production pin
 - [x] PE and selection products: not rebuilt locally; the owner decided on 2026-09-28 that consuming the pinned reference build (a24a5903 / bab92bab) satisfies 12F gate 2 (the campaign's rebuild passed `gwcat validate --strict` 84/84)
-- [ ] P12.4 builder shown to accept the rebuilt chieff / chieff_reference 2.0 pair
-- [ ] P12.1, resolved inputs, P12.2, P12.2b and P12.3 regenerated with the rebuilt products and accepted under the 12F criterion
-- [ ] fixed-coordinate check: DESI field target's soft cap-10 total finite and unpenalised at the calibration point and at the P12.3 MAP
-- [ ] P12.4 dynesty run converged; penalty measured exactly zero at the posterior mean and median
-- [ ] promote 12F to an acceptance record, or record why not
+- [x] P12.4 builder shown to accept the chieff / chieff_reference 2.0 pair (the pinned Product A reference build; GPU chain 2026-09-29)
+- [x] P12.1, resolved inputs, P12.2, P12.2b and P12.3 regenerated with the Product A reference build and accepted under the 12F criterion (CPU at cap 10, Slurm 1346044; GPU at the 12L cap 20; 2026-09-29)
+- [x] fixed-coordinate check: the DESI field target's soft total finite and unpenalised at the calibration point and at the P12.3 MAP, at the 12L cap 20 (at cap 10 the P12.3 MAP H0 = 64.5 is penalised by 4.5e-9 nats: the 12L trigger), 2026-09-29
+- [x] P12.4 dynesty run converged (final dlogz 0.0999); penalty measured exactly zero at the posterior mean and median (GPU chain, cap 20, 2026-09-29)
+- [ ] promote 12F to an acceptance record, or record why not (owner; gate 1's green contract run is still owed)
 
 No new H0 posterior is accepted at this checkpoint.
 
