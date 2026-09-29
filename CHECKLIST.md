@@ -221,8 +221,8 @@ consumer main       2668ae7e2eb9325910e1a8bec9b7228003cb4942
 - [x] real-backends made a required check on core main (branch protection, 2026-09-27)
 - [x] first production execution of the chain under a46dec7: P12.1 PASS (Slurm 1340521, 2026-09-27)
 - [ ] scientific contract for catalog rows in fully masked pixels (56 occupied nside-64 pixels with f_p = 0; 941 galaxies), then P12.1 to P12.3 re-run
-- [ ] owner sign-off on the 12D and 12H acceptance records (makes a46dec7 the active production pin)
-- [ ] PE and selection products rebuilt with gwcat 8f9e2f1 in the Product A definition; `gwcat validate --strict` 84/84; compared with the reference build (a24a5903 / bab92bab)
+- [x] owner sign-off on the 12D and 12H acceptance records (2026-09-28): a46dec7 is the active production pin
+- [x] PE and selection products: not rebuilt locally; the owner decided on 2026-09-28 that consuming the pinned reference build (a24a5903 / bab92bab) satisfies 12F gate 2 (the campaign's rebuild passed `gwcat validate --strict` 84/84)
 - [ ] P12.4 builder shown to accept the rebuilt chieff / chieff_reference 2.0 pair
 - [ ] P12.1, resolved inputs, P12.2, P12.2b and P12.3 regenerated with the rebuilt products and accepted under the 12F criterion
 - [ ] fixed-coordinate check: DESI field target's soft cap-10 total finite and unpenalised at the calibration point and at the P12.3 MAP

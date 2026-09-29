@@ -3,7 +3,8 @@
 ## Status
 
 **NOT ACCEPTED. Consumer change merged without contract CI on the owner's
-decision of 2026-09-27; gates 4 to 6 open; gate 1's green run still owed.**
+decision of 2026-09-27; gate 2 met by the owner's decision of 2026-09-28;
+gates 3 to 6 open; gate 1's green run still owed.**
 
 Contract: `phases/12F_selection_guard_and_gwcat_products_contract.md`
 (merged as proposed, e9dc0b1, 2026-09-27). This record follows its acceptance
@@ -52,13 +53,15 @@ A_pe_chieff_bbh259_n4096_v20.h5     86136323 bytes   a24a5903a7f7da6fdcdee22f58c
 A_sel_chieffref_o3o4ab_v20.h5      126491918 bytes   bab92babf2d6958a6ed04ee536c44fa533f5c4822ca9a22f934347a089d21ab5
 ```
 
-This resolves the contract's open question 3 in favour of consuming the
-reference build directly, if the owner confirms. A rebuild with
+**Met (owner, 2026-09-28).** The owner confirmed that consuming the pinned
+reference build directly satisfies this gate. This resolves the contract's
+open question 3: the products are not rebuilt locally. A rebuild with
 `gwcat validate --strict` 84/84 was done once, in the campaign (Phase 12E).
 
 ## Gate 3: the P12.4 builder accepts the rebuilt 2.0 pair
 
-Not yet shown on the production path: P12.2's spectral probe has not run
+With gate 2 met by the reference build, "the rebuilt pair" is the pinned
+Product A pair itself. Not yet shown on the production path: P12.2's spectral probe has not run
 (gate 4). A measurement-only build of the P12.4 target on the Product A pair
 was started on 2026-09-27 (Hildafs Slurm, `logs/measure_blocks.py` in the
 production checkout); its outcome is not part of this record.

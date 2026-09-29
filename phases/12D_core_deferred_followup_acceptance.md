@@ -2,8 +2,8 @@
 
 ## Status
 
-**PROPOSED ACCEPTANCE — owner sign-off pending. Contract CI on the consumer
-was waived by the owner (see Phase 12H).**
+**ACCEPTED 2026-09-28 through Phase 12H (owner sign-off). Contract CI on the
+consumer was waived by the owner (see Phase 12H).**
 
 Contract: `phases/12D_core_deferred_followup_contract.md` (merged as a
 proposed record, 733a11b, 2026-09-24). Its pin decision named three
@@ -50,13 +50,13 @@ Accepting 12H accepts 12D with it; 12D is not accepted separately.
   `z_depth` treatment in `selection_budget_audit`) stay open by design and
   are unchanged.
 
-## What this record still lacks
+## Owner sign-off
 
-- the owner's sign-off, which is the acceptance of 12H;
-- nothing on the core side.
+The owner signed off on 2026-09-28 by accepting Phase 12H. Nothing is owed on
+the core side.
 
 ## Verdict
 
-**Proposed for acceptance through Phase 12H.** No numerics of the fixed
+**Accepted through Phase 12H (owner, 2026-09-28).** No numerics of the fixed
 parametric DESI population target are touched by 12D; the one numerics change
 (the GP mass-ratio normaliser near the minimum mass) concerns GP models only.

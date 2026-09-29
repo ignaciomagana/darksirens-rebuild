@@ -2,8 +2,9 @@
 
 ## Status
 
-**PROPOSED ACCEPTANCE — owner sign-off pending. Consumer contract CI waived
-by the owner; P12.1 passed under the pin; P12.2 to P12.4 not yet run.**
+**ACCEPTED 2026-09-28 (owner sign-off). Consumer contract CI waived by the
+owner; P12.1 passed under the pin; P12.2 to P12.4 not yet run on the
+production path.**
 
 There is no separate 12H contract record: the change was prepared on the
 owner's decision of 2026-09-27 (prepare the core repin that the Phase 12F and
@@ -65,19 +66,24 @@ at `3429bb2f`, darksirens-lensing at `43c45074`, and dynesty 2.1.4. The next
 stage failed closed on the footprint rule (12F record, gate 4); it is
 independent of the pin.
 
-## What this record still lacks
+## Owner sign-off
 
-- the owner's sign-off;
+The owner signed off on 2026-09-28: `a46dec7` is the production core pin, the
+consumer runs on it, and the local stand-ins above replace the consumer's
+contract CI until Actions is unblocked.
+
+Still owed after acceptance, none of which blocks the pin:
+
 - a green `phase12-contract` run on the consumer's merged `main` (billing);
-- P12.2, P12.2b and P12.3 regenerated under the pin, which waits on the
-  footprint contract decision;
+- P12.2, P12.2b and P12.3 regenerated under the pin on the production path
+  (the footprint rule is decided in Phase 12I);
 - the control fields of the consumer's marker (`control_repository`,
-  `control_commit`, `control_record`), to be filled with this record's merge
-  once it is accepted.
+  `control_commit`, `control_record`), filled with this record's merge commit
+  in a consumer follow-up.
 
 ## Verdict
 
-**Proposed for acceptance.** Accepting it makes `a46dec7` the active
-production core pin, accepts Phase 12D with it, and leaves Phase 12F's own
+**Accepted (owner, 2026-09-28).** `a46dec7` is the active production core
+pin, Phase 12D is accepted with it, and it leaves Phase 12F's own
 gates (products, regenerated P12.1 to P12.3, the fixed-coordinate check) to
 the 12F acceptance record.
