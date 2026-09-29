@@ -355,6 +355,16 @@ owner:        accepted 2026-09-28
 consumer PR:  desi_darksirens_selection #16 (merged after #15)
 ```
 
+### Phase 12L — soft selection guard at cap 20 (ACCEPTED CONTRACT CHANGE, 2026-09-29)
+
+```text
+record:    phases/12L_selection_guard_cap_20_contract.md
+trigger:   first P12.4 run (MIKO H100, consumer dc9c8a3) stopped before sampling: anchor H0 = 64.5 penalised at cap 10
+           (N_eff 7,310 = 1.07 x threshold); the field target is penalised below H0 ~ 63 at cap 10, 29% of the P12.3 mass
+change:    max_likelihood_variance 10 -> 20 in P12.2, P12.3 and P12.4 (soft guard unchanged otherwise)
+evidence:  CPU P12.1-P12.3 at cap 10 from consumer main dc9c8a3 PASS (Hildafs Slurm 1346044, 2026-09-29)
+```
+
 ### Next admissible action
 
 The accepted chain cannot pass P12.2 on its own GW inputs under the hard guard

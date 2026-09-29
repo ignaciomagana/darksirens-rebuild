@@ -223,7 +223,10 @@ consumer main       2668ae7e2eb9325910e1a8bec9b7228003cb4942
 - [x] scientific contract for catalog rows in fully masked pixels (56 occupied nside-64 pixels with f_p = 0; 941 galaxies): Phase 12I record (`phases/12I_masked_pixel_catalog_rows_contract.md`), rule accepted by the owner 2026-09-28 (remove rows in fully masked native pixels, 2,287 rows)
 - [ ] consumer PR #15 merged; input stage passes with the declared counts; P12.1 to P12.3 regenerated under a46dec7 from the merged `main`
 - [x] Phase 12J run-setting record (`phases/12J_single_pass_blocks_contract.md`): single-pass likelihood sums, measured equal to the blocks (4e-16) and 1.4x faster on CPU; accepted by the owner 2026-09-28
-- [ ] consumer PR #16 merged; P12.1 to P12.3 regenerated under it
+- [x] consumer PR #16 merged 2026-09-28 (consumer `main` `dc9c8a3`, after #15 as `3845085`)
+- [x] P12.1 to P12.3 at cap 10 from consumer `main` `dc9c8a3` under 12I and 12J: PASS (CPU, Hildafs Slurm 1346044, 2026-09-29; P12.2 calibration probe total ln L -765.1371043921606, bitwise the 12F reference)
+- [x] Phase 12L record (`phases/12L_selection_guard_cap_20_contract.md`): soft guard cap 20, accepted by the owner 2026-09-29
+- [ ] consumer 12L change merged; chain re-run at cap 20 (P12.2 calibration within 1e-12; P12.4 anchor accepted); P12.4 under 12F gate 7
 - [x] owner sign-off on the 12D and 12H acceptance records (2026-09-28): a46dec7 is the active production pin
 - [x] PE and selection products: not rebuilt locally; the owner decided on 2026-09-28 that consuming the pinned reference build (a24a5903 / bab92bab) satisfies 12F gate 2 (the campaign's rebuild passed `gwcat validate --strict` 84/84)
 - [ ] P12.4 builder shown to accept the rebuilt chieff / chieff_reference 2.0 pair
