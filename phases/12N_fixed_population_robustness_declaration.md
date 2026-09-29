@@ -139,6 +139,37 @@ Findings. These are sizes; the owner judges.
 - Not run, as declared: C3 needs a selection refit at m_lim 20.5; G1 needs a
   DAG-consistent event cut.
 
+### Follow-up checks (2026-09-29, owner's choice)
+
+**The input catalog is cut at z = 0.3 upstream.** The native DESI input has
+max Z = 0.3000 exactly (99.9th percentile 0.2999), and its counts per 0.01
+bin rise to the edge (1.03 M at 0.20 to 2.13 M at 0.29, then 0). C2
+(z_depth 0.4) is therefore invalid by construction: the catalog is empty in
+0.3 to 0.4 because of the cut, and the missing budget treats that shell as
+50 to 75% complete. C2 is withdrawn as a robustness datum; the admissible
+depths are at most 0.3.
+
+**The host prior at the cut.** Internal note in the GPU checkout,
+`logs/analysis_depth_2026-09-29/NOTE.md`. It is the target's exact state,
+summed over the 32,143 covered pixels, at the prior means of M0hat and
+sigma_M.
+- At depth 0.3 the model completeness f_p Cbar(z) stays near 0.8 up to the
+  cut. The observed galaxy term falls to 0.35 (H0 64.5) to 0.47 (H0 71) of the
+  expected density at z = 0.3.
+- The host prior therefore sits at 0.57 to 0.68 of the expectation just
+  below the cut and jumps to 1.0 above it. At depth 0.2 the step is small
+  (-8% to +18%).
+- The jump's distance moves with H0, which pulls the events that reach it.
+- Also, the expected density scales as n0 H0^-3 against fixed counts; that
+  count-calibration channel is H0 information only if n0 and the
+  luminosity-function calibration are independent of H0.
+
+Reading (sizes and mechanism; the owner judges): at the fixed population,
+the catalog's shift of H0 relative to the catalog-free baseline comes from
+the completeness model near the catalog's upstream z = 0.3 edge, not from
+galaxy structure. At z_depth 0.2 the catalog adds nothing over the
+catalog-free H0.
+
 Consequence for Phase 12M: the result of record stands as computed. At the
 fixed population its catalog information is set mainly by the depth choice,
 which is a modelling systematic at the level of the statistical error. How to
