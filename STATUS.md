@@ -375,31 +375,33 @@ change:    max_likelihood_variance 10 -> 20 in P12.2, P12.3 and P12.4 (soft guar
 evidence:  CPU P12.1-P12.3 at cap 10 from consumer main dc9c8a3 PASS (Hildafs Slurm 1346044, 2026-09-29)
 ```
 
+### First P12.4 production run (2026-09-29): PASS, pipeline result
+
+```text
+chain:     consumer c86629b, core a46dec7, 12K CUDA backend, MIKO H100; P12.1-P12.4 all PASS (30 min)
+P12.4:     dynesty converged (final dlogz 0.0999), unpenalised at anchor, mean and median (cap 20)
+H0:        median 71.07, 68% [66.29, 75.13] (pipeline result, not a result of record)
+CPU check: P12.1-P12.3 at cap 10 from dc9c8a3 PASS (Slurm 1346044); calibration probe bitwise the 12F reference
+records:   evidence in phases/12F_selection_guard_and_gwcat_products_acceptance.md ("Production-path evidence")
+```
+
 ### Next admissible action
 
-The accepted chain cannot pass P12.2 on its own GW inputs under the hard guard
-at cap 1.0. That was measured on 2026-09-25 and is recorded in Phase 12F. Its
-next admissible action is therefore no longer a run from consumer main
-`cc030f023f5fdee00caeada3af02566865dfcc72`. It is instead:
+As of 2026-09-29 the chain passes end to end on the production assets:
+P12.1 to P12.4 under core `a46dec7`, with Phases 12I (catalog mask rule), 12J
+(single-pass sums), 12K (CUDA backend) and 12L (soft guard at cap 20). What
+remains:
 
-1. the owner accepts or rejects the Phase 12F contract change;
-2. the consumer PRs #11 (12F), #12 (12G), #14 (12H repin) and #13 were
-   merged on 2026-09-27 without contract CI (owner's decision; the repository
-   stays private); the green contract run on the merged consumer `main`
-   (`53ed335`) is still owed once Actions is unblocked, and it also covers
-   PR #10 (jit the P12.4 target), merged on 2026-09-26 as `5efa8da`;
-3. the GW products: the owner decided on 2026-09-28 that the pinned reference
-   build (Product A, by sha256) is consumed directly, without a local rebuild;
-4. the chain is run on Hildafs with the exact package pins above and the
-   site-neutral Slurm/runbook in the consumer repository, using dynesty.
-
-After the run:
-
-1. freeze P12.1/P12.2/P12.2b/P12.3/P12.4 numerical provenance;
-2. accept or reject the P12.4 posterior on the reliability criterion of the
-   contract in force (the hard guard at cap 1.0 today; the Phase 12F criterion
-   if 12F is accepted);
-3. only then produce plots and begin the fixed-population robustness matrix.
+1. robustness of the P12.4 posterior to the guard cap and the sampler seed:
+   done 2026-09-29. Caps 15 and 30 and seeds 23 and 24 move the H0 median by
+   at most 0.05 (0.01 sd); see `phases/12L_selection_guard_cap_20_contract.md`,
+   "Robustness";
+2. the owner accepts or rejects the P12.4 posterior as a result of record, and
+   promotes Phase 12F (its gate 6);
+3. the green contract run on the merged consumer `main`, owed once GitHub
+   Actions is unblocked (the repository stays private);
+4. only then: freeze the P12.1 to P12.4 numerical provenance, produce plots,
+   and begin the fixed-population robustness matrix.
 
 The legacy footprint-map caveat remains explicit: Phase 12B preserves the
 mature `masked_frac` product and does not claim that its source-count-based

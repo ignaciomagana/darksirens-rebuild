@@ -96,6 +96,21 @@ Consequences:
 4. Promotion to an acceptance record with the merge SHA and the P12.1 to
    P12.3 record hashes.
 
+## Production-path evidence (2026-09-29)
+
+Gate 2: consumer #16 merged as `dc9c8a3` (2026-09-28). Stand-ins (billing):
+CI-equivalent 261 passed, 9 skipped; frozen environment 294 passed. Gate 3:
+under a single pass the CPU calibration probe's total ln L is bitwise the
+12F reference (made under the blocks), and N_eff is within 3.4e-15. The
+CPU P12.1 to P12.3 took 18.5 min, against 1 h 17 min under the blocks on the
+same partition (12I evidence run; not a controlled timing: 16 against 28
+threads, different nodes). Gate 4:
+
+The full record of both runs is in
+`phases/12F_selection_guard_and_gwcat_products_acceptance.md`, "Production-path
+evidence". CPU driver record 3ee41c955ed560a1, P12.2 record 1c4719323d86cd7c;
+GPU chain record 92cd5a48f926592a.
+
 ## Verdict
 
 **Accepted (owner, 2026-09-28).** The P12.2, P12.3 and P12.4 likelihood sums

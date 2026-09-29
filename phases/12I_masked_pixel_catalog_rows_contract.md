@@ -3,9 +3,9 @@
 ## Status
 
 **ACCEPTED CONTRACT CHANGE (owner, 2026-09-28): the proposed rule.**
-Consumer implementation: `desi_darksirens_selection` PR #15, merged after
-this record. Gates 2 to 5 below are met on the production path by the run
-from the merged consumer `main`, recorded in the promotion.
+Consumer implementation: `desi_darksirens_selection` PR #15, merged as
+`3845085` (2026-09-28). **Gates 2 to 5 met on the production path
+(2026-09-29): see "Production-path evidence".**
 
 ## Trigger
 
@@ -185,6 +185,20 @@ data/phase12/catalogs/desi_union_nside64.h5        f6227dc0c31c82c8
 
 These were made on the PR branch (`e0eb170`), not on `main`; on acceptance
 the chain regenerates them from the merged `main` before P12.4.
+
+## Production-path evidence (2026-09-29)
+
+Gate 2: consumer #15 merged as `3845085`. Stand-ins (billing): CI-equivalent
+251 passed, 8 skipped; frozen environment 283 passed. Gates 3 to 5:
+
+The full record of both runs (commits, environments, hashes) is in
+`phases/12F_selection_guard_and_gwcat_products_acceptance.md`, "Production-path
+evidence". For this record: the input stage passed in both runs with exactly
+the declared counts (22,787,566 after the cut, 2,287 removed, 22,785,279
+retained; 0 occupied nside-64 pixels with `f_p = 0`). Both runs produced the
+same standardized catalog bytes as the evidence run (f6227dc0c31c82c8).
+P12.2 to P12.3 were accepted at cap 10 (CPU) and at cap 20 (GPU), and P12.4
+was accepted at cap 20.
 
 ## Verdict
 
