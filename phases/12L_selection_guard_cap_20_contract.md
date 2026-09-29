@@ -54,7 +54,7 @@ with 29% of its mass below H0 = 62. At cap 10 the P12.4 posterior would be
 truncated on its low-H0 side by the guard, not by the data.
 
 Diagnostic files (Hildafs GPU checkout
-`/hildafs/projects/phy220048p/magana/darksirens-core-data/desi_darksirens_selection-phase12-gpu/logs/`,
+`/hildafs/projects/phy220048p/magana/darksirens-core-data/desi_darksirens_selection-phase12-gpu/logs/diagnostics_2026-09-29/`,
 sha256 first 16 hex): `diag_anchor_gpu.json` fd159326568ac9d2,
 `diag_anchor_cpu.json` ff3e9559bba31285, `diag_neff_scan_gpu.json`
 481df8eebdcfe2ee.
@@ -122,7 +122,7 @@ These are re-runs of P12.4 alone on the MIKO H100 (consumer `c86629b`, 12K
 backend), made with a copy of the runner that overrides only the cap used to
 build the target, the dynesty seed and the output paths. The chain's gates ran
 at the production cap 20. These are not production products; they live in the
-GPU checkout under `logs/diag_runs/<tag>/`. Hashes are sha256, first 16 hex.
+GPU checkout under `logs/diagnostics_2026-09-29/diag_runs/<tag>/` (README there). Hashes are sha256, first 16 hex.
 
 ```text
 run          cap  seed  H0 median  mean +- sd      68%             90%             log Z      gate 7  result.json
