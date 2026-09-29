@@ -170,6 +170,21 @@ the completeness model near the catalog's upstream z = 0.3 edge, not from
 galaxy structure. At z_depth 0.2 the catalog adds nothing over the
 catalog-free H0.
 
+### C6 result (2026-09-29)
+
+```text
+C6    smooth-n(z) control, seed 20261001   72.17   72.18 +- 4.50  [67.59, 76.72]  +0.24   1.033  -780.450  db482677b721ef8f
+```
+
+- The chain passed and converged, and met gate 7. The mask rule removed the
+  declared 2,287 rows (positions unchanged). The control catalog is
+  `C6_inputs/`, sha256 c78a93f47db48ab0.
+- As predicted in the declaration, removing the radial structure along each
+  line of sight leaves the catalog's shift in place (+0.24 sd, slightly up).
+- Together with C5/C5b: neither the angular nor the radial galaxy structure
+  carries the shift relative to the catalog-free baseline. The completeness
+  model at the catalog's z = 0.3 edge does ("Follow-up checks" above).
+
 Consequence for Phase 12M: the result of record stands as computed. At the
 fixed population its catalog information is set mainly by the depth choice,
 which is a modelling systematic at the level of the statistical error. How to
