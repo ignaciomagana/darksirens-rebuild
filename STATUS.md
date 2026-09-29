@@ -90,9 +90,9 @@ arrival time.
 
 ## Post-reconstruction Phase 12 — first production consumer
 
-Status: **PHASE 12C CORE ACCEPTED / 12D ACCEPTED THROUGH 12H / 12E CAMPAIGN RECORD MERGED AS PROPOSED (d6b63f7) / 12F ACCEPTED (2026-09-29, CI WAIVED) / 12H CORE PIN a46dec7 ACCEPTED / 12I MASK RULE, 12J SINGLE PASS, 12K CUDA BACKEND, 12L CAP 20 ACCEPTED / 12M FIRST P12.4 POSTERIOR ACCEPTED AS THE RESULT OF RECORD (2026-09-29)**
+Status: **PHASE 12C CORE ACCEPTED / 12D ACCEPTED THROUGH 12H / 12E CAMPAIGN RECORD MERGED AS PROPOSED (d6b63f7) / 12F ACCEPTED (2026-09-29, CI WAIVED) / 12H CORE PIN a46dec7 ACCEPTED / 12I MASK RULE, 12J SINGLE PASS, 12K CUDA BACKEND, 12L CAP 20 ACCEPTED / 12M FIRST P12.4 POSTERIOR SUSPENDED (2026-09-29; depth artifact, 12N)**
 
-**First Phase 12 result of record (2026-09-29): the fixed-population DESI field H0 posterior, median 71.07, 68% [66.29, 75.13] (`phases/12M_p12_4_result_of_record.md`). It carries a catalog-depth systematic at the level of its statistical error (Phase 12N); it is not quoted in paper text until that is settled.**
+**The first Phase 12 result of record (2026-09-29, H0 median 71.07; `phases/12M_p12_4_result_of_record.md`) is SUSPENDED: its catalog information comes from the completeness model at the catalog's upstream z = 0.3 edge (Phase 12N). No result of record is quotable now.**
 
 Phase 12 began with a generic composition extension (12A), then a final pre-run
 audit found that the first P12.4 consumer did not implement the intended DESI
