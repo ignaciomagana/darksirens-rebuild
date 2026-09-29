@@ -394,6 +394,15 @@ catalog depth 0.2:  -1.45 sd (64.55)      catalog depth 0.4: -0.76 sd (67.66)   
 open:               C3 (selection refit at m_lim 20.5), G1 (DAG-consistent footprint cut); owner decides on the depth systematic
 ```
 
+### Phase 12O — catalog depth by continuity criterion (PROVISIONAL, 2026-09-29)
+
+```text
+criterion:  largest z_depth <= 0.3 with the host prior continuous at the cut within 5% (calibration point) -> 0.245
+run:        consumer 559540e, full chain PASS; H0 68.06, 68% [64.47, 72.57]; provisional, not of record
+caveat:     z_depth 0.2 also passes the criterion and gives 64.55 (0.8 sd spread)
+next:       recalibrate n0 and the LF against the catalog; scope darksirens-surveys first (owner)
+```
+
 ### Next admissible action
 
 As of 2026-09-29 the chain passes end to end on the production assets:
