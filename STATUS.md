@@ -362,7 +362,7 @@ record:       phases/12K_cuda_environment_contract.md
 change:       jax-cuda12-plugin/pjrt 0.4.34 + NVIDIA CUDA 12.3 wheels on top of the frozen stack; nothing else
 device:       Hildafs MIKO H100 NVL 96 GB, driver 545.23.08 (CUDA 12.3)
 consumer:     requirements-cuda12.txt (desi_darksirens_selection)
-gates open:   GPU vs CPU at the P12.2 calibration point (1e-12 relative); P12.4 under 12F gate 7
+gates:        GPU vs CPU at the P12.2 calibration point 6.5e-16 / 3.7e-15 (met); P12.4 under 12F gate 7 (met), 2026-09-29
 ```
 
 ### Phase 12L — soft selection guard at cap 20 (ACCEPTED CONTRACT CHANGE, 2026-09-29)

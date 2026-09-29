@@ -5,8 +5,8 @@
 **ACCEPTED ENVIRONMENT CHANGE (owner, 2026-09-28).** Consumer
 implementation: `desi_darksirens_selection` `requirements-cuda12.txt`, its
 runbook section and a contract test. No package of the frozen stack changes;
-no setting or numerics of the chain changes. The first GPU run's comparison
-with the CPU run (gate 3) is recorded when it completes.
+no setting or numerics of the chain changes. **Gates 3 and 4 met on
+2026-09-29** (see "GPU evidence"); gate 2 is this PR's consumer counterpart.
 
 ## Trigger
 
@@ -64,6 +64,29 @@ lines above; freeze file alongside it).
    posterior mean equal the CPU values.
 4. P12.4 is accepted under the Phase 12F gate 7 criterion (dynesty converged
    to dlogz 0.1; zero soft-guard penalty at the posterior mean and median).
+
+## GPU evidence (2026-09-29)
+
+In the environment above on the MIKO H100 (driver 545.23.08), the consumer's
+test suite passes (297 passed at the 12K branch; 294 passed at `c86629b`).
+The chain runs are recorded in full in
+`phases/12F_selection_guard_and_gwcat_products_acceptance.md`, "Production-path
+evidence".
+
+- Gate 3, at P12.2's calibration point. The CPU run (consumer `dc9c8a3`,
+  frozen environment, Slurm 1346044) gives total ln L -765.1371043921606 and
+  N_eff 12837.827176048335. The GPU runs (`dc9c8a3` at cap 10, and `c86629b`
+  at cap 20) give -765.1371043921611 and 12837.827176048382. The differences
+  are 6.5e-16 and 3.7e-15 relative, within 1e-12. P12.3's grid maximum
+  (64.5) and posterior mean (64.643) are equal on both devices.
+- The P12.4 field target itself was also compared at single points: at ten
+  values of H0 from 60 to 72 (at the prior means of `M0hat` and `sigma_M`),
+  GPU and CPU agree to 2.9e-16 (ln L) and 7.2e-15 (N_eff), and the
+  soft-guard penalties agree.
+- Gate 4: the GPU P12.4 run at cap 20 (consumer `c86629b`) converged (final
+  dlogz 0.0999). It is unpenalised at the anchor, the posterior mean and the
+  posterior median: 12F gate 7 is met.
+- Wall time of the whole chain on the H100: 30 min (P12.4 28 min).
 
 ## Verdict
 

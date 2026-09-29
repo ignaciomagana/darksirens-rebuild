@@ -229,7 +229,7 @@ consumer main       2668ae7e2eb9325910e1a8bec9b7228003cb4942
 - [x] Phase 12L record (`phases/12L_selection_guard_cap_20_contract.md`): soft guard cap 20, accepted by the owner 2026-09-29
 - [ ] consumer 12L change merged; chain re-run at cap 20 (P12.2 calibration within 1e-12; P12.4 anchor accepted); P12.4 under 12F gate 7
 - [x] Phase 12K CUDA backend record (`phases/12K_cuda_environment_contract.md`), accepted by the owner 2026-09-28
-- [ ] first GPU chain run agrees with the CPU run at the P12.2 calibration point (1e-12 relative); P12.4 accepted under 12F gate 7
+- [x] first GPU chain run agrees with the CPU run at the P12.2 calibration point (6.5e-16 / 3.7e-15 relative); P12.4 under 12F gate 7 met (2026-09-29)
 - [x] owner sign-off on the 12D and 12H acceptance records (2026-09-28): a46dec7 is the active production pin
 - [x] PE and selection products: not rebuilt locally; the owner decided on 2026-09-28 that consuming the pinned reference build (a24a5903 / bab92bab) satisfies 12F gate 2 (the campaign's rebuild passed `gwcat validate --strict` 84/84)
 - [ ] P12.4 builder shown to accept the rebuilt chieff / chieff_reference 2.0 pair
