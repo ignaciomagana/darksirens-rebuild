@@ -58,6 +58,38 @@ z_d     T/E - 1        z_d     T/E - 1        z_d     T/E - 1
 The jump grows monotonically in magnitude beyond 0.23, so the largest depth
 within 5% is unambiguous.
 
-## Run
+## Run (2026-09-29)
 
-(appended)
+The full chain P12.1 to P12.4 ran on the MIKO H100 (12K backend) from consumer
+`main` `559540e` (z_depth 0.245), 17:25 to 17:57 UTC, in the GPU checkout.
+Every stage passed. P12.4 converged (final dlogz 0.100, log Z -779.880 +-
+0.059) and is unpenalised at the anchor, mean and median (total MC variance
+at the centre 8.4); 12F gate 7 is met.
+
+```text
+H0 (z_depth 0.245)   median 68.06   mean 68.35 +- 3.95   68% [64.47, 72.57]   90% [62.29, 74.95]
+catalog-free         median 64.52   68% [59.63, 69.65]
+z_depth 0.3 (12M)    median 71.07   68% [66.29, 75.13]   (suspended)
+z_depth 0.2 (12N C1) median 64.55   68% [61.23, 67.81]
+```
+
+Products (sha256, first 16 hex), GPU checkout:
+
+```text
+results/phase12/fixed_population_desi_h0.json       35e5ebaa806bcb81
+results/phase12/fixed_population_desi_samples.npz   7e2d47821302f6ae
+results/phase12/fixed_population_spectral_h0.json   a4772f498ba47742
+provenance/fixed_population_chain.json              64d2672031f8da37
+provenance/preinference_diagnostics.json            2cec3c2a6b56384b
+provenance/inputs.resolved.json                     fc19bf80c0ee6ba5
+provenance/bootstrap_environment.json               7fa49d90c35008ab
+data/phase12/catalogs/desi_union_nside64.h5         c2d1ff36567419e4
+```
+
+**Residual depth sensitivity.** z_depth 0.2 and 0.245 both pass the 5%
+continuity criterion (+4.7% and -4.4% at the calibration point), yet give H0
+68.06 and 64.55: a spread of 3.5 (0.8 sd) inside the admissible window.
+Continuity at one H0 does not remove the depth dependence. The jump's own
+H0 dependence (through the n0 H0^-3 scaling of the expected density against
+fixed counts) is the likely carrier. The owner decides whether this run is
+the result of record.
