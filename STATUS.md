@@ -345,6 +345,16 @@ consumer PR:   desi_darksirens_selection #15
 evidence run:  P12.1-P12.3 PASS on the PR branch, Hildafs Slurm 1340556; to be repeated from merged main
 ```
 
+### Phase 12J — single-pass likelihood sums (ACCEPTED RUN-SETTING CHANGE, 2026-09-28)
+
+```text
+record:       phases/12J_single_pass_blocks_contract.md
+measurement:  Hildafs CPU node, Slurm 1340541 (2026-09-27): single pass = one block, 1.40x faster than
+              blocks 131072/32, 4e-16 relative difference, +12 GiB working memory (fits the Hildafs GPUs)
+owner:        accepted 2026-09-28
+consumer PR:  desi_darksirens_selection #16 (merged after #15)
+```
+
 ### Next admissible action
 
 The accepted chain cannot pass P12.2 on its own GW inputs under the hard guard
