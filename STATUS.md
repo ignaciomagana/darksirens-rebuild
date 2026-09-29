@@ -90,9 +90,9 @@ arrival time.
 
 ## Post-reconstruction Phase 12 — first production consumer
 
-Status: **PHASE 12C CORE ACCEPTED / PHASE 12D ACCEPTED THROUGH 12H (2026-09-28) / PHASE 12E CAMPAIGN RECORD MERGED AS PROPOSED (d6b63f7) / PHASE 12F CONTRACT CHANGE PROPOSED, NOT ACCEPTED (consumer change merged without contract CI, 2026-09-27; acceptance status record drafted) / PHASE 12H CORE REPIN TO a46dec7 ACCEPTED (owner, 2026-09-28; consumer on it since e72c24a) / PHASE 12I MASK RULE ACCEPTED (2026-09-28; resolves the input-stage stop on 56 occupied pixels with f_p = 0)**
+Status: **PHASE 12C CORE ACCEPTED / 12D ACCEPTED THROUGH 12H / 12E CAMPAIGN RECORD MERGED AS PROPOSED (d6b63f7) / 12F ACCEPTED (2026-09-29, CI WAIVED) / 12H CORE PIN a46dec7 ACCEPTED / 12I MASK RULE, 12J SINGLE PASS, 12K CUDA BACKEND, 12L CAP 20 ACCEPTED / 12M FIRST P12.4 POSTERIOR ACCEPTED AS THE RESULT OF RECORD (2026-09-29)**
 
-**No new H0 result is accepted yet.**
+**First Phase 12 result of record (2026-09-29): the fixed-population DESI field H0 posterior, median 71.07, 68% [66.29, 75.13] (`phases/12M_p12_4_result_of_record.md`).**
 
 Phase 12 began with a generic composition extension (12A), then a final pre-run
 audit found that the first P12.4 consumer did not implement the intended DESI
@@ -375,12 +375,13 @@ change:    max_likelihood_variance 10 -> 20 in P12.2, P12.3 and P12.4 (soft guar
 evidence:  CPU P12.1-P12.3 at cap 10 from consumer main dc9c8a3 PASS (Hildafs Slurm 1346044, 2026-09-29)
 ```
 
-### First P12.4 production run (2026-09-29): PASS, pipeline result
+### First P12.4 production run (2026-09-29): PASS, RESULT OF RECORD (Phase 12M)
 
 ```text
 chain:     consumer c86629b, core a46dec7, 12K CUDA backend, MIKO H100; P12.1-P12.4 all PASS (30 min)
 P12.4:     dynesty converged (final dlogz 0.0999), unpenalised at anchor, mean and median (cap 20)
-H0:        median 71.07, 68% [66.29, 75.13] (pipeline result, not a result of record)
+H0:        median 71.07, 68% [66.29, 75.13]; accepted as the result of record (phases/12M_p12_4_result_of_record.md)
+frozen:    /hildafs/projects/phy220048p/magana/darksirens-core-data/phase12_frozen_2026-09-29 (read-only, MANIFEST.sha256)
 CPU check: P12.1-P12.3 at cap 10 from dc9c8a3 PASS (Slurm 1346044); calibration probe bitwise the 12F reference
 records:   evidence in phases/12F_selection_guard_and_gwcat_products_acceptance.md ("Production-path evidence")
 ```
@@ -396,12 +397,14 @@ remains:
    done 2026-09-29. Caps 15 and 30 and seeds 23 and 24 move the H0 median by
    at most 0.05 (0.01 sd); see `phases/12L_selection_guard_cap_20_contract.md`,
    "Robustness";
-2. the owner accepts or rejects the P12.4 posterior as a result of record, and
-   promotes Phase 12F (its gate 6);
+2. done 2026-09-29: the owner accepted the P12.4 posterior as the result of
+   record (Phase 12M) and promoted Phase 12F (CI waived);
 3. the green contract run on the merged consumer `main`, owed once GitHub
    Actions is unblocked (the repository stays private);
-4. only then: freeze the P12.1 to P12.4 numerical provenance, produce plots,
-   and begin the fixed-population robustness matrix.
+4. the numerical provenance is frozen (2026-09-29). Next: figures from the
+   frozen products; the fixed-population robustness matrix (variant list to
+   the owner first); an internal note on the catalog's shift of H0 relative to
+   the catalog-free baseline.
 
 The legacy footprint-map caveat remains explicit: Phase 12B preserves the
 mature `masked_frac` product and does not claim that its source-count-based
