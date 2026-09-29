@@ -386,6 +386,14 @@ CPU check: P12.1-P12.3 at cap 10 from dc9c8a3 PASS (Slurm 1346044); calibration 
 records:   evidence in phases/12F_selection_guard_and_gwcat_products_acceptance.md ("Production-path evidence")
 ```
 
+### Phase 12N — fixed-population robustness matrix (DECLARED; C1, C2, C4, C5, C5b RUN 2026-09-29)
+
+```text
+mask rule (b):      +0.00 sd      angular shuffle x2: +0.11, +0.02 sd
+catalog depth 0.2:  -1.45 sd (64.55)      catalog depth 0.4: -0.76 sd (67.66)      reference 0.3: 71.07
+open:               C3 (selection refit at m_lim 20.5), G1 (DAG-consistent footprint cut); owner decides on the depth systematic
+```
+
 ### Next admissible action
 
 As of 2026-09-29 the chain passes end to end on the production assets:
