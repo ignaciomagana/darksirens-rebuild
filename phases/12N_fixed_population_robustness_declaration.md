@@ -68,6 +68,26 @@ G1   all-sky vs DESI-masked   selection from the injections inside the DESI foot
 Already measured at the reference, and recorded in 12L "Robustness": the soft
 guard cap (15, 30) and the sampler seed (23, 24).
 
+## Addition, declared 2026-09-29 before running
+
+```text
+id   family                   change from the reference                                         status
+C6   smooth-n(z) control      every galaxy keeps its sky position, magnitudes, weight and ZERR;  runnable after the
+                              its Z is replaced by a random draw from the catalog's global n(z)  control catalog is
+                              (a random permutation of all Z) plus a Gaussian jitter of 0.02,    built (seed 20261001)
+                              reflected at 0; this removes the radial structure along each line
+                              of sight and keeps the catalog's overall fall-off with z
+```
+
+- Why (owner, 2026-09-29, after C1 to C5): it is the radial counterpart of the
+  angular shuffle.
+- Expectation, stated before the run, from the internal depth-cut note:
+  - The mismatch between the model completeness and the observed counts near
+    the depth cut should survive C6, because the global n(z) keeps the
+    fall-off. H0 should then stay near the reference.
+  - If instead C6 returns the catalog-free value, radial structure carries
+    the shift.
+
 ## Results (2026-09-29)
 
 Every variant ran the full chain P12.1 to P12.4 on the MIKO H100 (12K
