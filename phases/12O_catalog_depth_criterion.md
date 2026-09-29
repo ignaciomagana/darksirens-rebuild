@@ -88,7 +88,7 @@ data/phase12/catalogs/desi_union_nside64.h5         c2d1ff36567419e4
 
 **Residual depth sensitivity.** z_depth 0.2 and 0.245 both pass the 5%
 continuity criterion (+4.7% and -4.4% at the calibration point), yet give H0
-68.06 and 64.55: a spread of 3.5 (0.8 sd) inside the admissible window.
+64.55 and 68.06 respectively: a spread of 3.5 (0.8 sd) inside the admissible window.
 Continuity at one H0 does not remove the depth dependence. The jump's own
 H0 dependence (through the n0 H0^-3 scaling of the expected density against
 fixed counts) is the likely carrier. The owner decides whether this run is
