@@ -68,6 +68,58 @@ G1   all-sky vs DESI-masked   selection from the injections inside the DESI foot
 Already measured at the reference, and recorded in 12L "Robustness": the soft
 guard cap (15, 30) and the sampler seed (23, 24).
 
-## Results
+## Results (2026-09-29)
 
-(appended as they complete)
+Every variant ran the full chain P12.1 to P12.4 on the MIKO H100 (12K
+backend) in its own worktree at consumer `c86629b`. Worktrees and logs are in
+`/hildafs/projects/phy220048p/magana/darksirens-core-data/robustness_12N/`
+(`<id>/`, `<id>.out`).
+- Every chain passed; every P12.4 converged (final dlogz 0.1) and met 12F
+  gate 7.
+- C4's input stage removed exactly the declared 941 rows (22,786,625
+  retained). C5's removed 0: no shuffled galaxy lands in a zero-f_p pixel.
+- The shift is (median minus 71.07) divided by the reference sd 4.49. The
+  width is the 68% width over the reference's. Hashes are sha256, first 16
+  hex, of each P12.4 result JSON.
+
+```text
+id    variant                         H0 median  mean +- sd     68%             shift    width   log Z     result
+ref   z_depth 0.3 (Phase 12M)          71.07     70.88 +- 4.49  [66.29, 75.13]   --      1.000  -780.722  be23ce578ced2e62
+C1    z_depth 0.2                      64.55     64.62 +- 3.56  [61.23, 67.81]  -1.45    0.744  -779.523  880911cdda8f0ae7
+C2    z_depth 0.4                      67.66     68.03 +- 4.71  [63.58, 73.00]  -0.76    1.065  -782.050  8c1bd5dc0cdf5855
+C4    mask rule (b), 941 rows          71.08     70.87 +- 4.49  [66.29, 75.10]  +0.00    0.997  -780.719  4e4b5fbf92de53b1
+C5    angular shuffle, seed 20260929   71.55     71.51 +- 4.46  [67.03, 76.09]  +0.11    1.025  -780.252  ffb13bf4c3b8e336
+C5b   angular shuffle, seed 20260930   71.17     71.25 +- 4.38  [66.92, 75.62]  +0.02    0.983  -780.381  0cc9c2f4ddb1e3a8
+--    catalog-free baseline (P12.3)    64.52     64.64 +- 5.05  [59.63, 69.65]  -1.46      --        --     42d21f65d9fdce55
+```
+
+The shuffled catalogs:
+- C5: `C5_inputs/`, sha256 2477a69bcc4e8c29, seed 20260929.
+- C5b: `C5b_inputs/`, sha256 a84652d30fcf4baf, seed 20260930.
+- Builder: `C5_build_shuffled_catalog.py`. C5b was run as declared, because
+  C5 moved the median by more than 0.1 sd.
+
+Findings. These are sizes; the owner judges.
+
+- **The mask definition (C4) does not matter.** Shift 0.00 sd.
+- **The angular galaxy structure does not carry the catalog's shift of H0**
+  relative to the catalog-free baseline. Two shuffles give +0.11 and +0.02 sd.
+  The +6.5 shift survives with the galaxies' sky positions randomized
+  inside the footprint.
+- **The catalog depth moves H0 at the 1-sigma level, non-monotonically:**
+  64.6 at 0.2, 71.1 at 0.3, 67.7 at 0.4. At z_depth 0.2 the posterior sits on
+  the catalog-free value, with a 26% narrower 68% interval.
+  - In the core's semantics, z_depth is where the host prior switches from
+    galaxies plus the (1 - C_sel) missing budget to the full expected
+    density (`phases/05D2_catalog_selection.md`, "Finite-depth state
+    semantics").
+  - The value 0.3 was carried over from the legacy production line
+    (`phases/12_P12.4_fixed_population_desi_implementation.md`). No record
+    documents a physical basis for it.
+- Not run, as declared: C3 needs a selection refit at m_lim 20.5; G1 needs a
+  DAG-consistent event cut.
+
+Consequence for Phase 12M: the result of record stands as computed. At the
+fixed population its catalog information is set mainly by the depth choice,
+which is a modelling systematic at the level of the statistical error. How to
+treat it is the owner's decision.
