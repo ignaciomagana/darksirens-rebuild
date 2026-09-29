@@ -2,10 +2,18 @@
 
 ## Status
 
-**CRITERION DECLARED (owner, 2026-09-29) before the depth or any H0 is
-computed from it.** The depth it selects, the consumer change, and the chain
-run are appended below as they happen. The result is a candidate for the
-result of record; its acceptance is the owner's.
+**PROVISIONAL (owner, 2026-09-29): the criterion's result, not a result of
+record.** The criterion was declared before the depth or any H0 was computed
+from it. It selects z_depth 0.245, and the chain there gives H0 68.06, 68%
+[64.47, 72.57]. The owner did not accept it as the result of record: z_depth
+0.2 also passes the criterion and gives 64.55, so the admissible window itself
+still moves H0 by 0.8 sd.
+
+The next step (owner): recalibrate the count normalization n0 and the
+luminosity-function parameters against the catalog, so the expected density
+matches the counts independently of H0. That starts with scoping what
+darksirens-surveys already provides; the survey package stays general, and
+the DESI specifics stay in the consumer. No result of record is quotable.
 
 ## Why
 
