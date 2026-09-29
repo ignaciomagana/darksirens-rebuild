@@ -90,7 +90,7 @@ arrival time.
 
 ## Post-reconstruction Phase 12 — first production consumer
 
-Status: **PHASE 12C CORE ACCEPTED / PHASE 12D ACCEPTED THROUGH 12H (2026-09-28) / PHASE 12E CAMPAIGN RECORD MERGED AS PROPOSED (d6b63f7) / PHASE 12F CONTRACT CHANGE PROPOSED, NOT ACCEPTED (consumer change merged without contract CI, 2026-09-27; acceptance status record drafted) / PHASE 12H CORE REPIN TO a46dec7 ACCEPTED (owner, 2026-09-28; consumer on it since e72c24a) / FIRST PRODUCTION CHAIN EXECUTION STOPS AT THE INPUT STAGE ON THE FOOTPRINT RULE (56 occupied pixels with f_p = 0)**
+Status: **PHASE 12C CORE ACCEPTED / PHASE 12D ACCEPTED THROUGH 12H (2026-09-28) / PHASE 12E CAMPAIGN RECORD MERGED AS PROPOSED (d6b63f7) / PHASE 12F CONTRACT CHANGE PROPOSED, NOT ACCEPTED (consumer change merged without contract CI, 2026-09-27; acceptance status record drafted) / PHASE 12H CORE REPIN TO a46dec7 ACCEPTED (owner, 2026-09-28; consumer on it since e72c24a) / PHASE 12I MASK RULE ACCEPTED (2026-09-28; resolves the input-stage stop on 56 occupied pixels with f_p = 0)**
 
 **No new H0 result is accepted yet.**
 
@@ -331,6 +331,18 @@ consumer:        PR #14 merged as e72c24a (2026-09-27), main 53ed335, without co
                  (private repository, Actions billing; owner's decision)
 core protection: main requires the real-backends check (`backends`), linear history (2026-09-27)
 P12.1 under it:  PASS (Hildafs Slurm 1340521); input stage failed closed on the footprint rule
+```
+
+### Phase 12I — catalog rows in fully masked native pixels (ACCEPTED CONTRACT CHANGE, 2026-09-28)
+
+```text
+record:        phases/12I_masked_pixel_catalog_rows_contract.md
+trigger:       first production input stage (2026-09-27) failed closed: 56 occupied nside-64 pixels with f_p = 0
+               (941 galaxies, all native children fully masked, LMC/SMC region)
+rule:          remove rows whose native nside-128 pixel has f_p = 0 (2,287 rows; 22,787,566 -> 22,785,279)
+owner:         accepted the rule 2026-09-28
+consumer PR:   desi_darksirens_selection #15
+evidence run:  P12.1-P12.3 PASS on the PR branch, Hildafs Slurm 1340556; to be repeated from merged main
 ```
 
 ### Next admissible action
