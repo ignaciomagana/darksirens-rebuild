@@ -37,9 +37,26 @@ continuous at the cut within 5%:
 - Candidates are z_d = 0.200 to 0.300 in steps of 0.005. Everything else is
   as in the result of record (consumer `c86629b`, core `a46dec7`).
 
-## Depth selected
+## Depth selected (2026-09-29)
 
-(appended)
+**z_depth = 0.245.** Computed on the MIKO H100 with the target's own state at
+each candidate, before any H0 at the new depth. Script
+`logs/analysis_depth_2026-09-29/depth_criterion.py` in the GPU checkout;
+product `depth_criterion_gpu.npz`, sha256 bb716bd625424a54.
+
+```text
+z_d     T/E - 1        z_d     T/E - 1        z_d     T/E - 1
+0.200   +0.047         0.235   -0.012         0.270   -0.124
+0.205   +0.040         0.240   -0.026         0.275   -0.150
+0.210   +0.022         0.245   -0.044  <--    0.280   -0.177
+0.215   +0.016         0.250   -0.053         0.285   -0.206
+0.220   +0.011         0.255   -0.064         0.290   -0.240
+0.225   +0.009         0.260   -0.080         0.295   -0.298
+0.230   +0.001         0.265   -0.104         0.300   -0.378
+```
+
+The jump grows monotonically in magnitude beyond 0.23, so the largest depth
+within 5% is unambiguous.
 
 ## Run
 
