@@ -2,7 +2,8 @@
 
 ## Status
 
-**PROPOSED SCOPE (2026-09-29), for the owner.** Nothing has been changed. The
+**SCOPE ACCEPTED, DECISIONS TAKEN (owner, 2026-09-29); implementation in
+progress.** The decisions are listed below. The
 owner asked for this scope, and for darksirens-surveys to stay general, with
 the DESI specifics in the consumer.
 
@@ -125,9 +126,16 @@ diagnostic. Proposal:
 4  depth re-derivation, chain run, 12N rows, depth check                             ~0.5 day (GPU)
 ```
 
-## Decisions for the owner
+## Owner decisions (2026-09-29)
 
-- The edge treatment: forward-model sigma_z, or fit only below 0.3 - 3 sigma_z.
-- The width and form of the LF systematics prior.
-- Whether to move the DESI adapters out of darksirens-surveys.
-- Whether to also h-scale n0 in core for other consumers.
+1. **Edge:** forward-model each galaxy's sigma_z (ZERR) into observed z
+   before the 0.3 cut, and fit over the whole [z_min, 0.3]. Cross-check
+   against a fit restricted to z < 0.3 - 3 sigma_z.
+2. **Luminosity-function prior:** widened to the north/south hemisphere offset
+   combined with the photo-z bias measured on a mock catalog.
+3. **DESI adapters:** move `DESI_LEGACY_RAW_COLUMNS`, `desi_legacy_rows` and
+   `load_desi_legacy_hdf5` out of darksirens-surveys into the consumer.
+4. **Core:** fix the n0 H0 coupling in core now, with its own package-change
+   record, a new core pin, re-validation and a consumer repin. The generic
+   binding gains an h-scaled count normalization. The legacy convention stays
+   available, because the frozen parity gates compare against it.
