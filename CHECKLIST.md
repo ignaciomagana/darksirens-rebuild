@@ -222,6 +222,8 @@ consumer main       2668ae7e2eb9325910e1a8bec9b7228003cb4942
 - [x] first production execution of the chain under a46dec7: P12.1 PASS (Slurm 1340521, 2026-09-27)
 - [x] scientific contract for catalog rows in fully masked pixels (56 occupied nside-64 pixels with f_p = 0; 941 galaxies): Phase 12I record (`phases/12I_masked_pixel_catalog_rows_contract.md`), rule accepted by the owner 2026-09-28 (remove rows in fully masked native pixels, 2,287 rows)
 - [ ] consumer PR #15 merged; input stage passes with the declared counts; P12.1 to P12.3 regenerated under a46dec7 from the merged `main`
+- [x] Phase 12J run-setting record (`phases/12J_single_pass_blocks_contract.md`): single-pass likelihood sums, measured equal to the blocks (4e-16) and 1.4x faster on CPU; accepted by the owner 2026-09-28
+- [ ] consumer PR #16 merged; P12.1 to P12.3 regenerated under it
 - [x] owner sign-off on the 12D and 12H acceptance records (2026-09-28): a46dec7 is the active production pin
 - [x] PE and selection products: not rebuilt locally; the owner decided on 2026-09-28 that consuming the pinned reference build (a24a5903 / bab92bab) satisfies 12F gate 2 (the campaign's rebuild passed `gwcat validate --strict` 84/84)
 - [ ] P12.4 builder shown to accept the rebuilt chieff / chieff_reference 2.0 pair
