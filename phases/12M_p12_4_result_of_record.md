@@ -2,8 +2,14 @@
 
 ## Status
 
-**ACCEPTED (owner, 2026-09-29).** The P12.4 fixed-population DESI field H0
-posterior of 2026-09-29 is the first Phase 12 result of record. Its products
+**SUSPENDED (owner, 2026-09-29, later).** It was accepted earlier that day,
+and it is not quotable now. The catalog's shift of this posterior relative to
+the catalog-free baseline was traced to the completeness model at the input
+catalog's upstream z = 0.3 edge, which z_depth 0.3 sits on
+(`phases/12N_fixed_population_robustness_declaration.md`, "Follow-up checks"
+and "C6 result"). A new result of record will come from a depth set by a
+stated criterion. The record and the frozen products below stay as they are.
+It was the first Phase 12 result of record. Its products
 are frozen, read-only, at
 `/hildafs/projects/phy220048p/magana/darksirens-core-data/phase12_frozen_2026-09-29/`.
 Figures and text read only from there.
@@ -89,4 +95,4 @@ completeness against redshift, and a smooth-n(z) control.
 
 ## Verdict
 
-**Accepted (owner, 2026-09-29), with the depth caveat above.**
+**Suspended (owner, 2026-09-29).** It was accepted with the depth caveat above, then suspended once the depth mechanism was identified.
