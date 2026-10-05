@@ -49,7 +49,7 @@ The DESI photo-z widths are larger than the mock's. The median ZERR is:
   - Output goes under
     `/hildafs/projects/phy230054p/magana/darksirens-core-data/phase12u/`.
 - **Code.** Consumer branch `phase12u/split`, from `phase12t/core-repin`
-  (4c44184); declared code at 65870af. It reuses the 12T environment (core
+  (4c44184); declared code at 926ecee. It reuses the 12T environment (core
   e7c3007, surveys 0.2.0). No package changes.
 - **Fixed as in 12T:**
   - one seed (22) per chain, dynesty nlive 1000, dlogz 0.1;
