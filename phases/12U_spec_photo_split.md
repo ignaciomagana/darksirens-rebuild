@@ -41,15 +41,21 @@ The DESI photo-z widths are larger than the mock's. The median ZERR is:
 
 ## Owner decisions (2026-10-05)
 
-- **Step 4.** Run the spectroscopic part, the photometric part, and a
-  sensitivity of the union that isolates the smooth-prior effect.
+- **Step 4.** Run three chains:
+  - the spectroscopic part, **BGS Bright only** (M_APP <= 19.5). BGS Faint
+    is dropped.
+  - the photometric part;
+  - **one** sensitivity of the union, the re-centred kernel. The half-width
+    run is dropped.
+- **n0 prior.** count_ridge only. No flat_wide chains.
 - **Compute.** ONE rita A100 job that runs every stage in order. The second
   A100 stays free.
-  - The CPU preparation runs before it on RM.
+  - The CPU preparation and its smoke test run before it on HENON (qos
+    henon), not RM.
   - Output goes under
     `/hildafs/projects/phy230054p/magana/darksirens-core-data/phase12u/`.
 - **Code.** Consumer branch `phase12u/split`, from `phase12t/core-repin`
-  (4c44184); declared code at 926ecee. It reuses the 12T environment (core
+  (4c44184); declared code at c074b07. It reuses the 12T environment (core
   e7c3007, surveys 0.2.0). No package changes.
 - **Fixed as in 12T:**
   - one seed (22) per chain, dynesty nlive 1000, dlogz 0.1;
@@ -97,20 +103,20 @@ spectrum, and the LS photometric redshift otherwise.
 
 | Part | Galaxies | Redshifts | Footprint |
 |---|---|---|---|
-| **spec** | Union rows with a DESI spectrum (codes 0, 2) and M_APP <= 19.5 | Spectroscopic | The LS map times c_p (below) |
+| **spec** | Union rows with a BGS Bright spectrum (code 0) and M_APP <= 19.5 | Spectroscopic | The LS map times c_p (below) |
 | **photo** | Every LS galaxy of the union's parent, with its photometric redshift | Photometric | The LS map |
 | **union_centred** | The union | Photometric rows: centre moved (below); width unchanged | The LS map |
-| **union_halfwidth** | The union | Photometric rows: ZERR halved | The LS map |
 
 **spec.**
-- **The magnitude limit.** 19.5 is the BGS Bright flux limit. Above it, BGS
-  Faint targeting depends on colour and fibre magnitude, which a single
-  magnitude limit cannot model. Those rows are left out.
+- **The sample.** BGS Bright only (owner, 2026-10-05). 19.5 is its flux
+  limit. BGS Faint (code 2) targeting depends on colour and fibre magnitude,
+  which a single magnitude limit cannot model, so every code-2 row is left
+  out, including those at M_APP <= 19.5.
 - **The footprint.** DESI observed only part of the LS sky, and only a
   fraction of the targets there have spectra.
   - c_p is the per-pixel spectroscopic fraction (nside 64): among union
-    galaxies with M_APP <= 19.5 in the pixel, the fraction with a DESI
-    redshift.
+    galaxies with M_APP <= 19.5 in the pixel, the fraction with a BGS
+    Bright redshift.
   - The spec map is f_p,spec = c_p f_p,LS. Pixels without spectra are off
     the footprint, where the catalog is completed entirely.
   - This assumes the spectroscopic fraction does not depend on magnitude
@@ -135,18 +141,14 @@ spectrum, and the LS photometric redshift otherwise.
 - The mock diagnosis says the bias is this mean pull, about s² d ln g/dz.
   The pull at the median DESI width is about 0.004 at z 0.1 and 0.007 at
   z 0.2.
-- Why centring rather than narrowing: narrowing would also make every
-  photometric galaxy overconfident and change the PE Monte-Carlo guard's
-  behaviour (the mock lost low-H0 points at s <= 0.0145).
+- Why centring rather than narrowing (the owner chose this run only):
+  narrowing would also make every photometric galaxy overconfident and change
+  the PE Monte-Carlo guard's behaviour (the mock lost low-H0 points at
+  s <= 0.0145).
 - The arm is also physically motivated: the LS photo-z is a regression
   estimate of z given the photometry. If it is already unbiased given z_phot,
   the extra volume prior counts the prior twice. The kernel-centre test in
   step P2 measures this directly.
-
-**union_halfwidth.**
-- This is the owner's suggested 0.5x width. It runs last and can be dropped.
-- If the mean pull is the mechanism, it should move H0 by about three
-  quarters of the union_centred shift, since the pull scales as s².
 
 ## Calibration of each part
 
@@ -155,7 +157,7 @@ its own. Each part is calibrated with the calibration_12q run 2 procedure
 (the one P12.4 uses), generalized in `scripts/phase12u_calibrate.py`. Its
 helpers are imported unchanged.
 
-| | spec | photo | union_centred, union_halfwidth |
+| | spec | photo | union_centred |
 |---|---|---|---|
 | Sample | spec rows after the quality cut and the Phase 12I mask, z in [0.02, 0.30] | the same, all rows | the union's (12T) |
 | m_lim | 19.5 | 21.0 | 21.0 |
@@ -204,12 +206,12 @@ The n0 prior carried about 1 km/s/Mpc of H0. count_ridge is chosen because:
 - a flat range would have to be re-centred for the spectroscopic part
   anyway.
 
-Each part's ridge range is recorded, so a flat_wide-style chain can be added
-later. It is not run here.
+Each part's ridge range is recorded. No flat_wide chain is run (owner,
+2026-10-05).
 
 ## Stages
 
-### CPU preparation (RM, before the GPU job; `config/phase12u_prep_manifest.json`)
+### CPU preparation (HENON, before the GPU job; `config/phase12u_prep_manifest.json`)
 
 - **P1.** The LS photometric rebuild. One pass of the builder:
   - It writes the union, which must equal the legacy native table column by
@@ -228,7 +230,7 @@ later. It is not run here.
 - **P3.** Calibrations and count ridges: the union (control), spec and
   photo.
 - **P4.** `scripts/phase12u_make_manifest.py` writes the GPU manifest from
-  P3's values. The CPU smoke of that manifest then runs on RM.
+  P3's values. The CPU smoke of that manifest then runs on HENON.
 
 ### GPU job (rita, one A100, `config/phase12u_manifest.json`, in this order)
 
@@ -242,10 +244,9 @@ exact-prior GW inputs.
 | 1-2 | scan, then chain **spec_only** | 3–6 h (about a quarter of the union's galaxies) |
 | 3-4 | scan, then chain **photo_only** | 7–9 h |
 | 5-6 | scan, then chain **union_centred** | 7–9 h |
-| 7-8 | scan, then chain **union_halfwidth** (optional, last) | 7–9 h |
 
 The estimates come from the 12T chains (6.9 to 8.9 h each on the union).
-The total is about 25 to 33 h, against the 7-day limit. Resubmitting
+The total is about 18 to 25 h, against the 7-day limit. Resubmitting
 continues from the DONE markers and the dynesty checkpoints.
 
 ## What is reported
@@ -283,9 +284,6 @@ No pass/fail threshold is set; the owner judges.
   removing the pull moves H0 up. Expected: an upward shift of 0 to a few
   km/s/Mpc against 70.11, at the same width. No shift means the smooth
   prior does not drive the union's result.
-- **union_halfwidth.** About three quarters of the union_centred shift if
-  the mean pull is the mechanism. The scan may show the Monte-Carlo guard
-  cutting low H0.
 - **Kernel-centre test.** Core's kernel pull is positive and grows with s.
   If the LS photo-z are unbiased given z_phot, the measured
   mean (z_spec - z_phot) is near zero.
