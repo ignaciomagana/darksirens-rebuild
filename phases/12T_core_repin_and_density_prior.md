@@ -2,9 +2,9 @@
 
 ## Status
 
-**DECLARED (owner, 2026-10-03) before any run.** Results will be appended
-here. The owner decides what follows and which run, if any, becomes the
-result of record.
+**DECLARED (owner, 2026-10-03) before any run. RESULTS appended below
+(2026-10-05).** The owner decides what follows and which run, if any, becomes
+the result of record.
 
 ## Why
 
@@ -102,3 +102,73 @@ For the parity stage:
 **Expectations, not thresholds.** With the old settings, the target should
 equal a935ef7 to rounding. The new defaults should agree to well below the
 sampler noise. No pass/fail threshold is set; the owner judges.
+
+## Results (2026-10-05)
+
+All 14 stages ran in one rita A100 job (1351923, 31.4 h, 0 failed stages).
+Outputs are under
+`/hildafs/projects/phy230054p/magana/darksirens-core-data/phase12t/runs/`
+(each stage directory holds result.json and samples.npz; the runner summary is
+in runner_status.json).
+
+### Parity and speed
+
+576 points: 512 from the 12S S1 posterior, 48 prior points, 16 prior edges.
+
+| Arm vs the old env (a935ef7) | max abs dlogL | bitwise equal | reweighted H0 shift | s per call (A100) |
+|---|---|---|---|---|
+| e7c3007, old settings stated | 0 | 100% | 0 | 0.576 vs 0.584 |
+| e7c3007, new defaults | 4.5e-12 | 6% | -6e-14 | 0.264 vs 0.584 |
+
+The new defaults agree with the old code to rounding and are 2.2 times faster
+per call. The first call is slower: about 70 s instead of 8 s of compilation.
+
+### Spectral-only H0 (grid, step 0.5 over [20, 140])
+
+| GW input | median | mean | 68% | sd |
+|---|---|---|---|---|
+| current (interpolated priors) | 64.27 | 64.64 | [59.4, 69.4] | 5.05 |
+| exact priors (gwcat 8263ae9) | 64.27 | 64.64 | [59.4, 69.4] | 5.05 |
+
+The exact priors move the posterior mean by 0.002 km/s/Mpc.
+
+### P12.4 chains (dynesty nlive 1000, dlogz 0.1, seed 22)
+
+| Chain | H0 median [68%] | H0 sd | sd / spectral | log10n0 | delta | logZ |
+|---|---|---|---|---|---|---|
+| repro_12S | 69.33 [64.1, 74.9] | 5.52 | 1.09 | -1.819 ± 0.105 | -0.73 ± 0.36 | -765.33 ± 0.07 |
+| flat_wide | 69.41 [64.1, 75.5] | 5.80 | 1.15 | -1.820 ± 0.170 | -0.72 ± 0.45 | -766.12 ± 0.08 |
+| count_ridge | 70.22 [64.6, 75.6] | 5.55 | 1.10 | -1.749 ± 0.049 | -0.84 ± 0.35 | -765.18 ± 0.07 |
+| count_ridge_exactGW | 70.11 [64.6, 75.5] | 5.52 | 1.09 | -1.747 ± 0.048 | -0.84 ± 0.35 | -765.20 ± 0.07 |
+
+Diagnostics for every chain:
+- converged (stop reason "convergence", final dlogz 0.0999);
+- the 12F gate 7 is met, unpenalised at the posterior mean and median;
+- selection N_eff is 5.2 to 5.4 times the threshold.
+
+Prior edges, as the fraction of samples within 2% of the prior range of an
+edge:
+- log10n0: 2.5% for repro_12S (prior [-2.0, -1.6]); 0 for the other chains;
+- delta: 0 for every chain.
+
+### Reading
+
+1. **Reproduction.** On current core with the new defaults, repro_12S gives
+   69.33 [64.1, 74.9]. 12S gave 69.4 [64.1, 74.8].
+2. **The n0 prior.**
+   - Widening log10n0 to [-2.4, -1.2] moves H0 by +0.08 and widens it by 5%.
+     The data alone place log10n0 at -1.82 ± 0.17, inside the old prior.
+   - Tying n0 to the catalog's total count moves H0 by +0.9, about a sixth of
+     its width. It pins log10n0 three times tighter, at -1.75 ± 0.05.
+   - The evidence prefers count_ridge to flat_wide by 0.9 in log.
+   - With one seed per chain, the prior carries about 1 km/s/Mpc of H0, not
+     ±2.
+3. **The catalog's information.** The catalog still does not narrow H0:
+   - every chain is 1.09 to 1.15 times wider than the spectral-only grid;
+   - it moves the median by +5 to +6 against the spectral median of 64.3.
+4. **Exact GW priors.** They shift the chain by -0.11 and the spectral grid by
+   0.002: negligible.
+
+Per the declared plan, step 4 (splitting the catalog into its spectroscopic
+and photometric parts) is the next candidate, because the catalog still adds
+no precision. The owner decides.
