@@ -136,8 +136,9 @@ spectrum, and the LS photometric redshift otherwise.
   - s = sqrt(ZERR² + 0.003²);
   - g evaluated at delta = -0.84, the 12T count_ridge_exactGW posterior mean;
   - z_c floored at 1e-4.
-- The kernel width, the galaxies, the calibration and the luminosity prior
-  are those of the 12T union chain. Only the mean pull is removed.
+- The kernel width, the galaxies, the anchor calibration and the
+  luminosity prior are those of the 12T union chain. The count ridge is the
+  union's full recomputation (below). Only the mean pull is removed.
 - The mock diagnosis says the bias is this mean pull, about s² d ln g/dz.
   The pull at the median DESI width is about 0.004 at z 0.1 and 0.007 at
   z 0.2.
@@ -165,31 +166,44 @@ helpers are imported unchanged.
 | Luminosity prior width | half the north–south offset | hypot(half the north–south offset, the mock bias) (12P rule) | 12T's |
 | Count density (log10n0, delta) | `fit_density_selection` over [0.02, 0.30], exact; cross-check over [0.02, 0.245] | forward-modelled through the ZERR mixture over [0.02, 0.30]; cross-check over [0.02, 0.30 - 3 sigma_z(0.30)] | 12T's |
 | Footprint (Omega_eff) | f_p,spec | the LS map | the LS map |
-| Count ridge | re-derived | re-derived | 12T's count_ridge |
+| Count ridge | re-derived | re-derived | the union's, re-derived (not 12T's; see below) |
 
-**The count ridge**, as in 12T:
+**The count ridge**, defined as in 12T:
 - For each delta on [-3.0, 1.5], take the log10n0 whose expected count over
-  [0.02, 0.30] equals the part's observed count. The expected count comes
-  from the fitted model's binned counts and is linear in n0 at fixed delta.
+  [0.02, 0.30] equals the part's observed count. The expected count is
+  recomputed from the full model at each delta, photo-z kernels included,
+  and is linear in n0 at fixed delta.
 - Fit a line a + b delta through it.
 - The width sd is the rms of log10(observed / expected) over the 28 bins at
   the fit.
+
+12T evaluated this definition approximately. It rescaled the fit's stored
+binned expected counts by (1+z)^(delta - delta_fit) at the bin centres,
+which ignores how the photo-z kernels move galaxies between bins as delta
+changes. It also quoted the scatter about the mean of log10(observed /
+expected) rather than the rms. On the union the approximation gives
+a -1.8158, b -0.0847, sd 0.0339 (12T's values). The full recomputation gives
+a -1.8105, b -0.0894, sd 0.0364, 0.009 dex higher at the 12T posterior
+delta (-0.84), about a quarter of sd. On the spectroscopic part, with no
+photo-z kernels, the two agree to 1e-5. Every arm therefore uses the full
+recomputation, the union arm included (owner, 2026-10-06).
 - The hard bounds stay [-2.4, -1.2], unless the ridge comes within 10 sd of
   them. They are then re-centred on the ridge with the same width.
 
 **Sensitivity arms.** union_centred moves some photometric rows out of
 [0.02, 0.30], which changes the observed count. The preparation records the
-change. The 12T ridge is kept if the change is well below its sd of 0.034 dex.
+change. The union's ridge is kept if the change is well below its sd.
 
 **Control.** The same script, run on the union, must reproduce:
 - calibration_12q run 2: log10n0 -1.9065 and delta 1.0475;
-- the 12T ridge: a -1.815898, b -0.084675, sd 0.033846.
+- the 12T ridge: a -1.815898, b -0.084675, sd 0.033846, when evaluated with
+  12T's approximation.
 
 ## Priors on (log10n0 [h-scaled], delta)
 
 Every chain uses count_ridge: delta U[-3.0, 1.5] and
 log10n0 | delta ~ N(a + b·delta, sd), truncated to the bounds above. spec
-and photo use their own (a, b, sd); the two union arms use 12T's.
+and photo use their own (a, b, sd); union_centred uses the union's.
 
 How the two 12T priors behaved on the union:
 - **flat_wide** (log10n0 U[-2.4, -1.2]):
@@ -290,5 +304,63 @@ No pass/fail threshold is set; the owner judges.
 
 ## Calibration values
 
-To be added from the CPU preparation record (`phase12u/prep/`) before the
-GPU job is submitted.
+From the CPU preparation (`phase12u/prep/`, HENON job 1361250, consumer
+c074b07). log10n0 is h-scaled. The GPU manifest and the count-ridge presets
+are at consumer ab226d6.
+- The CPU smoke of that manifest (HENON 1361251, nlive 8) passed all six
+  stages.
+- The union_centred stages, re-smoked with the union's ridge (HENON
+  1361514), also passed.
+- The smoke scans at H0 30, 64 and 130 rejected no point. The selection
+  N_eff is 1.2 to 4.9 times its threshold, and lowest for photo_only at
+  H0 30 (1.25).
+
+| | union (control) | spec | photo |
+|---|---|---|---|
+| Rows in [0.02, 0.30] | 22,778,800 | 4,907,325 | 22,498,606 |
+| Exact-redshift fraction | 0.270 | 1.000 | 0.000 |
+| m_lim | 21.0 | 19.5 | 21.0 |
+| Luminosity fit on observed z (M0hat, sigma_M) | -20.309, 0.714 | -20.187, 0.816 | -20.304, 0.711 |
+| After the photo-z inversion | -20.498, 0.559 | (no inversion) | -20.536, 0.510 |
+| Luminosity prior: M0hat | N(-20.498, 0.199) | N(-20.187, 0.010) | N(-20.536, 0.252) |
+| Luminosity prior: sigma_M | N(0.559, 0.130) | N(0.816, 0.006) | N(0.510, 0.168) |
+| Forward fit (log10n0, delta) | -1.9067, 1.050 | -1.7141, -0.127 | -1.9479, 1.537 |
+| Cross-check fit (log10n0, delta) | -1.7229, -2.568 (z <= 0.172) | -1.7415, 0.341 (z <= 0.245) | -1.8303, -0.223 (z <= 0.176) |
+| Count ridge a, b, sd | -1.810518, -0.089449, 0.036361 | -1.724559, -0.076030, 0.030334 | -1.807815, -0.089445, 0.035470 |
+| Ridge range over the delta prior | [-1.947, -1.545] | [-1.841, -1.498] | [-1.944, -1.542] |
+| log10n0 bounds (re-centred) | [-2.346, -1.146] | [-2.270, -1.070] | [-2.343, -1.143] |
+
+- **Control.**
+  - With calibration_12q's luminosity values held fixed, the 12U script
+    reproduces its forward fit to 1e-7: -1.906534, 1.047456.
+  - The photo-z inversion itself moves the union's luminosity values by
+    about 1e-3 (-20.4997, 0.5575 in 12q; -20.4984, 0.5589 here). Its
+    "common" random numbers stop being common once a single mock galaxy
+    crosses the magnitude cut, so the result carries Monte Carlo noise of
+    the order of its 2e-3 tolerance. That is 0.01 of the prior widths and
+    moves delta by 0.003. It is accepted and reported (owner, 2026-10-06).
+  - 12T's ridge approximation, evaluated on these outputs, gives
+    a -1.815834, b -0.084672, sd 0.033892, against 12T's -1.815898,
+    -0.084675, 0.033846.
+- **union_centred** removes 41,581 rows from the window (-0.0008 dex in the
+  count, against sd 0.036), so it keeps the union's ridge and bounds.
+- **photo's forward-fit delta (1.537) lies just above the delta prior
+  (U[-3.0, 1.5]).** The chain samples the prior, and the anchor is used only
+  for the H0 scan. On the union the GW-weighted posterior sat far from the
+  forward fit (delta -0.84 against 1.05).
+- **spec's luminosity prior is narrow** (0.010, 0.006). The 12P rule then
+  reduces to half the north–south offset, because exact redshifts have no
+  photo-z bias.
+- **Kernel-centre test** (LS galaxies with a DESI redshift, 5.9 million; per
+  0.01 bin of z_phot):
+  - core's kernel moves each kernel's mean above z_phot by +0.003 at z 0.02,
+    rising to +0.006 to +0.008 over z 0.08 to 0.30;
+  - the measured mean (z_spec - z_phot) is within ±0.002 of zero over z 0.08
+    to 0.22, and +0.001 to +0.003 below 0.08;
+  - above 0.22 it falls to -0.023 in the last bin. The test cannot tell a
+    photo-z bias there from the selection of which galaxies have spectra
+    (brighter galaxies, at lower true z for a given z_phot);
+  - over z 0.08 to 0.22, the LS photo-z are unbiased while core's
+    kernel pulls galaxies to higher z, which is the effect union_centred
+    removes;
+  - the M_APP <= 19.5 subsample gives the same picture.
