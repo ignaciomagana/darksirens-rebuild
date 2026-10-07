@@ -2,7 +2,7 @@
 
 ## Status
 
-**DECLARED (owner, 2026-10-05) before any run. Results will be appended here.**
+**DECLARED (owner, 2026-10-05) before any run. RESULTS appended below (2026-10-07).**
 The calibration values of each part come from a CPU preparation that runs
 before the GPU job. They are added to this record, under "Calibration values",
 before the owner submits the GPU job. The owner decides what follows.
@@ -364,3 +364,54 @@ are at consumer ab226d6.
     kernel pulls galaxies to higher z, which is the effect union_centred
     removes;
   - the M_APP <= 19.5 subsample gives the same picture.
+
+## Results (2026-10-07)
+
+All six stages ran in one rita A100 job (1361525, 17.6 h, 0 failed stages),
+consumer ab226d6. Outputs are under
+`/hildafs/projects/phy230054p/magana/darksirens-core-data/phase12u/runs/`
+(each stage directory holds result.json and samples.npz; the runner summary is
+in runner_status.json).
+
+### Chains (dynesty nlive 1000, dlogz 0.1, seed 22, exact-prior GW inputs)
+
+| Chain | H0 median [68%] | H0 sd | sd / spectral | log10n0 | delta | logZ |
+|---|---|---|---|---|---|---|
+| spec_only | 70.32 [64.7, 76.1] | 5.65 | 1.12 | -1.663 ± 0.040 | -0.86 ± 0.33 | -765.79 ± 0.07 |
+| photo_only | 70.53 [65.2, 76.5] | 5.72 | 1.13 | -1.734 ± 0.051 | -0.88 ± 0.35 | -765.49 ± 0.07 |
+| union_centred | 70.06 [64.6, 75.5] | 5.58 | 1.11 | -1.744 ± 0.052 | -0.79 ± 0.35 | -765.50 ± 0.07 |
+| 12T count_ridge_exactGW (reference) | 70.11 [64.6, 75.5] | 5.52 | 1.09 | -1.747 ± 0.048 | -0.84 ± 0.35 | -765.20 ± 0.07 |
+
+Diagnostics for every chain:
+- converged (stop reason "convergence", final dlogz 0.0999);
+- the 12F gate 7 is met, unpenalised at the posterior mean and median;
+- selection N_eff is 5.4 to 5.5 times the threshold;
+- the H0 scans (12 points over [25, 139]) rejected no point.
+
+Prior edges: no sample lies within 2% of the prior range of an edge, in
+log10n0, delta or H0. log10n0 sits on each part's ridge (median offset -0.09
+to -0.13 of the ridge sd).
+
+### Reading
+
+1. **Spectroscopic redshifts alone give the union's H0.** spec_only, with
+   exact redshifts for BGS Bright galaxies only, lands at 70.32, 0.2 from the
+   union and +6.0 from the spectral-only median of 64.27. The shift of the
+   catalog analyses against the spectral-only grid is therefore not a
+   photometric-redshift effect.
+2. **The photometric part carries the union's result.** photo_only gives
+   70.53, 0.4 from the union.
+3. **Removing the smooth-prior pull does not move H0.** union_centred moves
+   every photometric kernel's mean back onto its photo-z and gives 70.06,
+   -0.05 from the union (the ridge also changed by 0.009 dex, see "The count
+   ridge"). On this event set the smooth prior on true redshift does not drive
+   the union's H0, although in the clustered mocks it biases a complete
+   catalog low by about half a posterior width at sigma_z 0.015.
+4. **No part of the catalog adds precision.** All three chains are 1.11 to
+   1.13 times wider than the spectral-only grid, as the union was (1.09). A
+   catalog that carries little information leaves little for a redshift-prior
+   pull to act on, which is consistent with point 3.
+5. The three arms agree within 0.5 km/s/Mpc, a tenth of their width. The
+   spectroscopic/photometric split and the kernel centres are not the source
+   of the +6 km/s/Mpc offset from the spectral-only result. The owner decides
+   what follows.
