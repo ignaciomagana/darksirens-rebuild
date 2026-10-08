@@ -127,8 +127,12 @@ per call. The first call is slower: about 70 s instead of 8 s of compilation.
 
 | GW input | median | mean | 68% | sd |
 |---|---|---|---|---|
-| current (interpolated priors) | 64.27 | 64.64 | [59.4, 69.4] | 5.05 |
-| exact priors (gwcat 8263ae9) | 64.27 | 64.64 | [59.4, 69.4] | 5.05 |
+| current (interpolated priors) | 64.52 | 64.64 | [59.6, 69.6] | 5.05 |
+| exact priors (gwcat 8263ae9) | 64.52 | 64.64 | [59.6, 69.6] | 5.05 |
+
+(Corrected 2026-10-08, Phase 12X: the median and interval were first recorded
+as 64.27 and [59.4, 69.4], half a grid step low. The stored posteriors give
+the values above; the mean and sd were right.)
 
 The exact priors move the posterior mean by 0.002 km/s/Mpc.
 
