@@ -6,6 +6,13 @@
 records 12M to 12X; each number below is taken from the record named beside
 it.
 
+**AMENDED 2026-10-08 (proposed, for the owner to read): the fixed spin values
+were wrong.** Every number in this record was made with an effective-spin
+distribution about 3.7 times too wide. The explanation of what the catalog
+does stands. The two headline values and the statements about the rate do
+not: see "Amendment: the fixed spin values" at the end, and read the body
+below as the record at the old spin.
+
 ## The result in one paragraph
 
 On the 259 GWTC events with the fixed GWTC-5 population, the spectral-siren
@@ -114,3 +121,61 @@ same freedom (5.5 to 5.7 against 5.77), and wider than the fixed-index one.
 3. **A mock study will measure what limits the catalog's information:** a
    scan over catalog depth and event localisation on the existing mock
    universe, declared in the examples repository first.
+
+## Amendment: the fixed spin values (2026-10-08)
+
+### What was wrong
+
+- The fixed GWTC-5 population set the effective-spin Gaussian to mean 0.0633
+  and width 0.3654. Those are the release's values for the spin
+  **magnitude** (12Z, finding 1).
+- The events reject that pair: the spectral likelihood peaks 107 to 110
+  lower in log than with a width near 0.10 (12Z).
+- **Corrected values (owner, 2026-10-08):** mean 0.04, width 0.10, the best
+  point of a 30-point spectral grid over the pair with everything else
+  fixed. They are a fit made in this project, not a published number.
+
+### The two numbers at the corrected spin
+
+Spectral-only, 259 events, same inputs and grid as 12T and 12X. The rate
+index γ is scanned on -2 to 6 in steps of 0.25 (33 grids, plus 2.5439).
+
+| Analysis | Old spin | Corrected spin |
+|---|---|---|
+| Rate index fixed at the GWTC-5 value (γ = 2.54) | 64.5 [59.6, 69.6] | 66.2 [61.4, 71.1] |
+| Rate index free | 70.7 [65.1, 76.6] (flat on -0.46 to 4.04) | 67.9 [62.7, 73.4] (flat on -2 to 6) |
+| Preferred rate index | 1.7 ± 0.3 | 2.22 ± 0.34 |
+| Peak log-likelihood, free minus GWTC-5 index | 3.3 | 0.43 |
+| Log evidence, free minus fixed index | +1.7 | -1.8 |
+| DESI union, δ fixed at 0, rate index free | not run | step-1 chain running (12Y) |
+
+- No grid point is penalised by the selection guard at the corrected spin.
+- Grids: `/hildafs/projects/phy230054p/magana/darksirens-core-data/phase12_5/spectral_gamma/runs/`.
+
+### Which statements change
+
+- **"The result in one paragraph" and "The two numbers":** 64.5 becomes
+  66.2 and 70.7 becomes 67.9. The gap between a fixed and a free rate index
+  falls from 6.2 to 1.7 km/s/Mpc. Most of the old gap was the spin error.
+- **"What the events say about the rate":** withdrawn as written. At the
+  corrected spin the events' index is 2.22 ± 0.34, consistent with the
+  GWTC-5 value of 2.54, and a free index is not preferred.
+- **Owner decision 1** (report 64.5 and 70.7 side by side) needs the new
+  pair, 66.2 and 67.9.
+- The catalog rows of "The two numbers" (70.1 to 70.5) were made at the old
+  spin with δ free. They are not rerun; the step-1 chain replaces them.
+
+### Which statements stand
+
+- **δ is the rate evolution** (12X): a property of the model that does not
+  involve the spin. It was measured on real data at the old spin only.
+- **The galaxies do not move H0** (12V, 12W): measured at the old spin. The
+  step-1 chain tests it at the corrected spin against the 67.9 above.
+- The calibration, count-ridge, photo-z and convergence checks.
+
+### Not yet known
+
+- Whether (0.04, 0.10) stays the best pair when other population parameters
+  move. Stage A0 found shifts of 4 to 9 km/s/Mpc per one-sigma step of the
+  mass break, the first mass slope and the peak positions (12Z), so every
+  value in this record is conditional on the fixed mass model.

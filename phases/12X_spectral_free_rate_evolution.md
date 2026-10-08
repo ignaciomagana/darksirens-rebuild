@@ -5,6 +5,13 @@
 **DECLARED (owner, 2026-10-08) before any run. RESULTS appended below (2026-10-08).**
 CPU likelihood grids only; no chain, no catalog and no GPU job.
 
+**AMENDED 2026-10-08 (proposed):** these grids used the fixed effective-spin
+pair (0.0633, 0.3654), which are spin-magnitude values (12Z). At the
+corrected pair (0.04, 0.10) the free-index result is 67.9 [62.7, 73.4] with
+index 2.22 ± 0.34, not 70.7 with 1.7 ± 0.3, and a free index is no longer
+preferred. The equivalence of δ and the rate index does not depend on the
+spin. See the amendment in `12_summary_12M_to_12X.md`.
+
 ## Question
 
 Phases 12V and 12W found that the catalog analyses' H0 of about 70 comes
