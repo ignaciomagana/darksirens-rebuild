@@ -2,7 +2,7 @@
 
 ## Status
 
-**DECLARED (owner, 2026-10-08) before any run. Results will be appended here.**
+**DECLARED (owner, 2026-10-08) before any run. RESULTS appended below (2026-10-08).**
 Spectral-only likelihood grids on HENON CPU. No chain, no catalog and no GPU
 job.
 
@@ -112,3 +112,122 @@ the spin question: what the file says, and the H0 shift between
 - The mass scales (μ1, σ1, μ2, m_break, the low-mass edges) move H0 most,
   after γ.
 - The guard acts first on the low-σ1 side.
+
+## Results (2026-10-08)
+
+105 spectral-only grids on HENON (array 1376061; one task was resubmitted as
+1376194 after a node start-up failure). Outputs:
+`/hildafs/projects/phy230054p/magana/darksirens-core-data/phase12_5/A0/runs/<parameter>/<value>/spectral_h0.json`;
+the tables below are in `phase12_5/A0/a0_summary.json`
+(`a0_analyze.py`), and the spin source check in
+`phase12_5/A0/lvk_hyperparameters.json`.
+
+**Control.** The run at the fixed values reproduces the 12T grid to 9e-13 in
+log-likelihood (H0 64.52, sd 5.05).
+
+### 1. The fixed spin values are spin-magnitude values, and the events reject them
+
+The GWTC-5 hyperposterior file (the run with a Gaussian on spin magnitude)
+has `mu_chi` 0.0633 [0.005, 0.173] and `sigma_chi` 0.3654 [0.305, 0.421].
+These are the two numbers of the fixed population, which applies them as a
+Gaussian on effective spin.
+
+| σ_χ (effective-spin width) | H0 median [68%] | peak logL − fixed | selection N_eff / threshold at the peak |
+|---|---|---|---|
+| 0.05 | 67.7 [62.9, 72.8] | +78.8 | 15.5 |
+| 0.08 | 67.0 [62.2, 72.0] | +103.3 | 24.7 |
+| 0.10 | 66.7 [61.9, 71.6] | +106.9 | 29.8 |
+| 0.15 | 66.3 [61.6, 71.3] | +99.8 | 39.3 |
+| 0.20 | 66.3 [61.5, 71.3] | +81.2 | 43.2 |
+| 0.25 | 66.2 [61.4, 71.2] | +57.1 | 37.8 |
+| 0.30 | 65.9 [61.0, 70.9] | +31.2 | 17.4 |
+| 0.3654 (fixed) | 64.5 [59.6, 69.6] | 0 | 3.6 |
+| 0.45 | guard penalises 144 of 241 H0 values | −29.5 | 1.0 |
+
+- The events prefer an effective-spin width near 0.10 to the fixed 0.3654
+  by 107 in log-likelihood.
+- At that width H0 is 66.7, 2.1 km/s/Mpc above the fixed-population value,
+  and the selection estimate has 8 times more effective injections.
+- The mean: μ_χ = 0 is preferred to 0.0633 by 11.8 at the fixed width, with
+  H0 64.97. μ_χ ≥ 0.15 runs into the guard.
+- Every Phase 12 result so far (spectral and catalog) used the fixed pair.
+
+### 2. H0 against each mass and pairing parameter
+
+Shift of the H0 median for a one-sigma step s of the parameter (from the
+±1 s runs), and the change in peak log-likelihood at −1 s and +1 s:
+
+| parameter | dH0 per s (km/s/Mpc) | peak logL at −1 s / +1 s |
+|---|---|---|
+| m_break | −9.4 | +0.8 / −5.6 |
+| α1 | +7.4 | −12.7 / +2.1 |
+| μ2 | −5.2 | −0.4 / −2.3 |
+| μ1 | −4.8 | −2.7 / +0.9 |
+| σ2 | −4.6 | +0.7 / −1.4 |
+| λ0 | −4.6 (from −1 s only) | −22.3 / — |
+| α2 | +4.3 | −4.5 / −0.2 |
+| λ1 | −2.6 (from −1 s only) | −27.0 / — |
+| β_q | −2.1 | −0.9 / +0.1 |
+| σ1 | −1.6 | +1.7 / −2.3 |
+| m1_low | −1.3 | +1.1 / −2.8 |
+| δm2 | −1.2 | −2.3 / +1.7 |
+| δm1 | −0.9 | −0.4 / −1.4 |
+| m2_low | −0.2 (from −0.5 s only) | −0.5 / — |
+
+For comparison, the rate index γ moves H0 by about −6.7 per unit near its
+preferred value (12X), and the fixed-population posterior sd is 5.05.
+
+- **Seven parameters each move H0 by 4 to 9 km/s/Mpc per one-sigma step**:
+  m_break, α1, μ2, μ1, σ2, λ0 and α2. That is as much as the whole
+  fixed-population posterior width.
+- The low-mass edges and taper widths (m1_low, m2_low, δm1, δm2), σ1 and β_q
+  move it by 2 or less.
+- Within ±1 s the peak log-likelihood changes by a few units at most for
+  most parameters: the events do not separate these values strongly at fixed
+  everything else. The exceptions are α1 (−12.7 at −1 s) and the peak
+  weights λ0 and λ1 (−22 and −27 at −1 s), whose separate scans overstate
+  their freedom because the two are anti-correlated.
+- μ1 extended: H0 falls to 50.5 at μ1 = 11.0 and 42.9 at 12.0, with the
+  peak log-likelihood lower by 4.1 and 22.2. A one-dimensional ridge toward
+  low H0 exists and is mildly disfavoured near μ1 = 11.
+
+### 3. Where the selection guard acts
+
+At the fixed population the selection N_eff is 3.6 times its threshold at
+the peak and 1.9 times at its lowest (low H0). The guard penalises H0 values
+in these runs only:
+
+| run | H0 values penalised |
+|---|---|
+| σ1 = 0.010 (−3 s) | 191 of 241 (H0 20 to 138) |
+| σ2 = 1.11 (−2 s) | 23 (H0 36 to 47) |
+| λ0 = 0.269, 0.138, 0.007 | 22, 48, 61 (below H0 36, 44, 50) |
+| λ1 = 0.415, 0.284, 0.153 | 4, 37, 47 (below H0 30, 40, 44) |
+| μ_χ = 0.15, 0.20 | 55, 98 (below H0 47, 68) |
+| σ_χ = 0.45 | 144 |
+
+No other run has a penalised point. The guard therefore acts on narrow peaks
+(small σ1, σ2), on low peak weights, and on effective-spin distributions
+shifted or widened beyond the fixed one. With the effective-spin width near
+0.1 the margin grows eightfold.
+
+### Reading
+
+1. **The fixed population's effective-spin distribution is wrong, and
+   correcting it comes before any further fixed-spin result.** The pair
+   (0.0633, 0.3654) describes spin magnitudes. With a width near 0.10 the
+   spectral-only H0 is about 66.7.
+2. **A fixed population understates the H0 uncertainty.** Seven mass
+   parameters each carry a shift as large as the quoted width. The
+   fixed-population values of P12.3 and P12.4 are conditional on the GWTC-5
+   medians, which were themselves measured at the LVK cosmology.
+3. **Parameter set for the chains of stage A1:** γ, the two spin parameters,
+   and m_break, α1, α2, μ1, μ2, σ2 and the peak weights λ0, λ1 (which must
+   be sampled together). σ1, β_q and the low-mass edges and tapers move H0
+   least and are the candidates to stay fixed.
+4. **Guard:** sampling σ1, σ2, the peak weights and the spin parameters
+   reaches guarded volume inside their priors. The guard diagnostics of the
+   chains must report it.
+5. The scans are one parameter at a time. What the joint posterior does, and
+   how much of these shifts survives marginalization, is the question of
+   stage A1.
