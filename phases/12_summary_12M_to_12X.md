@@ -103,10 +103,14 @@ same freedom (5.5 to 5.7 against 5.77), and wider than the fixed-index one.
 - The value of H0 quoted from a catalog analysis must state how the rate
   evolution is treated: 64.5 with the GWTC-5 index, 70.7 with it free.
 
-## Open, for the owner
+## Owner decisions (2026-10-08)
 
-- Whether Phase 12 reports the fixed-index or the free-index value, or both.
-- Whether δ stays a sampled parameter of the catalog model, given that it
-  duplicates the population's rate index.
-- What limits the catalog's information here (event localisation, catalog
-  depth, completeness), which a mock study could measure.
+1. **Phase 12 reports both values, side by side:** 64.5 [59.6, 69.6] with the
+   GWTC-5 rate index and 70.7 [65.1, 76.6] with the index free, with the
+   statement that the DESI catalog changes neither.
+2. **δ will be fixed and the population's rate index freed instead.** The
+   freedom then sits in one parameter, the one that carries it physically.
+   This changes the catalog model, so it is declared before any run.
+3. **A mock study will measure what limits the catalog's information:** a
+   scan over catalog depth and event localisation on the existing mock
+   universe, declared in the examples repository first.
