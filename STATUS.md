@@ -90,6 +90,15 @@ arrival time.
 
 ## Post-reconstruction Phase 12 — first production consumer
 
+**State on 2026-10-08 (the entries below stop at 12O and are history):**
+- P12.1 to P12.3 are done. P12.4, the DESI comparison at a fixed population, is recorded in 12M to 12X and
+  summarized in `phases/12_summary_12M_to_12X.md`.
+- The two results: H0 = 64.5 [59.6, 69.6] with the GWTC-5 rate index, and 70.7 [65.1, 76.6] with the index free.
+  The DESI catalog adds neither a shift nor precision on this event set. The owner reports both values.
+- P12.5 (population marginalization) has started: step 1, the chain with δ fixed and the rate index sampled, is
+  declared in `phases/12Y_p12_5_step1_free_rate_index.md`. The full marginalization is being scoped.
+- P12.6 (robustness matrix) and P12.7 (result freeze and figures) have not started.
+
 Status: **PHASE 12C CORE ACCEPTED / 12D ACCEPTED THROUGH 12H / 12E CAMPAIGN RECORD MERGED AS PROPOSED (d6b63f7) / 12F ACCEPTED (2026-09-29, CI WAIVED) / 12H CORE PIN a46dec7 ACCEPTED / 12I MASK RULE, 12J SINGLE PASS, 12K CUDA BACKEND, 12L CAP 20 ACCEPTED / 12M FIRST P12.4 POSTERIOR SUSPENDED (2026-09-29; depth artifact, 12N)**
 
 **The first Phase 12 result of record (2026-09-29, H0 median 71.07; `phases/12M_p12_4_result_of_record.md`) is SUSPENDED: its catalog information comes from the completeness model at the catalog's upstream z = 0.3 edge (Phase 12N). No result of record is quotable now.**
