@@ -93,8 +93,10 @@ arrival time.
 **State on 2026-10-08 (the entries below stop at 12O and are history):**
 - P12.1 to P12.3 are done. P12.4, the DESI comparison at a fixed population, is recorded in 12M to 12X and
   summarized in `phases/12_summary_12M_to_12X.md`.
-- The two results: H0 = 64.5 [59.6, 69.6] with the GWTC-5 rate index, and 70.7 [65.1, 76.6] with the index free.
-  The DESI catalog adds neither a shift nor precision on this event set. The owner reports both values.
+- The two results, at the corrected fixed spin (effective-spin mean 0.04, width 0.10; core 4b97f4a): H0 = 66.2
+  [61.4, 71.1] with the GWTC-5 rate index, and 67.9 [62.7, 73.4] with the index free. The DESI catalog adds neither a
+  shift nor precision on this event set. The earlier pair, 64.5 and 70.7, was made with spin-magnitude values applied
+  to the effective spin and is superseded (amendment in `phases/12_summary_12M_to_12X.md`).
 - P12.5 (population marginalization) has started: step 1, the chain with δ fixed and the rate index sampled, is
   recorded in `phases/12Y_p12_5_step1_free_rate_index.md`: H0 67.6 [62.8, 73.9] with the rate index 2.28 ± 0.35, at
   the corrected spin; spectral-only with the same freedom gives 67.9 [62.7, 73.4]. The full marginalization is scoped

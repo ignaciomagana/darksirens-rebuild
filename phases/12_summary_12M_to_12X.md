@@ -6,7 +6,7 @@
 records 12M to 12X; each number below is taken from the record named beside
 it.
 
-**AMENDED 2026-10-08 (proposed, for the owner to read): the fixed spin values
+**AMENDED 2026-10-08 (owner, 2026-10-09): the fixed spin values
 were wrong.** Every number in this record was made with an effective-spin
 distribution about 3.7 times too wide. The explanation of what the catalog
 does stands. The two headline values and the statements about the rate do
