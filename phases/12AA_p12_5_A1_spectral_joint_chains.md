@@ -591,8 +591,106 @@ is submitted.
 5. **GPU timing** on rita: seconds per call, and a 7-minute stretch of the
    real chain command in a scratch directory.
 
+### Results of the checks (2026-10-09, consumer commit 3ebc505)
+
+HENON job 1376479 (control, spike, guard map), HENON job 1376480 (tests),
+rita job 1376481 (timing).
+
+**1. Control: passed.**
+
+- Limit set back to 20: the 18-dimensional target equals the stored grid at
+  all 241 H0 values, largest difference 9e-13 in ln L, at both rate indices.
+  No recompilation after the first point.
+- Limit 1: equal to 9e-13 at the 162 H0 values where no penalty acts
+  (H0 ≥ 59.5). The reference population is inside the limit for H0 ≥ 42.5 and
+  over it for H0 ≤ 42. Its penalty in ln L: −0.003 at H0 45, −0.17 at 42,
+  −10,400 at 32.5, −84,400 at 20. The smooth cutoff is close to a wall.
+- H0 from the reference-population grid is unchanged by the limit:
+  66.2 [61.4, 71.1].
+
+**2. The first attempt's spike: rejected by limit 1.**
+
+| 200 best points of | H0 45 to 140, seed 41 | H0 20 to 45, seed 31 |
+|---|---|---|
+| total variance of ln L | 17.2 to 20.1 | 14.2 to 20.0 |
+| of which from the events alone | 6.1 to 7.5 | 9.3 to 9.9 |
+| ln L at limit 20 (as stored) | −631.8 to −630.4 | −630.1 to −629.4 |
+| ln L at limit 1 | −509,000 to −463,000 | −690,000 to −686,000 |
+
+- All 400 points are over the limit and penalised. The events' variance
+  alone is six to ten times the limit, so no selection N_eff could admit
+  them.
+- At limit 20 the embedded points reproduce the stored likelihoods to 1e-9,
+  so the embedding is right.
+
+**3. Guard map on the prior: 0.2% to 0.3% of the prior is inside the limit.**
+
+| 2000 prior draws | H0 20 to 45 | H0 45 to 140 |
+|---|---|---|
+| inside the variance limit | 4 (0.20%) | 6 (0.30%) |
+| inside it with a finite likelihood | 3 | 5 |
+| free of any penalty | 0 | 4 (0.20%) |
+| penalised, finite | 76.8% | 74.2% |
+| minus infinity (no support for some event) | 23.2% | 25.7% |
+| events' variance alone over 1 | 79% | 79% |
+| total variance, median | 224 | 208 |
+| inside limit 20, for comparison | 11.1% | 9.9% |
+
+- **This is below the 1% mark.** Almost the whole prior is over the limit,
+  mostly because the events' own Monte Carlo sums fail there. The sampler
+  starts on the penalty's slope, not on the likelihood.
+- The 7-minute stretch of the real chain command (H0 45 to 140) did start
+  and climb: 3926 iterations, the worst live point's ln L from below
+  −400,000 to −22,200. It had not reached the region inside the limit.
+
+**4. Unit tests:** 32 passed.
+
+**5. GPU timing (rita A100-80).**
+
+- Likelihood: 0.0018 s per call, no recompilation. Prior transform: 0.0056 s
+  per call (0.0037 s in the first attempt; it now carries two joint maps).
+- Chain stretch: 76,300 calls in 406 s, 0.0053 s per call, 108 calls per
+  iteration.
+- **Estimated cost.** The first attempt's production chains ran 1.2 times
+  slower per call than its stretch, so about 0.006 s per call. With 50 to 80
+  iterations per live point (the archived 18-parameter runs needed 49; the
+  priors here are wider), a chain is 5.4 to 8.6 million calls: **9 to 14
+  hours per chain, 3 to 5 days for the eight** in one job. Uncertain by a
+  factor of two; the job's limit is 7 days. The walks setting is kept.
+
+### The low-part chains are held (decision needed)
+
+- The chain command refuses to start unless the reference population at one
+  H0 inside its range is free of any penalty. Under limit 1 that holds only
+  for H0 ≥ 59.5. The four chains on H0 20 to 45 would therefore stop before
+  sampling, whatever anchor H0 is chosen.
+- That check has not been changed. Whether to record the anchor instead of
+  refusing, for this stage, is the owner's decision.
+- More than the start is at stake. In the low part the GWTC-5 values
+  themselves are over the limit below H0 42, with our injection set. A low
+  mode can only live at other population values, and the weight of the low
+  part against the high part will depend on where the limit falls.
+
 ### Run plan
 
-As before: `sbatch slurm/phase12_5_A1_runner.sbatch` in `phase12_5/repo_A1`,
-one job on one rita A100, the eight chains in the same alternating order and
-then the combination. Outputs in `phase12_5/A1/runs/`.
+- **Submitted now: the four chains on H0 45 to 140** (seeds 41 to 44), in one
+  job on one rita A100:
+  `PHASE12_5_A1_ONLY="high_seed41 high_seed42 high_seed43 high_seed44" sbatch slurm/phase12_5_A1_runner.sbatch`
+  in `phase12_5/repo_A1`. Outputs in `phase12_5/A1/runs/`.
+- **Not submitted: the four chains on H0 20 to 45 and the combination.**
+  After the decision above, the same file without the selection runs what is
+  left; finished chains are skipped and an unfinished one resumes.
+- The high part alone is not the result. It is H0 conditional on H0 ≥ 45.
+
+### Risks specific to this attempt
+
+- **The limit as a cut in H0.** At the GWTC-5 values the total variance
+  falls from 1.12 at H0 20 to 0.70 at H0 140. The limit therefore removes
+  low H0 first. The posterior's low-H0 edge may be the limit's, not the
+  data's. The fraction of posterior points penalised, and their H0, will be
+  reported for every chain.
+- **A posterior on the limit.** The first attempt's posterior sat on its
+  limit (54% and 52% of points in the penalty band). The same may happen at
+  limit 1; then the result depends on the limit.
+- **Start of sampling** from a prior that is 99.7% over the limit: shown to
+  work for 7 minutes, not to convergence.
