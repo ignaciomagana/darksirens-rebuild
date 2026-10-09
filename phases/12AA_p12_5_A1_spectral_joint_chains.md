@@ -786,6 +786,73 @@ is submitted.
 4. Guard map on the prior, 2000 draws per H0 part.
 5. Unit tests; a short GPU timing.
 
+### Results of the checks (2026-10-09, consumer commit cc5fb8e)
+
+HENON job 1376484 (control, spike, guard map), HENON job 1376485 (tests),
+rita job 1376486 (timing). **All pass.**
+
+**1. Control at limit 4: passed.** Equal to the stored grids at all 241 H0
+values (largest difference 9e-13 in ln L), at both rate indices, with no
+recompilation. H0 from the reference-population grid: 66.2 [61.4, 71.1].
+
+**2. The reference population is free of any penalty from H0 20 to 140.**
+
+| H0 | variance from the events | from the selection | total | N_eff over its threshold | penalty |
+|---|---|---|---|---|---|
+| 20 | 0.25 | 0.88 | 1.12 | 4.3 | 0 |
+| 32.5 | 0.25 | 0.80 | 1.05 | 4.7 | 0 |
+| 45 | 0.24 | 0.75 | 0.98 | 5.0 | 0 |
+| 66 | 0.20 | 0.66 | 0.86 | 5.7 | 0 |
+| 92.5 | 0.17 | 0.59 | 0.76 | 6.5 | 0 |
+| 140 | 0.16 | 0.54 | 0.70 | 7.1 | 0 |
+
+The penalty is exactly zero at all 241 H0 values, also at rate index 2.25
+(total variance 0.74 to 1.13). Both start points of the chains (H0 32.5 and
+92.5) pass the unchanged start check.
+
+**3. The first attempt's spike: still rejected.** All 400 points are over
+limit 4 (total variance 14.2 to 20.1; from the events alone 6.1 to 9.9) and
+penalised: ln L −463,000 to −690,000, where the first attempt had about
+−630. At limit 20 they reproduce the stored likelihoods to 1e-9.
+
+**4. Guard map on the prior.**
+
+| 2000 prior draws | H0 20 to 45 | H0 45 to 140 |
+|---|---|---|
+| inside the variance limit | 76 (3.8%) | 56 (2.8%) |
+| inside it with a finite likelihood | 3.2% | 2.5% |
+| free of any penalty | 2.8% | 2.2% |
+| penalised, finite | 74.1% | 72.2% |
+| minus infinity (no support for some event) | 23.2% | 25.7% |
+| events' variance alone over 4 | 39% | 35% |
+
+About 3% of the prior is inside the limit, above the 1% mark (0.2% to 0.3%
+at limit 1).
+
+**5. Unit tests:** 32 passed.
+
+**6. GPU timing (rita A100-80).** Likelihood 0.0018 s per call, no
+recompilation; prior transform 0.0058 s. The 7-minute chain stretch (H0 45
+to 140) made 67,400 calls in 406 s, 0.006 s per call, and reached ln L
+−1358 for its worst live point after 3760 iterations (at limit 1 it was at
+−22,200 after as many). **Estimated cost, as before: 9 to 14 hours per
+chain, 3 to 5 days for the eight** in one job, uncertain by a factor of two;
+the job's limit is 7 days.
+
+### Risks at limit 4
+
+- **A posterior on the limit.** Likely: the first attempt's posterior sat on
+  limit 20 and the LVK posteriors sit on theirs. The fraction of posterior
+  points penalised, their variance and their H0 are reported for every
+  chain. If the second peak's width, or any width, collapses again, the
+  attempt has failed like the first.
+- **The limit against H0.** At the GWTC-5 values the limit is now 3.5 to 5.7
+  times away in variance, at every H0. Away from them it is not known.
+- **A result that depends on the limit.** One limit is run. The paper shows
+  both of its limits for that reason.
+- **Minus infinity in a quarter of the prior.** Its cause was not
+  investigated (taken to be an event left without support).
+
 ### Run plan
 
 `sbatch slurm/phase12_5_A1_runner.sbatch` in `phase12_5/repo_A1`: all eight
