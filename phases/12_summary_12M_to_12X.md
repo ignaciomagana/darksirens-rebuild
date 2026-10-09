@@ -147,7 +147,7 @@ index γ is scanned on -2 to 6 in steps of 0.25 (33 grids, plus 2.5439).
 | Preferred rate index | 1.7 ± 0.3 | 2.22 ± 0.34 |
 | Peak log-likelihood, free minus GWTC-5 index | 3.3 | 0.43 |
 | Log evidence, free minus fixed index | +1.7 | -1.8 |
-| DESI union, δ fixed at 0, rate index free | not run | step-1 chain running (12Y) |
+| DESI union, δ fixed at 0, rate index free | not run | 67.6 [62.8, 73.9], index 2.28 ± 0.35 (12Y) |
 
 - No grid point is penalised by the selection guard at the corrected spin.
 - Grids: `/hildafs/projects/phy230054p/magana/darksirens-core-data/phase12_5/spectral_gamma/runs/`.
@@ -163,14 +163,17 @@ index γ is scanned on -2 to 6 in steps of 0.25 (33 grids, plus 2.5439).
 - **Owner decision 1** (report 64.5 and 70.7 side by side) needs the new
   pair, 66.2 and 67.9.
 - The catalog rows of "The two numbers" (70.1 to 70.5) were made at the old
-  spin with δ free. They are not rerun; the step-1 chain replaces them.
+  spin with δ free. They are not rerun; the step-1 chain (12Y) replaces
+  them.
 
 ### Which statements stand
 
 - **δ is the rate evolution** (12X): a property of the model that does not
   involve the spin. It was measured on real data at the old spin only.
 - **The galaxies do not move H0** (12V, 12W): measured at the old spin. The
-  step-1 chain tests it at the corrected spin against the 67.9 above.
+  step-1 chain confirms it at the corrected spin: 67.6 [62.8, 73.9] with
+  the catalog against 67.9 [62.7, 73.4] without, sd 5.59 against 5.40
+  (12Y).
 - The calibration, count-ridge, photo-z and convergence checks.
 
 ### Not yet known
