@@ -1,10 +1,11 @@
-# Phase 12AA — P12.5 stage A1: spectral-only chains with H0 and eleven population parameters sampled (declaration)
+# Phase 12AA — P12.5 stage A1: spectral-only chains with H0 and the GWTC-5 population sampled (declaration)
 
 ## Status
 
-**SECOND ATTEMPT DECLARED (owner, 2026-10-09). Read the last section,
-"Second attempt", first: it replaces the priors, the number of sampled
-parameters and the variance limit given below.** The first attempt was
+**THIRD ATTEMPT DECLARED (owner, 2026-10-09): all seventeen population
+parameters, the GWTC-5 paper's priors, variance limit 4. Read the last two
+sections first: "Second attempt" gives the priors and what the variance
+limit means; "Third attempt" replaces its limit of 1 by 4.** The first attempt was
 cancelled after two of its eight chains and failed; what follows up to that
 section is its declaration, kept as written.
 
@@ -694,3 +695,99 @@ rita job 1376481 (timing).
   limit 1; then the result depends on the limit.
 - **Start of sampling** from a prior that is 99.7% over the limit: shown to
   work for 7 minutes, not to convergence.
+
+---
+
+## Third attempt (2026-10-09): variance limit 4
+
+### What happened to the second attempt
+
+- The four chains on H0 45 to 140 were submitted at limit 1 (rita job
+  1376483). The owner cancelled the job after 3 minutes, on the check results
+  above. Nothing was sampled to any purpose.
+- Its partial output (the first chain's checkpoint and log) is kept under
+  `phase12_5/A1/runs_attempt2_var1/`. `phase12_5/A1/runs/` starts empty.
+
+### Why limit 1 was dropped
+
+- **With our injection set, limit 1 falls on the GWTC-5 values themselves.**
+  Total variance of ln L at the reference population:
+
+  | H0 | total variance | under limit 1 |
+  |---|---|---|
+  | 20 | 1.12 | over the limit, penalty −84,400 in ln L |
+  | 32.5 | 1.05 | over the limit, penalty −10,400 |
+  | 42 | 1.00 | over the limit, penalty −0.17 |
+  | 45 | 0.98 | inside, penalty −0.003 |
+  | 59.5 and above | 0.90 and below | no penalty |
+  | 140 | 0.70 | no penalty |
+
+  The limit would have cut low H0 first, and the weight of the low part
+  against the high part would have been set by it.
+- **Only 0.2% to 0.3% of the prior is inside limit 1** (4 and 6 of 2000 draws
+  in the two H0 parts).
+- The chains on H0 20 to 45 could not start: their start check needs the
+  reference population free of any penalty somewhere in the range.
+
+### Owner decision
+
+**Variance limit 4**, the paper's relaxed cut ("for some models, we also show
+results with a more relaxed variance cut in App. B"; its figures compare
+"var=1" and "var=4"). Everything else as the second attempt: the priors
+table, the 18 dimensions, the split at 45, four seeds per part, the sampler,
+the inputs, the smooth cutoff.
+
+Source of the value, checked in the released LVK result files
+(`/hildafs/projects/phy220048p/share/LVK_population_analyses/popsummary_files/`,
+the two `gwtc5_updated_default_*` files for the broken power law + 2 peaks
+model, 259 events each):
+
+| file | posterior samples | `variance` column: median | maximum |
+|---|---|---|---|
+| default | 8200 | 0.968 | 0.999994 |
+| `var_4` | 8842 | 3.05 | 3.999982 |
+
+- The relaxed cut is 4, and it is sharp in those runs.
+- The files also settle the definition left open above. They carry one
+  variance column per event and the selection N_eff. In the default file the
+  median of the summed event variances is 0.50 and 259²/N_eff at the median
+  N_eff (147,400) is 0.46: together the reported total, to the precision of
+  comparing medians. **The paper's variance is the same total as ours.**
+- The LVK posterior itself sits on its limit: 90% of the default file's
+  samples have a variance above 0.9. A posterior pressed against the limit
+  is a property of the method, not only of our inputs.
+- Their selection N_eff is higher than ours at comparable populations
+  (median 147,400 in the default file; ours is 76,500 to 124,200 at the
+  GWTC-5 values). Limit 1 costs us more than it costs them.
+
+### Expected at limit 4
+
+- At the reference population the threshold on N_eff is about 17,900
+  (259²/(4 − 0.25)); N_eff there is 76,500 to 124,200. No penalty at any H0
+  from 20 to 140 is expected. **Checked before the chains; if any H0 is
+  penalised, no chain is submitted.**
+- The first attempt's spike had the events' variance alone at 6.1 to 9.9, so
+  limit 4 should still reject it. **Checked before the chains; if it is not
+  rejected, no chain is submitted.**
+- From the limit-1 guard map's recorded variances, about 3% to 4% of the
+  prior is inside limit 4.
+
+### Checks before the chains
+
+Outputs in `phase12_5/A1/checks3/`; results are added here before any chain
+is submitted.
+
+1. Control at the declared limit 4 against the stored spectral grids, at
+   both rate indices: equal at every H0 to 1e-8, and no penalty at any H0.
+2. Total variance and penalty against H0 at the reference population, 20 to
+   140, from the same run.
+3. The first attempt's 400 best points at limit 4 (must be rejected) and at
+   limit 20 (must reproduce the stored likelihoods).
+4. Guard map on the prior, 2000 draws per H0 part.
+5. Unit tests; a short GPU timing.
+
+### Run plan
+
+`sbatch slurm/phase12_5_A1_runner.sbatch` in `phase12_5/repo_A1`: all eight
+chains in the alternating order, then the combination, one job on one rita
+A100. The start check of the chain command is unchanged.
