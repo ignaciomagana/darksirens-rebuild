@@ -2,6 +2,12 @@
 
 ## Status
 
+**SECOND ATTEMPT DECLARED (owner, 2026-10-09). Read the last section,
+"Second attempt", first: it replaces the priors, the number of sampled
+parameters and the variance limit given below.** The first attempt was
+cancelled after two of its eight chains and failed; what follows up to that
+section is its declaration, kept as written.
+
 **DECLARED (owner, 2026-10-09) before any chain.** The implementation, its
 CPU checks and one 8-minute GPU timing job are done and recorded below. The
 owner's decisions on the open points are in the next section and are applied
@@ -391,3 +397,202 @@ For the combined posterior and for each of the eight chains:
 - **Not exercised yet:** a chain run to convergence on the real events (the
   smokes are capped); a resume on the GPU (done on CPU only); the eight-chain
   manifest beyond its dry run.
+
+---
+
+## Second attempt (2026-10-09): all seventeen population parameters, the GWTC-5 paper's priors, variance limit 1
+
+### What happened to the first attempt
+
+- Job 1376409 on rita ran the first two chains (H0 45 to 140 with seed 41,
+  H0 20 to 45 with seed 31) to convergence, 3.4 and 3.5 hours each. The owner
+  cancelled it during the third chain.
+- **It failed.** The width of the second mass peak, with a prior flat on 0 to
+  10 solar masses, collapsed:
+
+  | | H0 45 to 140, seed 41 | H0 20 to 45, seed 31 |
+  |---|---|---|
+  | H0 (median, 68%) | 86.1 [76.1, 91.7] | 40.5 [40.2, 41.6] |
+  | second peak width, median (solar masses) | 0.022 | 0.0008 |
+  | ln Z | −670.36 ± 0.21 | −672.39 ± 0.24 |
+  | highest ln L | −630.4 | −629.4 |
+  | variance of ln L at that point | 19.7 (limit 20) | 19.9 (limit 20) |
+  | posterior points the selection guard penalises | 54% | 52% |
+  | selection N_eff over its threshold, median | 1.12 | 1.13 |
+
+  In the high part 98% of the posterior has the width below 0.1 solar
+  masses. In the low part the posterior is a few repeated points near
+  H0 = 40.38. Weight of the low part: 0.033.
+- A Gaussian that narrow puts its weight on single posterior samples of
+  single events. The Monte Carlo sums over those samples are then not
+  estimates of an integral. The run allowed a variance of 20 on the
+  log-likelihood estimator, and its best points sit at 19.7 and 19.9: the
+  sampler climbed until it met the limit.
+- These numbers are a record of the failure, not results.
+- Its outputs are kept under `phase12_5/A1/runs_attempt1/`: the two finished
+  chains, the unfinished third (`high_seed42`, 8 minutes) and the runner's
+  status file. `phase12_5/A1/runs/` starts empty.
+
+### Owner decision
+
+The setup of the GWTC-5 population paper (arXiv:2605.27226): every mass
+parameter sampled with the paper's priors, the paper's limit of 1 on the
+variance of the likelihood estimator, and the ranges of the paper's
+effective-spin model for our spin pair. Kept from before: H0 flat on 20 to
+140 split at 45, four seeds per part (41 to 44 above 45, 31 to 34 below),
+dynesty with 1000 live points and dlogz 0.1, the same inputs, cosmology and
+core version.
+
+### The priors
+
+18 sampled dimensions: H0 and all 17 parameters of core's
+`brokenpowerlaw+2peaks` GWTC-5 model. All flat on the range given.
+
+| parameter | prior | source |
+|---|---|---|
+| H0 | 20 to 140, run as 20 to 45 and 45 to 140 | owner (not sampled in the paper) |
+| first slope α1 | −4 to 12 | paper Table 5 |
+| second slope α2 | −4 to 12 | Table 5 |
+| break mass | 20 to 50 | Table 5 |
+| first peak position μ1 | 5 to 20 | Table 5 |
+| first peak width σ1 | 0 to 10 | Table 5 |
+| second peak position μ2 | 25 to 60 | Table 5 |
+| second peak width σ2 | 0 to 10 | Table 5 |
+| lower mass edge m1,low | 3 to 10 | Table 5 |
+| taper range δm1 | 0 to 10 | Table 5 |
+| peak fractions λ0, λ1 | uniform on λ0 + λ1 ≤ 1 | Table 5, Dirichlet(1, 1, 1) |
+| mass-ratio slope βq | −2 to 7 | Table 5 |
+| lower edge of the secondary m2,low | 3 to m1,low (conditional) | Table 5 |
+| taper range of the secondary δm2 | 0 to 10 | Table 5 |
+| maximum mass | fixed at 300 | Table 5 |
+| rate index γ (the paper's κz) | −10 to 10 | Table 7 |
+| effective-spin mean | 0 to 1 | Table 8 gives −1 to 1; our model admits 0 to 1 |
+| effective-spin width | 0.05 to 1 | Table 8 |
+
+- Each Table 5 range was read from the paper's text and compared with the
+  ranges of core's model class at the installed version (e7c3007): they are
+  the same, entry by entry. A test in the consumer repository holds a typed
+  copy of the paper's ranges and compares the configuration with it and with
+  the model.
+- The two joint priors are core's cube maps, so no prior volume has zero
+  likelihood: the fractions uniform on the triangle (which is
+  Dirichlet(1, 1, 1)), and m2,low = 3 + u (m1,low − 3) with u uniform.
+- Six parameters are new relative to the first attempt: the first peak's
+  width, both lower edges, both taper ranges and the mass-ratio slope. The
+  rate index widens from [−2, 6]; the spin mean from [0, 0.3]; the spin width
+  from [0.005, 0.3] to [0.05, 1].
+
+### The variance limit, in our code and in the paper
+
+The paper (Sec. 3): "we require a maximum variance of 1 on the population
+likelihood estimator ... implemented as a sharp or smoothly-tapered cutoff".
+It gives no formula.
+
+What `numerics.max_likelihood_variance = 1.0` does in core e7c3007
+(`selection/gw.py`, `selection_log_correction`, called by
+`spectral_siren_log_likelihood`):
+
+- **It limits the total variance of the log-likelihood estimator:** the sum
+  over the 259 events of each event's Monte Carlo variance of ln Z_i (from
+  its 4096 reweighted posterior samples, Σw²/(Σw)² − 1/n), plus
+  N_obs²/N_eff for the selection term. This is the estimator of Talbot &
+  Golomb (2023) that the paper cites. Covariances between the terms are
+  neglected.
+- **It is applied as a threshold on the selection N_eff:**
+  N_eff > N_obs² / (1 − Σ event variances), and never below 5 N_obs. If the
+  events alone exceed 1, no N_eff passes.
+- **With `selection_neff_soft_guard = true` (ours) the cutoff is smooth, not
+  a rejection.** Below the threshold the log-likelihood gets a steep finite
+  penalty that grows with the distance below it and with the size of the
+  selection term. The penalty is numerically zero above about 1.15 times the
+  threshold and overwhelms the likelihood below about 0.95 times it. Points
+  over the limit therefore stay finite and ordered, which nested sampling
+  needs to start from a prior that is mostly over the limit.
+- **The limit and the selection guard are one mechanism.** The first number
+  sets the threshold; the second switch chooses a hard wall or the smooth
+  penalty. "Penalised by the selection guard" and "over the variance limit"
+  describe the same test. Our records call a point penalised when the smooth
+  and the hard corrections differ at all, which includes the band from 1.0
+  to 1.15 times the threshold where the penalty is tiny.
+
+Differences from the paper, as far as its text allows a comparison:
+
+- The shape of our smooth cutoff is core's own, not the taper of Callister &
+  Farr (2024) that the paper names as an example.
+- Core's likelihood also carries the Farr (2019) term N(N+3)/(2 N_eff) for
+  the uncertainty of the selection integral. Inside the limit it is at most
+  about 0.5 in ln L. The paper does not say it uses this term (not verified).
+- The paper's exact estimator is not written out; that it is the total
+  variance above is our reading of its references.
+
+### What is not like the paper
+
+- **The spin model.** The paper's default has spin magnitudes and tilts
+  (Table 6). Ours is a Gaussian in the effective spin, so the owner chose
+  the ranges of the paper's effective-spin model (Table 8) for the mean and
+  width. That model also has a second spin, a correlation and a skewness;
+  ours has none of them.
+- **The inputs.** Our 259 events with 4096 posterior samples each and our
+  injection set (`A_sel_chieffref_o3o4ab_v20_exact.h5`). The variance, and
+  so where the limit falls, depends on both.
+- **H0 is sampled.** The paper fixes the cosmology.
+- **The sampler** (dynesty, split H0 prior, four seeds per part).
+
+### Known before any check: the reference population is at the limit
+
+From the stored spectral grid at the reference population (GWTC-5 values,
+spin 0.04 and 0.10), made with limit 20:
+
+| H0 | variance from the events | from the selection (N_eff) | total |
+|---|---|---|---|
+| 20 | 0.24 | 0.88 (76,500) | 1.12 |
+| 32.5 | 0.25 | 0.80 (83,800) | 1.05 |
+| 45 | 0.24 | 0.75 (89,600) | 0.98 |
+| 66 | 0.20 | 0.66 (101,000) | 0.86 |
+| 92.5 | 0.17 | 0.59 (113,900) | 0.76 |
+| 140 | 0.16 | 0.54 (124,200) | 0.70 |
+
+- With limit 1 the reference population itself is over the limit below
+  H0 ≈ 42, and inside the band where the smooth penalty is not exactly zero
+  below H0 ≈ 60.
+- Consequence 1: the limit will act as a cut that depends on H0 near the
+  GWTC-5 values. A posterior pressed against it is shaped by our injection
+  set, and the result must say how much of the posterior is there.
+- Consequence 2: the chain command checks, before sampling, that the
+  reference population at the middle of its H0 range is free of any penalty.
+  In the high part (H0 92.5) it is. **In the low part it is not, at any H0 in
+  20 to 45.** How the low-part chains are started is recorded under the
+  checks below before any chain is submitted.
+
+### Sampler
+
+As the first attempt: dynesty, 1000 live points, dlogz 0.1, random walk with
+the walks setting "scaled" (six steps per dimension). In 18 dimensions that
+is 108 steps per iteration, where the 12-dimensional first attempt had 72.
+
+### Checks before the chains
+
+Outputs in `phase12_5/A1/checks2/`. Results are added here before any chain
+is submitted.
+
+1. **Control.** The 18-dimensional target at the reference values against
+   the stored spectral grids (rate index 2.5439 and 2.25): with the limit set
+   back to 20 it must equal them at every H0 to 1e-8; with limit 1 it must
+   equal them wherever neither limit acts.
+2. **The first attempt's spike.** The 200 highest-likelihood points of each
+   finished chain, with the six parameters that attempt held fixed at their
+   fixed values: at limit 20 they must reproduce the stored likelihoods; at
+   limit 1 their variance must be over the limit and their likelihood
+   penalised. **If limit 1 does not reject them, no chain is submitted.**
+3. **Guard map on the prior.** 2000 prior draws in each H0 part: the fraction
+   inside the limit. A large rejected fraction is expected. Below about 1%
+   accepted, the start of nested sampling is a concern and is reported.
+4. **Unit tests** of the consumer repository's two test files for this stage.
+5. **GPU timing** on rita: seconds per call, and a 7-minute stretch of the
+   real chain command in a scratch directory.
+
+### Run plan
+
+As before: `sbatch slurm/phase12_5_A1_runner.sbatch` in `phase12_5/repo_A1`,
+one job on one rita A100, the eight chains in the same alternating order and
+then the combination. Outputs in `phase12_5/A1/runs/`.
