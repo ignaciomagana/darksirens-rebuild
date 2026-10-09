@@ -96,7 +96,9 @@ arrival time.
 - The two results: H0 = 64.5 [59.6, 69.6] with the GWTC-5 rate index, and 70.7 [65.1, 76.6] with the index free.
   The DESI catalog adds neither a shift nor precision on this event set. The owner reports both values.
 - P12.5 (population marginalization) has started: step 1, the chain with δ fixed and the rate index sampled, is
-  declared in `phases/12Y_p12_5_step1_free_rate_index.md`. The full marginalization is being scoped.
+  recorded in `phases/12Y_p12_5_step1_free_rate_index.md`: H0 67.6 [62.8, 73.9] with the rate index 2.28 ± 0.35, at
+  the corrected spin; spectral-only with the same freedom gives 67.9 [62.7, 73.4]. The full marginalization is scoped
+  and on hold for the owner.
 - P12.6 (robustness matrix) and P12.7 (result freeze and figures) have not started.
 
 Status: **PHASE 12C CORE ACCEPTED / 12D ACCEPTED THROUGH 12H / 12E CAMPAIGN RECORD MERGED AS PROPOSED (d6b63f7) / 12F ACCEPTED (2026-09-29, CI WAIVED) / 12H CORE PIN a46dec7 ACCEPTED / 12I MASK RULE, 12J SINGLE PASS, 12K CUDA BACKEND, 12L CAP 20 ACCEPTED / 12M FIRST P12.4 POSTERIOR SUSPENDED (2026-09-29; depth artifact, 12N)**

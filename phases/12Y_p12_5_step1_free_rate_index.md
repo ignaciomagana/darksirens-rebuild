@@ -1,8 +1,8 @@
-# Phase 12Y — P12.5 step 1: the DESI chain with δ fixed and the rate index free (declaration)
+# Phase 12Y — P12.5 step 1: the DESI chain with δ fixed and the rate index free (declaration and results)
 
 ## Status
 
-**DECLARED (owner, 2026-10-08) before any chain. Results will be appended here.**
+**DECLARED (owner, 2026-10-08) before any chain. RESULTS appended below (2026-10-08).**
 The implementation and its CPU checks come first; the GPU chain is submitted
 only after the owner's go.
 
@@ -145,3 +145,61 @@ superseded: this chain is expected near H0 = 68 with γ near 2.2.
 
 The chain's starting H0 is still read from the 12T spectral grid (64.5). It
 only starts the sampler, and the point was accepted in the smoke.
+
+## Results (2026-10-08)
+
+One chain on a rita A100 (job 1376256, 8.0 h of sampling, 127,829 likelihood
+calls). Consumer `phase12.5/free-rate-index` 0d75b40, core e7c3007 with its
+defaults, exact-prior GW inputs, union catalog, depth 0.245, nlive 1000,
+seed 22. Outputs:
+`/hildafs/projects/phy230054p/magana/darksirens-core-data/phase12_5/runs/`.
+
+### H0 and the rate index
+
+| Analysis (corrected spin 0.04, 0.10) | H0 median [68%] | sd | γ |
+|---|---|---|---|
+| **DESI union, δ = 0, γ flat on [-2, 6] (this chain)** | **67.6 [62.8, 73.9]** | 5.59 | 2.28 ± 0.35 |
+| Spectral-only, γ flat on [-2, 6] (34 grids) | 67.9 [62.7, 73.4] | 5.40 | 2.22 ± 0.34 |
+| Spectral-only, γ fixed at 2.5439 | 66.2 [61.4, 71.1] | | |
+
+- **The catalog adds neither a shift nor precision.** The union differs
+  from spectral-only with the same freedom by -0.3 km/s/Mpc in the median,
+  and its posterior is not narrower (5.59 against 5.40).
+- **γ:** 2.28 ± 0.35, 68% interval [1.93, 2.62], consistent with the GWTC-5
+  value of 2.5439. Samples run from 0.87 to 3.97; none lies within 0.4 of
+  either edge of [-2, 6].
+- **H0 and γ are anti-correlated** (coefficient -0.40).
+- The comparisons listed in "What is reported" against 70.1, 64.5 and 70.7
+  are comparisons with results made at the old spin. They are not like for
+  like and are not interpreted.
+
+### Calibration parameters against their priors
+
+| Parameter | Posterior | Prior |
+|---|---|---|
+| log10 n0 | -1.815 ± 0.035 | count ridge at δ = 0: -1.811 ± 0.036 |
+| M0hat | -20.498 ± 0.199 | -20.500 ± 0.199 |
+| sigma_M | 0.564 ± 0.131 | 0.557 ± 0.130 |
+
+The events do not update any of the three.
+
+### Sampler and guard
+
+- **Convergence:** verified; final dlogz 0.0999 against 0.1, stop reason
+  convergence, 7,299 iterations. logZ = -658.845 ± 0.078.
+- **Gate:** met, no open items.
+- **Guard:** unpenalised at the posterior mean and median; selection N_eff
+  24.8 times the threshold at both.
+- **Scan stage** (H0 grid at the anchor calibration, γ = 2.5439): 0 of 12
+  points rejected.
+
+### What this settles and what it does not
+
+- With δ fixed at 0 and the freedom moved to the population's rate index,
+  the DESI analysis reproduces the spectral-only result. The 12V to 12X
+  conclusion, made at the old spin, holds at the corrected spin.
+- It is one chain with one seed, and the mass model is fixed. Stage A0
+  (12Z) found H0 shifts of 4 to 9 km/s/Mpc per one-sigma step of several
+  mass parameters, so the value is conditional on the fixed mass model.
+- Core main now carries the corrected spin pair in the preset (core #60,
+  4b97f4a). This chain used core e7c3007 with the pair passed explicitly.
