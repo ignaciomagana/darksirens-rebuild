@@ -2,10 +2,25 @@
 
 ## Status
 
-**DECLARED (draft for the owner's review, 2026-10-09) before any chain.**
-The implementation, its CPU checks and one 8-minute GPU timing job are done
-and recorded below. No production chain has been submitted. The owner reviews
-this record, settles the open decisions at its end, and gives the go.
+**DECLARED (owner, 2026-10-09) before any chain.** The implementation, its
+CPU checks and one 8-minute GPU timing job are done and recorded below. The
+owner's decisions on the open points are in the next section and are applied
+throughout. No production chain has been submitted; the owner submits after a
+dry run.
+
+## Owner decisions (2026-10-09)
+
+The first draft proposed the model's own ranges for both spin priors and two
+seeds per H0 part, and listed five open points. The owner decided:
+
+1. **Spin priors narrowed:** the effective-spin mean flat on 0 to 0.3 and its
+   width flat on 0.005 to 0.3. With the model ranges (0 to 1) the selection
+   guard penalised 88% of the prior volume (check 2). Every other prior as
+   proposed; the second peak width keeps its lower edge at 0.
+2. **Four seeds per H0 part: eight chains.** The point of four is the seed
+   scatter of each part's ln Z and of the low part's weight.
+3. **Random-walk length 72** confirmed.
+4. **No guard-cap control now.**
 
 ## Where this sits
 
@@ -65,14 +80,14 @@ All flat. "Model range" is the range of core's GWTC-5 model.
 |---|---|---|---|
 | H0 | — | 20 to 140, run in two parts: 20 to 45 and 45 to 140 | no dependence |
 | rate index γ | 2.5439 | −2 to 6, as in step 1 (model range −10 to 10) | mild: penalised fraction rises with γ |
-| effective-spin mean μ_χ | 0.04 | 0 to 1 (model range) | **every draw above 0.5 penalised** |
-| effective-spin width σ_χ | 0.10 | 0.005 to 1 (model range) | **every draw above 0.5 penalised**; half of those below 0.06 |
+| effective-spin mean μ_χ | 0.04 | **0 to 0.3** (owner; model range 0 to 1) | above 0.5 nearly every draw is penalised; inside the prior, a third above 0.24 |
+| effective-spin width σ_χ | 0.10 | **0.005 to 0.3** (owner; model range 0.005 to 1) | above 0.5 nearly every draw is penalised; inside the prior, half below 0.064 |
 | mass break | 37.451 | 20 to 50 (model range) | none |
 | first slope α1 | 1.4816 | −4 to 12 (model range) | mild: more penalised above 6 |
 | second slope α2 | 5.4187 | −4 to 12 (model range) | mild: more penalised below −0.7 |
 | first peak position μ1 | 9.9109 | 5 to 20 (model range) | none |
 | second peak position μ2 | 32.3273 | 25 to 60 (model range) | none |
-| second peak width σ2 | 5.7263 | 0 to 10 (model range) | **half of the draws below 2 penalised** |
+| second peak width σ2 | 5.7263 | 0 to 10 (model range; lower edge kept, owner) | **half of the draws below 2 penalised** |
 | fractions λ0, λ1 | 0.4004, 0.5457 | uniform on the triangle λ0 ≥ 0, λ1 ≥ 0, λ0 + λ1 ≤ 1 | none in the prior draws (see below) |
 
 - **The triangle.** Core maps the sampler's unit square onto the triangle, so
@@ -91,39 +106,52 @@ All flat. "Model range" is the range of core's GWTC-5 model.
 ### Split prior and seeds
 
 - H0 is sampled in two parts, 20 to 45 and 45 to 140, each with its flat
-  prior normalised on its own part. Two seeds per part: four chains.
+  prior normalised on its own part. **Four seeds per part: eight chains**
+  (seeds 31 to 34 for the low part, 41 to 44 for the high part).
 - The parts are combined by evidence. With a flat prior on 20 to 140, a
   part's prior mass is its width over 120, so the low part's posterior mass
   is 25 Z_low / (25 Z_low + 95 Z_high).
-- Each part's ln Z is the mean of its two seeds. The low part's mass is also
-  given for all four pairings of one seed per part; their spread is the seed
-  scatter.
+- **Pooled estimate:** each part's ln Z is the mean of its seeds' ln Z.
+- **Seed scatter, reported beside it:**
+  - per part, every seed's ln Z, their sample sd, and the standard error of
+    their mean;
+  - the low part's mass for each of the four matched pairs (first low seed
+    with first high seed, and so on), which are independent estimates, with
+    their mean and sd;
+  - the same for all sixteen pairings of one seed per part: mean, sd,
+    smallest and largest.
 - Combined samples: each part contributes its posterior mass, shared equally
-  between its two seeds.
+  among its seeds.
+- The combination uses the seeds that have a result (at least one per part),
+  and names any chain left out.
 
 ### Sampler
 
 dynesty only, through core's `ds.infer`: 1000 live points, stop at dlogz 0.1,
 random-walk proposals. Checkpoint every 30 minutes.
 
-**Random-walk length (proposed, owner to confirm):** 72 steps per proposal
-(core's `dynesty_walks="scaled"`, 6 per parameter). dynesty's own default
-would be 32. Core's record of 13-parameter mock runs has ln Z 0.6 to 0.75 low
-at the default and correct at 6 per parameter. The parts are combined by
-their evidences, so an evidence bias matters here. It costs 2.25 times the
-likelihood calls.
+**Random-walk length:** 72 steps per proposal (core's
+`dynesty_walks="scaled"`, 6 per parameter; confirmed by the owner). dynesty's
+own default would be 32. Core's record of 13-parameter mock runs has ln Z 0.6
+to 0.75 low at the default and correct at 6 per parameter. The parts are
+combined by their evidences, so an evidence bias matters here. It costs 2.25
+times the likelihood calls.
 
 ## Implementation
 
 Consumer repository `desi_darksirens_selection`, branch
-`phase12.5/spectral-joint` at d0b58cb (from `phase12.5/free-rate-index`),
-pushed, no pull request.
+`phase12.5/spectral-joint` at **008e780** (from
+`phase12.5/free-rate-index`), pushed, no pull request. The checks below ran
+on earlier commits of the branch with the same likelihood code; the final
+guard map and the unit tests ran on the final commit.
 
 - `phase12/spectral_joint.py` builds the target. The base stays the fully
   fixed population; every call writes the sampled values into the population
   vector, as step 1 does for γ. One compiled program serves the likelihood
   and its diagnostics, with the events, the injections and the population
   vector as arguments.
+- The priors are in `config/spectral_joint.json`; the manifest sets only the
+  H0 part, the seed and the sampler.
 - `scripts/phase12_5_spectral_joint.py` has five commands: the control grid,
   the guard map, the timing, the chain, and the combination.
 - The chain writes, per run: posterior summaries of the twelve parameters and
@@ -164,7 +192,8 @@ the 241-point H0 grid against the stored grids at the corrected spin
 
 ### 2. Guard map: how much of the prior the selection guard penalises
 
-2000 draws from the priors above, 1000 in each H0 part
+**With the model-range spin priors (the first proposal, superseded).** 2000
+draws, 1000 in each H0 part, both spin priors on their model ranges up to 1
 (`checks/b_guard_map_low`, `_high`).
 
 | | H0 20 to 45 | H0 45 to 140 |
@@ -183,8 +212,11 @@ the 241-point H0 grid against the stored grids at the corrected spin
 - The two H0 parts lose the same share (10.4 ± 1.0% against 12.6 ± 1.0%
   kept), so the cut does not favour one part by itself.
 
-**The same map with the spin priors narrowed** to μ_χ in 0 to 0.3 and σ_χ in
-0.005 to 0.3 (`checks/b_guard_map_spin03_low`, `_high`):
+**With the final priors** (spin mean on 0 to 0.3, width on 0.005 to 0.3),
+1000 draws per part on the final configuration and commit (job 1376407,
+`checks/b_guard_map_final_low`, `_high`). An earlier job with the same priors
+given on the command line (1376400) has the same draws and the same
+likelihoods, bit for bit.
 
 | | H0 20 to 45 | H0 45 to 140 |
 |---|---|---|
@@ -209,12 +241,13 @@ the lowest and highest fifth of each prior, both parts together):
 With σ2 above 2, σ_χ above 0.03 and γ below 4.5 as well, 93% of the draws
 are unpenalised.
 
-**Reading.** The corrected spin values (0.04, 0.10) lie well inside the
-unpenalised region, and at the fixed population the selection N_eff is 22 to
-37 times its threshold on the whole H0 grid. The guard's cut is far from
-where the posterior is expected. It is still a cut on the declared prior,
-and the evidences are relative to the declared prior including the cut
-volume. Whether to narrow the spin priors is the owner's decision 1 below.
+**Reading.** With the final priors the guard leaves 78% to 79% of the prior
+alone, the same share in both H0 parts. The corrected spin values (0.04,
+0.10) lie well inside the unpenalised region, and at the fixed population the
+selection N_eff is 22 to 37 times its threshold on the whole H0 grid. What
+is still cut lies at the edges named in the table. The penalty is still so
+large that a penalised region is excluded in practice, and the evidences are
+relative to the declared prior including the cut 21% to 22%.
 
 ### 3. CPU smoke with a kill and a resume
 
@@ -230,19 +263,22 @@ The low-H0 chain at 40 live points, checkpoint every 20 s
 - A run that stops at its own call cap is finished for dynesty and cannot be
   continued. Only a killed or requeued run resumes. The production cap is
   20 million calls, far above the estimate.
-- The smoke manifest (the four chains at 40 live points and 1500 calls each,
-  then the combination) ran through the stage runner with 0 failed stages.
-  Its numbers mean nothing: no chain is converged.
+- The smoke manifest as first drafted (four chains at 40 live points and 1500
+  calls each, with the model-range spin priors, then the combination) ran
+  through the stage runner with 0 failed stages. Its numbers mean nothing: no
+  chain is converged. The eight-chain manifest was dry-run, not smoked again.
 
 ### 4. Unit tests
 
-406 pass on CPU at the branch head d0b58cb (375 before; 31 new).
+408 pass on CPU at the final commit 008e780 (job 1376408; 375 before this
+branch, 33 new).
 
 They include: the target at the fixed values equals the grid stage's
 likelihood; each coordinate lands in its own population entry; no call
 retraces; a run killed mid-sampling resumes and converges; a checkpoint is
 refused for another H0 part, seed or input file; the combination of the
-parts reproduces hand-computed weights.
+parts reproduces hand-computed weights and seed scatter, with unequal seed
+counts and with a chain that has no result yet.
 
 ### 5. GPU timing (rita A100-80, job 1376403, 8 minutes)
 
@@ -253,8 +289,10 @@ parts reproduces hand-computed weights.
 | one prior transform (core evaluates the triangle map step by step on the GPU) | 0.0037 measured alone |
 | **one call inside a running chain, all included** | **0.0038** |
 
-- The last line is the production command itself (H0 45 to 140, 1000 live
-  points, 72 steps) run for 407 s and then killed: 108,434 calls. It is the
+- The last line is the production chain command (H0 45 to 140, 1000 live
+  points, 72 steps; at that time with the model-range spin priors, which do
+  not change the cost of a call) run for 407 s and then killed: 108,434
+  calls. It is the
   figure used below.
 - No call after the first retraced or recompiled.
 - This is 60 times faster than the 0.23 s per call of the DESI target.
@@ -265,21 +303,22 @@ parts reproduces hand-computed weights.
 
 ## What will be reported
 
-For the combined posterior and for each of the four chains:
+For the combined posterior and for each of the eight chains:
 
 - H0: median, 68% and 90% intervals, sd. Against the fixed-population
   spectral value 66.2 [61.4, 71.1] and the value with only the rate index
   free, 67.9 [62.7, 73.4]: the shift in km/s/Mpc and the ratio of widths.
-- **The posterior mass of H0 below 45**, with its seed scatter (four
-  pairings), and whether a separate mode is there: the H0 and first-peak
+- **The posterior mass of H0 below 45**: the pooled value, the four
+  matched-pair values with their sd, and the range over the sixteen
+  pairings; and whether a separate mode is there: the H0 and first-peak
   position of the low part's posterior.
 - Each population parameter's posterior against its GWTC-5 value and
   interval, and against its prior: which are measured, which follow the
   prior, which pile up at an edge.
 - The spin pair against (0.04, 0.10), the values now fixed in step 1.
 - The correlation of each parameter with H0.
-- ln Z of each chain and of the combination, and the two seeds' difference in
-  each part.
+- ln Z of each chain and of the combination, and per part the seeds' sd
+  against the errors dynesty reports.
 - Convergence, and the guard: N_eff over threshold at the posterior mean,
   median and best point, and the fraction of posterior samples penalised, per
   chain.
@@ -288,7 +327,7 @@ For the combined posterior and for each of the four chains:
 
 - In the high part, H0 near 66 to 68 with a wider posterior than the
   fixed-population sd of 5.
-- The spin posterior near (0.04, 0.10), far narrower than its prior.
+- The spin posterior near (0.04, 0.10), well inside its prior of 0 to 0.3.
 - The low part is not predicted. The archived mode was found at the old spin
   values with 18 parameters free; 12Z's one-parameter ridge toward low H0
   along the first peak's position was mildly disfavoured (4 in ln L at 11
@@ -301,50 +340,54 @@ For the combined posterior and for each of the four chains:
 
 - One job on one rita A100: `sbatch slurm/phase12_5_A1_runner.sbatch` in the
   consumer worktree `phase12_5/repo_A1`. It runs
-  `config/phase12_5_A1_manifest.json` in order: H0 45 to 140 seed 41; 20 to
-  45 seed 31; 45 to 140 seed 42; 20 to 45 seed 32; then the combination. A
-  first complete answer exists after two chains.
+  `config/phase12_5_A1_manifest.json` in order, alternating the parts so
+  that one seed of each finishes first:
+
+  | order | H0 part | seed |
+  |---|---|---|
+  | 1 | 45 to 140 | 41 |
+  | 2 | 20 to 45 | 31 |
+  | 3 | 45 to 140 | 42 |
+  | 4 | 20 to 45 | 32 |
+  | 5 | 45 to 140 | 43 |
+  | 6 | 20 to 45 | 33 |
+  | 7 | 45 to 140 | 44 |
+  | 8 | 20 to 45 | 34 |
+  | 9 | the combination | |
+
+- A first complete answer exists after two chains. The combination can be run
+  by hand at any time on the chains that have finished.
 - A finished stage is skipped and an unfinished chain resumes its
   checkpoint, so resubmitting the same file continues the run.
 - Outputs: `phase12_5/A1/runs/<chain>/result.json`, `samples.npz`, and
   `runs/combined/`.
 - **Estimated cost.** The archived 18-parameter split runs needed 49
   iterations per live point. With 35 to 50 here, 1000 live points and 72
-  calls per iteration, a chain is 2.5 to 3.6 million calls: **about 3 to 4
-  hours per chain, 11 to 15 GPU-hours for the four**, at 0.0038 s per call.
-  Treat it as uncertain by a factor of two. With dynesty's default 32 steps
-  it would be under half of that.
+  calls per iteration, a chain is 2.5 to 3.6 million calls: about 3 to 4
+  hours per chain at 0.0038 s per call, **21 to 30 GPU-hours for the eight**.
+  Treat it as uncertain by a factor of two. The job's limit is 7 days.
 
 ## Risks
 
-- **The guard as a prior cut.** With the model-range spin priors, 88% of the
-  prior volume is cut. If the posterior of any chain touches the cut, the
-  guard shapes it. The fraction of posterior samples penalised says so.
+- **The guard as a prior cut.** With the final priors, 21% to 22% of the
+  prior volume is cut, at small second-peak width, at the narrow and wide
+  ends of the spin width, and at high spin mean, rate index and first slope.
+  If the posterior of any chain touches the cut, the guard shapes it. The
+  fraction of posterior samples penalised says so.
+- **The spin prior's upper edges.** If either spin posterior reaches 0.3, the
+  narrowed prior is shaping it and the result says so.
 - **The low part.** Its preferred region (small fractions at low H0, 12Z) is
   where the one-parameter scans met the guard. If the low mode's weight
   depends on the guard cap, a control at another cap is needed before it is
-  quoted.
+  quoted. The owner decided against that control for now.
 - **Evidence accuracy.** The low part's mass rests on a difference of two
-  ln Z. Two seeds per part give one difference each; a scatter above about
-  0.3 means more seeds or more steps before a weight is quoted.
+  ln Z. Four seeds per part measure the scatter; a seed sd well above the
+  errors dynesty reports means the weight is quoted with the seed scatter,
+  not the reported error.
 - **More than one mode inside a part.** The split separates H0 below and
   above 45 only.
 - **Conditional results.** Six population parameters stay fixed, and the
   cosmology has one free parameter.
 - **Not exercised yet:** a chain run to convergence on the real events (the
-  smokes are capped); a resume on the GPU (done on CPU only).
-
-## Decisions for the owner before the run
-
-1. **Spin priors.** Keep the model ranges (0 to 1; 0.005 to 1), with 88% of
-   the prior cut by the guard; or narrow them to 0 to 0.3 and 0.005 to 0.3,
-   where 78% of the prior is unpenalised and the two H0 parts agree (78.0%,
-   78.9%). The posterior should not differ; the evidences then refer to a
-   prior the guard mostly leaves alone.
-2. **Second peak width.** Keep 0 to 10, or raise the lower edge (half of the
-   draws below 2 are penalised; the GWTC-5 5% value is 1.9).
-3. **Random-walk length.** 72 steps (proposed) or dynesty's default 32.
-4. **Seeds.** Two per part as declared. At 3 to 4 hours per chain, four per
-   part would cost about a day and give a real scatter.
-5. **A guard-cap control** (the scope proposed cap 30 beside cap 20): now, or
-   only if a chain's posterior touches the cut.
+  smokes are capped); a resume on the GPU (done on CPU only); the eight-chain
+  manifest beyond its dry run.
