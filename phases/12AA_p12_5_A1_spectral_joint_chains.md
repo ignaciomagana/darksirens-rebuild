@@ -858,3 +858,61 @@ the job's limit is 7 days.
 `sbatch slurm/phase12_5_A1_runner.sbatch` in `phase12_5/repo_A1`: all eight
 chains in the alternating order, then the combination, one job on one rita
 A100. The start check of the chain command is unchanged.
+
+---
+
+## Limit-8 bracket (declared 2026-10-10, coordinator for the owner)
+
+### Why
+
+- The limit-4 chains are running (rita job 1376492). In the two finished ones
+  (H0 45 to 140 seed 41, H0 20 to 45 seed 31) about 20% of the posterior is
+  penalised by the smooth limit, and 14% to 16% of points lie within 10% of
+  the N_eff threshold. The first mass peak's width presses on the limit: its
+  median is 0.17 to 0.19 solar masses, and penalised points are about half as
+  wide as unpenalised ones. The second peak's width is healthy.
+- A posterior on the limit may depend on it. The stricter side is tested
+  without new chains, by reweighting the limit-4 posteriors to limits 3 and 2
+  (outputs in `phase12_5/A1/checks4/`). Limit 1 is excluded, as recorded
+  above. **This bracket tests the looser side.**
+
+### Setup
+
+- **Variance limit 8; everything else identical to the limit-4 run:** the
+  priors table, 18 dimensions, inputs, cosmology, core e7c3007, the smooth
+  cutoff, dynesty with 1000 live points, dlogz 0.1, walks "scaled" (108).
+- **Two chains per H0 part:** 45 to 140 with seeds 41 and 42; 20 to 45 with
+  seeds 31 and 32. Run in that alternating order, then their combination by
+  evidence.
+- The limit-8 configuration is the limit-4 configuration with one override,
+  `numerics.max_likelihood_variance=8.0`, in its own manifest
+  (`config/phase12_5_A1_var8_manifest.json`). It runs from a second worktree
+  (`phase12_5/repo_A1b`, branch `phase12.5/spectral-joint-brackets`) because
+  the limit-4 job reads `repo_A1` at every stage.
+- Outputs in `phase12_5/A1/runs_var8/`; `A1/runs/` is not touched.
+- One rita job, submitted with `--dependency=afterany:1376492`, so it starts
+  when the limit-4 job frees the GPU. Estimated 9 to 14 hours per chain,
+  1.5 to 2.5 days for the four.
+
+### Check before submission
+
+- **The first attempt's spike must still be rejected at limit 8.** Its 400
+  best points have a variance of 6.1 to 9.9 from the events alone and 14 to
+  20 in total. **If limit 8 does not reject them, nothing is submitted.**
+- Control at limit 8 against the stored spectral grids (equal at every H0,
+  no penalty at the reference population).
+- Outputs in `phase12_5/A1/checks_var8/`.
+
+### What will be compared with limit 4
+
+Per H0 part and after the evidence combination:
+
+- the H0 median shift and width ratio, in units of the limit-4 posterior
+  standard deviation;
+- the first peak's width (median and lower tail);
+- the penalised fraction and the quantiles of N_eff over its threshold;
+- the evidence ratio between the parts.
+
+**Read as heading toward the first attempt's collapse:** the first (or
+second) peak's width running to its lower bound, or the pile-up at the
+limit moving with the limit.
