@@ -916,3 +916,14 @@ Per H0 part and after the evidence combination:
 **Read as heading toward the first attempt's collapse:** the first (or
 second) peak's width running to its lower bound, or the pile-up at the
 limit moving with the limit.
+
+### Check results (2026-10-10, HENON job 1385447, brackets commit a611f51)
+
+- **The first attempt's spike is rejected at limit 8.** All 400 points are
+  over the limit and penalised. Their ln L is −408,000 to −690,000 (about
+  −630 in the first attempt), and N_eff over its threshold is at most 0.16.
+  At limit 20 they reproduce the stored likelihoods to 1e-9.
+- Control at limit 8: equal to the stored grids at all 241 H0 values (9e-13),
+  at both rate indices. No penalty at the reference population at any H0;
+  N_eff is at least 8.7 times its threshold.
+- Submitted: rita job, dependency `afterany:1376492` (job ID in the report).
