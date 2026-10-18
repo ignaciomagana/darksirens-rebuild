@@ -81,6 +81,13 @@ written.
   tests at 0c9e6d7 were still running on HENON (jobs 1389593, batch env, and
   1389594, e7c3007 env).
 
+**CHECKS RECORDED (2026-10-18, 14:35 UTC), before any B2 chain.** Checks 1
+to 4, 6 and 7 passed; both H0 parts may start. **Check 5 is running; the gate
+is pending on it.** See "Results: before the chains" at the end. The code
+moved from 0c9e6d7 to the commit named there: one change to the chain
+command (it refuses a dynesty other than 2.1.4, as check 1 declares), plus
+check scripts, a smoke manifest and tests. The launcher is unchanged.
+
 ## Where this sits
 
 P12.5 replaces the fixed GWTC-5 population by its uncertainty. Its ladder
@@ -638,3 +645,238 @@ code):
   the uninterrupted chain, because the queue is refilled on resume. That it
   converges is tested on CPU only.
 - **B1's result**, which is not yet available (running).
+
+## Results: before the chains (2026-10-18)
+
+Recorded before any B2 chain started. No H0 value is quoted here.
+
+**Code.**
+
+- Consumer branch `phase12.5/direct-desi`, pushed. The commit in force is
+  given under "The gate" below.
+- The chain command and the target code are those of fc5792c. Later commits
+  change only tests, check scripts and a smoke manifest.
+- Env `consumer_e7c3007batch_cuda12`: core 32c6210, the backport of the
+  batched pool to e7c3007.
+- Likelihood form "rows" at Q = 32, kernel pin "auto".
+- Outputs: `phase12_5/B2/checks/` (paths below are relative to `phase12_5/B2/`).
+
+**Two departures from the text above** came out of the checks.
+
+- **The likelihood form is "rows", not the vmapped program.** Core's pool
+  hands each batch of proposals to the target. In the rows form each
+  distinct proposal is evaluated by the single-point call. Core's padding
+  copies are not evaluated again.
+  - On this target one point already fills the H100: 26.0 ms alone and
+    27.2 ms per point in a vmap of 32. Vmapping saves nothing and pays for
+    the padding.
+  - In the rows form every value is the single-point value bit for bit. The
+    chain is dynesty's own `queue_size=32` chain exactly, not "up to 2e-12"
+    as under "Why it is equivalent", item 2.
+  - The vmapped form stays available as a setting (`sampler.dynesty_batch_form`
+    "pytree"). The form is stamped in the run fingerprint, so a checkpoint
+    never resumes under the other form.
+- **The point-by-point prior transform costs as much as the likelihood.** On
+  this 21-dimensional target it is 25.6 ms per point on the MIKO H100 NVL,
+  against the 11 ms measured on the step-1 target. Batched, it is 0.39 ms
+  per point (64 points per call).
+  - That is most of what the pool gains on this target: on one 6,072-call
+    run, the rows form took 111 s, against 177 s for dynesty's own queue
+    path with single calls.
+  - A chain with a queue of 1 (A1, 12Y, and 12AE Part 2 as declared) pays
+    it on every call.
+
+### 1. Unit tests (CPU, HENON) — passed
+
+- **Full suite at 70a0731:**
+  - batch env (core 32c6210): job 1389610, 487 passed and 2 skipped;
+  - e7c3007 env: job 1389611, 480 passed and 9 skipped (the core-pool tests, which need
+    the pool).
+- **At 78b84f9** (which adds the kernel-pin resume test), the two direct-chain
+  test files: batch env 50 passed (job 1389612); e7c3007 env 39 passed and
+  11 skipped (job 1389613). The core-pool tests skip there because that core
+  has no pool.
+- **The two skips in the batch env are expected.**
+  - The frozen-stack gate refuses that env on the darksirens commit, as it
+    must. The test asserts exactly that refusal before it skips. The env
+    differs from the frozen stack in that one line of `pip freeze`.
+  - The test that the frozen core carries the field pin skips whenever the
+    installed core is not e7c3007 itself. The pinned-target tests run in
+    that env and pass.
+- **The declared items:**
+  - **The pool equals dynesty's own queue path bit for bit** on the spectral
+    fixture, at Q = 4 in the rows form (dead points, samples, ncall, ln Z).
+    Core's own tests (`tests/test_dynesty_batched.py`, CI on #69) show the
+    same on its fixtures.
+  - **On the DESI target**, core's batched form of both targets equals
+    single calls to 1e-10 on the synthetic fixture, with the pin on and
+    off. On the real target the chain equality is under check 2 below.
+  - **Only the random walk, only dynesty 2.1.4.**
+    - Core's adapter builds the sampler with `sample="rwalk"` and has no
+      option for another sampler. The pool passes any other function to the
+      builtin map (core test).
+    - The chain command refuses `dynesty_batch` with any dynesty other than
+      2.1.4 (new at fc5792c, tested).
+  - **A killed chain resumes:**
+    - core's test: a resumed batched chain is the uninterrupted chain bit
+      for bit;
+    - this branch: killed in the middle of a queue fill, then resumed;
+    - on the real target, under check 2 below.
+  - **A resume is refused** with another Q, unbatched, under the other
+    likelihood form, or under another kernel pin setting or pin digest. The
+    pin is stamped in the target's provenance, so core's run fingerprint
+    refuses the resume. Tested in each case.
+  - **B1's tests of the generalized target pass** (in the full suite).
+
+### 2. The pin on the B2 target (MIKO H100 NVL) — passed
+
+**The declared check** (`checks/prechecks.20261018T135727Z/prechecks.json`,
+at 78b84f9). The target is the B2 target with pin auto and with pin off.
+
+- **Points.** In each H0 part, 64 prior draws and 64 points near the
+  reference population, with the nuisances near their prior centres and H0
+  uniform in the part.
+- **Evaluated** with pin auto in single calls and in batches of 32 (core's
+  vmapped form), and with pin off in single calls.
+
+| H0 part | finite (both pins) | non-finite pattern | largest \|Δ ln L\|, single | largest \|Δ ln L\|, batches of 32 | bitwise equal, single |
+|---|---|---|---|---|---|
+| 20 to 45 | 107 of 128 | equal | 3.6e-12 | 4.0e-11 | 87 of 128 |
+| 45 to 140 | 115 of 128 | equal | 2.3e-13 | 3.6e-12 | 116 of 128 |
+
+All are within 1e-9. The pin's digest is `0a1bcf7a237c01e20405b3695793bb35`
+(catalog_digest).
+
+**The pool inside a chain on this target** (`checks/gpu_equality_*`). The
+check uses a tiny run of the B2 target:
+
+- upper part, seed 41, 64 live points, 8 walk steps, Q = 32;
+- capped at 6,000 calls: 600 iterations, 17 random-walk queue fills.
+
+It is run three ways:
+
+- **A:** core's pool, through `ds.infer(..., dynesty_batch=32)`;
+- **B:** dynesty's own `queue_size=32` path, with single calls;
+- **C:** A killed in the middle of the sixth random-walk fill, then resumed.
+
+Results:
+
+- **Rows form:** A equals B bit for bit (664 dead points: ln L, unit-cube
+  and physical positions, equal-weighted samples, ncall, ln Z). C equals A
+  bit for bit on A's 600 iterations.
+- **Vmapped form** (at 2b3d086): the same positions and ncall, ln L within
+  7.5e-11. C equals A bit for bit.
+- **The rows result** above is the rerun from the clean commit:
+  `checks/gpu_equality_rows.20261018T141829Z/` at 78b84f9, clean. A first
+  rows run from the uncommitted working tree gave the same result.
+
+### 3. The tie to B1 (MIKO H100 NVL) — passed
+
+- **Draws:** 256 of B1's draws, with B1's nuisance values:
+  - 128 from the B1 evaluation of the A1 chain `high_seed44`;
+  - 128 from `low_seed33`;
+  - both evaluated by B1 on the MIKO H100 NVL, at B1's 596651c.
+- **Pin off** reproduces B1's stored ln L_target **bit for bit** at all 256
+  draws, all finite.
+- **Pin auto** differs from B1 by at most 1.3e-10 in ln L. 166 of 256 values
+  are bitwise equal.
+
+### 4. The start check at limit 4 — passed in both parts
+
+The reference population at the start H0 of each part, with the nuisances at
+their prior centres. Both pins give the same flags.
+
+| H0 part | start H0 | penalised | MC-reliability gate | total MC variance (limit 4) | selection N_eff over its threshold |
+|---|---|---|---|---|---|
+| 20 to 45 | 32.5 | no | accepted | 1.33 | 3.6 |
+| 45 to 140 | 92.5 | no | accepted | 0.82 | 5.9 |
+
+- **The lower part starts.** This was listed as not verified (12AE).
+- The anchor gates of the GPU smoke and of the CPU smoke (check 7) find the
+  same at both H0 values.
+
+### 5. Control: Q = 32 against A1's queue of 1 — running, gate pending
+
+- **Started** 2026-10-18 at 13:41 UTC on the MIKO H100 NVL, in the holder job
+  1388940.
+- **Configuration:** the A1 chain configuration (`config/spectral_joint.json`,
+  limit 4 with the smooth guard), H0 45 to 140, seed 41, 1000 live points,
+  walks scaled (108), the A1 GW posterior samples. The input sha256 is
+  checked against A1's record.
+- **Sampler:** core's pool at Q = 32 in the rows form, env
+  `consumer_e7c3007batch_cuda12`, at fc5792c.
+- **Script:** `checks/check5/run_check5.sh`, byte-identical to the committed
+  `slurm/phase12_5_B2_check5_miko.sh`. Log: `logs/check5.20261018T134128Z.log`.
+- **Progress:** 1.5 million calls at 14:18 UTC, in the random-walk phase.
+- **The pass rule** is the declared one: ln Z, the H0 median and the H0 sd
+  each within twice the seed sd (ddof 1) of A1's four upper-part chains, from
+  their mean. It is applied by the script. The script also requires the same
+  inputs and a converged chain.
+- **The verdict** goes to `checks/check5/result.json`, and the log ends
+  `CHECK5 DONE pass=<true|false>`.
+- **If it fails, no B2 chain starts,** and the owner decides.
+
+### 6. GPU timing and memory — MIKO measured; Jetstream2 at the start of its chain
+
+**MIKO H100 NVL**, a 10-minute stretch of the real chain command
+(`checks/check6/timing_stretch.json`):
+
+- Stage `high_seed41`, in a scratch directory, at 70a0731.
+- **It shared the GPU with check 5** (a spectral chain, 1.1 GB, which keeps
+  the GPU busy), so the timing is an upper bound.
+- **Setup:** 192 s to the start of the sampling loop. That covers the build,
+  the anchor, the preflight and the 1,000 initial live points.
+- **The stretch:** 606 s, 13,661 calls, **44 ms per call**. The whole stretch
+  was in dynesty's first, unit-cube phase. There every call is evaluated, one
+  point per GPU call in the rows form.
+- **Memory:** the chain process held 17.8 GB of GPU memory, and the GPU 18.9
+  GB in all.
+
+**Unshared figures** from the same day, on the same GPU:
+
+- **26.0 ms** per single call, and **27.2 ms** per point in a vmap of 32
+  (`checks/gpu_timing*/timing.json`). The vmap of 64 runs out of memory.
+- **In the tiny chain of check 2** (rows form): 25.9 ms per evaluated point
+  in the random-walk queue, and 18 ms per dynesty call. Calls outside the
+  unit cube cost nothing.
+
+**The estimate under "Compute", revised:**
+
+- 4.8 to 5.7 million calls at 18 to 27 ms per call gives **1.0 to 1.8 days
+  per chain**, on an H100 that is not shared.
+- A MIKO pair takes 2 to 3.6 days. The holder job ends 2026-10-25 at 06:19
+  UTC.
+- On a shared GPU the cost rises toward 44 ms per call. **No other GPU work
+  should run on MIKO with the B2 chains.** Check 5 ends before they start.
+
+**Jetstream2 H100: a scheduling deviation.** Its GPU is fully used by the four
+limit-2 chains (12AA), which are not to be disturbed (owner, 12:50 UTC).
+
+- Its 10-minute figure will therefore come from the first 10 minutes of its
+  production chain (`runs/high_seed41/stage.log`, and the samples the
+  launcher's log carries). It is not measured before the start.
+- The prototype measured 23.6 ms per point there on the step-1 target.
+
+### 7. CPU smoke at 8 live points — passed
+
+- **Manifest:** `config/phase12_5_B2_full_manifest.smoke_cpu8.json`, the
+  production manifest capped: 8 live points, 48 calls, walks 2, Q = 4 in the
+  rows form.
+- **Run:** on HENON with `--cpu` at 70a0731.
+  - The four chains ran in parallel: jobs 1389605 to 1389608, 13 to 14
+    minutes each.
+  - Then the combination and the comparison: job 1389609.
+  - All exit 0. Outputs in `smoke_runs_cpu8/`.
+- **Each chain** passed its anchor at the midpoint of its part, ran core's
+  pool and wrote its result.
+- **At 8 live points** the chains stay in the unit-cube phase. The
+  random-walk queue is exercised by the GPU smoke at 24 live points instead
+  (`smoke_runs_gpu/`, at 2b3d086: 38 to 79 random-walk queue fills per
+  chain, all four chains and the combination exit 0).
+
+### The gate
+
+- `phase12_5/B2/checks/gate_pre5.json`: checks 1 to 4, 6 and 7 pass, and
+  both H0 parts are allowed. Commit in force: 78b84f9 (78b84f91564fdf7a1082bbfadd27f2de9396c928).
+- **The launch also needs check 5's pass.** The coordinating session watches
+  for `CHECK5 DONE pass=true`. If check 5 fails, no B2 chain starts.
