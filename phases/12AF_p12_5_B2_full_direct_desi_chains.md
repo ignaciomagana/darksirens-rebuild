@@ -795,7 +795,7 @@ their prior centres. Both pins give the same flags.
 - The anchor gates of the GPU smoke and of the CPU smoke (check 7) find the
   same at both H0 values.
 
-### 5. Control: Q = 32 against A1's queue of 1 — running, gate pending
+### 5. Control: Q = 32 against A1's queue of 1 — passed
 
 - **Started** 2026-10-18 at 13:41 UTC on the MIKO H100 NVL, in the holder job
   1388940.
@@ -815,6 +815,20 @@ their prior centres. Both pins give the same flags.
 - **The verdict** goes to `checks/check5/result.json`, and the log ends
   `CHECK5 DONE pass=<true|false>`.
 - **If it fails, no B2 chain starts,** and the owner decides.
+- **Result (2026-10-18, 15:33 UTC): PASSED** (`checks/check5/result.json`).
+  The chain converged (stop reason "convergence", final dlogz 0.09998 against
+  0.1) on the same inputs as A1 (sha256 checked). It took 4.25 million calls
+  (A1's four: 4.16 to 4.28 million), 41,902 iterations and 6,672 s of
+  sampling, partly while sharing the GPU with checks 2, 3 and 6. The pool
+  ran 1,050 unit-cube and 1,220 random-walk queue fills, and its startup
+  probe matched single calls bit for bit at all 32 points. Against the four
+  A1 upper-part chains, in units of their seed sd (limit 2):
+
+  | quantity | difference from the A1 mean, in seed sd |
+  |---|---|
+  | ln Z | +0.82 (+0.27 in ln Z) |
+  | H0 median | +0.36 |
+  | H0 sd | +0.51 |
 
 ### 6. GPU timing and memory — MIKO measured; Jetstream2 at the start of its chain
 
@@ -880,3 +894,6 @@ limit-2 chains (12AA), which are not to be disturbed (owner, 12:50 UTC).
   both H0 parts are allowed. Commit in force: 78b84f9 (78b84f91564fdf7a1082bbfadd27f2de9396c928).
 - **The launch also needs check 5's pass.** The coordinating session watches
   for `CHECK5 DONE pass=true`. If check 5 fails, no B2 chain starts.
+- **Check 5 passed at 15:33 UTC, so the gate is open** for both H0 parts.
+  The coordinating session starts the launcher after this entry is pushed:
+  MIKO at once, and Jetstream2 when the limit-2 chains have been combined.
