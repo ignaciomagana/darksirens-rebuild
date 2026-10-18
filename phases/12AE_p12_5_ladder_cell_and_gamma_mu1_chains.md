@@ -52,6 +52,11 @@ env `consumer_e7c3007_cuda12` (core e7c3007), outputs in
 - **The jobs run from the repo_B2 working tree.** Job 1389599 reads it when
   it starts, after Part 1. Each job logs the commit it ran.
 
+**PART 1 DONE (2026-10-18, 14:53 UTC): robust.** The ladder cell gives H0
+66.1 [61.7, 71.7] against the spectral 66.2 [61.4, 71.2], so Δ = −0.01 and
+R = 1.01. The control passed bit for bit. See "Results (2026-10-18)" at the
+end of Part 1. Job 1389599 started after it, as queued.
+
 ## Where this sits
 
 P12.5 reports a ladder of three population rows, each with and without the
@@ -176,6 +181,50 @@ So one chain with one seed, without the split prior.
   with the γ override removed from both stages and new output paths.
 - **Outputs:** `/hildafs/projects/phy230054p/magana/darksirens-core-data/phase12_5/ladder_cell/`
   (`scan_union_fixed/`, `union_fixed/`).
+
+### Results (2026-10-18): the ladder cell is robust
+
+rita job 1389044, 09:53 to 14:53 UTC (5.0 h), consumer branch
+`phase12.5/ladder-cell` (worktree `phase12_5/repo_12AE`), env
+`consumer_e7c3007_cuda12`, kernel pin off, seed 22. Outputs in
+`phase12_5/ladder_cell/runs/` (`scan_union_fixed_pop/`, `union_fixed_pop/`).
+
+**Control: passed, bit for bit.** The chain's scan stage reproduces the 12Y
+scan stage (`phase12_5/runs/scan_union_gamma/scan.json`) at all 12 of its H0
+values with a difference of exactly 0 in ln L (declared tolerance 1e-6). It
+also reproduces the corrected-spin union check
+(`phase12_5/checks/e_union_spin_gamma_2.5439/scan.json`) at the 3 H0 values
+they share, again exactly. The anchor matches the step-1 target at γ =
+2.5439 bit for bit (`ladder_cell/checks/anchor_equality.json`). The scan
+rejected no point.
+
+**H0: 66.1 [61.7, 71.7] km/s/Mpc** (median and 68%), 90% [58.6, 74.9], sd
+4.95, mean 66.5.
+
+| comparison | value | reading |
+|---|---|---|
+| against the spectral γ-fixed grid (66.17, sd 4.89): Δ, R | Δ = −0.01, R = 1.01 | **robust** |
+| against the DESI γ-free chain (12Y, 67.63, sd 5.59): γ free minus γ fixed | +1.5 km/s/Mpc, sd ratio 1.13 | beside the spectral pair's +1.8 and 1.10 |
+| ln Z: 12Y (γ free) minus this chain (γ fixed) | −658.845 − (−656.916) = **−1.93 ± 0.10** | beside the spectral −1.2 to −1.8 |
+
+- **The catalog does not change H0 with the population and γ fixed either.**
+  This fills the last cell of the ladder: Δ is −0.01 here, against +0.08 for
+  B1 with everything free (12AD). Both are in the robust band.
+- **Freeing γ moves H0 by about the same with and without the catalog**
+  (+1.5 and +1.8), and widens it by about the same (1.13 and 1.10).
+- **The evidence prefers the fixed γ by 1.9 in ln Z** with the catalog, as
+  without it. That is the Occam factor of a free γ whose GWTC-5 value is
+  within the posterior.
+- **Calibration nuisances:** M0hat −20.50 ± 0.20, σ_M 0.56 ± 0.13, log10 n0
+  −1.822 ± 0.034. The prior on log10 n0 is centred at −1.8105 with sd 0.036,
+  so the posterior is the prior shifted by −0.3 of its sd and 0.95 times as
+  wide. The catalog does not constrain n0 at this depth, as in 12Y.
+- **Guard and gate:** unpenalised at the posterior mean and median, with
+  selection N_eff 26.6 times its threshold and total MC variance 0.95 (limit
+  20). Gate 7 is met.
+- **Convergence:** stop reason "convergence", final dlogz 0.09999986 against
+  0.1, ln Z −656.916 ± 0.059, 5,372 iterations, 78,946 calls, 17,836 s of
+  sampling.
 
 ## Part 2 — direct DESI chains with γ and μ1 free
 
