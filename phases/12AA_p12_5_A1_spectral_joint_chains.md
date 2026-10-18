@@ -6,6 +6,11 @@
 run is the reference full-population spectral result.** Read "Results" at
 the end first.
 
+**LIMIT-2 RESULTS APPENDED (2026-10-18).** The direct limit-2 chains confirm
+the reweighting by the declared rule; the median's agreement is marginal.
+They are in the robust band against limit 4. σ1 follows the limit, and there
+is no collapse. See "Results (2026-10-18)" at the end of the last section.
+
 **LIMIT-2 CHAINS DECLARED (owner, 2026-10-18), before any limit-2 chain:**
 direct chains at variance limit 2, two per H0 part, on the Jetstream2 H100
 while the direct DESI chains of 12AF are written. See the last section,
@@ -1209,3 +1214,167 @@ Against the limit-4 chains and against their reweighting to limit 2
   known statement that σ1 is set by the limit, not a failure.
 - **Read as a collapse**, as at limit 8, if σ1 or σ2 runs to its lower
   bound. That is not expected at a stricter limit.
+
+### Results (2026-10-18)
+
+The four chains ran concurrently on the Jetstream2 H100 from about 11:22 UTC
+and the combination finished at 19:58 UTC. The outputs were copied back to
+Hildafs and checked by sha256.
+
+Outputs under `phase12_5/A1/`:
+
+- `runs_var2/`: the chains and their combination;
+- `checks_var2/compare/var2_vs_var4.json`: the location-free comparison
+  (HENON job 1389633);
+- `checks_var2/confirm/confirm_var2.json`: the declared reading below (HENON
+  job 1389663), from `scripts/phase12_5_a1_confirm_var2.py` at consumer
+  commit 16e0062 on `phase12.5/spectral-joint-var2`. The chains ran at
+  5591811 on the same branch.
+
+Statistics are taken on the nested points with their weights. The parts are
+combined as for limits 4 and 8: each part's weight is its prior mass times
+its evidence, taken from the mean of its seeds' ln Z.
+
+#### The chains
+
+| H0 part | seed | H0 median [68%] | ln Z | posterior penalised | calls | hours |
+|---|---|---|---|---|---|---|
+| 45 to 140 | 41 | 69.5 [56.1, 82.0] | −683.02 ± 0.21 | 27.1% | 3.94 M | 7.8 |
+| 45 to 140 | 42 | 68.6 [56.0, 80.6] | −683.07 ± 0.20 | 26.2% | 4.05 M | 8.6 |
+| 20 to 45 | 31 | 41.0 [35.6, 43.9] | −685.05 ± 0.20 | 20.8% | 3.84 M | 8.1 |
+| 20 to 45 | 32 | 40.9 [35.3, 43.9] | −684.68 ± 0.20 | 24.4% | 3.82 M | 8.1 |
+
+- **Every chain converged and met its gate.** Each stopped on convergence at
+  dlogz 0.1, after 38,600 to 40,700 iterations; limit 4 took 4.0 to 4.3
+  million calls. Upper 41 was resumed once from its checkpoint (11:24 UTC).
+  The hours are with four chains sharing the GPU.
+- **Like for like.** The inputs (by sha256), priors, sampler settings and
+  core commit equal those of the eight limit-4 chains. Only the limit
+  differs.
+- **Combination.** ln Z is −684.86 ± 0.14 for the lower part (its two seeds
+  differ by 0.37) and −683.04 ± 0.14 for the upper. The lower part's weight
+  is 0.041 (0.034 and 0.050 over the pairings). Limit 4 gives 0.037 and its
+  reweighting to limit 2 gives 0.040.
+- **H0 = 68.3 [54.3, 81.0] km/s/Mpc, sd 13.4; 90% [46.1, 89.0].**
+
+#### The reweighting is confirmed
+
+The eight limit-4 chains are reweighted to limit 2 at their nested points.
+Each chain's ln Z becomes ln Z₄ plus the log of its mean weight, so each
+part's evidence moves with its samples.
+
+| H0 | direct | reweighted | difference | reweighting error | chains' error (a) / (b) | combined error | difference / combined |
+|---|---|---|---|---|---|---|---|
+| median | 68.34 | 67.34 | +1.00 | 0.18 | 0.19 / **0.57** | 0.60 | 1.67 |
+| sd | 13.36 | 13.03 | +0.33 | 0.14 | **0.21** / 0.05 | 0.26 | 1.30 |
+
+- **Confirmed by the declared rule:** both differences are within twice
+  their combined error. In limit-4 sd they are +0.08 (median) and +0.03
+  (sd).
+- **How the errors were computed.**
+  - The bootstrap takes 1000 resamples of each chain's nested points. In
+    each, every chain's ln Z is drawn from its reported error, and a part's
+    ln Z is the mean of its seeds'.
+  - The reweighting's error is its bootstrap, with ln Z₄ drawn the same way.
+  - (b) is half the spread between the matched pairs 41 + 31 (median 68.89,
+    sd 13.43) and 42 + 32 (67.76, 13.32).
+  - The chains' error is the larger of (a) and (b), in bold.
+- **The median's agreement is marginal, and it depends on the pairing.**
+  The other pairing is 41 + 32 (68.60, 13.80) and 42 + 31 (68.07, 12.94). It
+  gives (b) = 0.26 for the median and 0.43 for the sd. With it, the median
+  differs by 3.1 combined errors and the sd by 0.7.
+- **The bootstrap understates the scatter between chains.**
+  - Over the four limit-4 seeds of each part, the single-chain H0 medians
+    scatter 4.3 to 4.6 times their bootstrap error, and the sds 3.3 to 3.5
+    times. The reweighted chains scatter 0.9 to 2.7 times theirs.
+  - Outside the declared rule, the reweighting's error can be taken as the
+    larger of its bootstrap and the standard error over its four matched
+    pairs: 0.23 for the median, 0.34 for the sd.
+  - With the declared pairing, the median and sd then differ by 1.6 and 0.8
+    combined errors. With the other pairing the median differs by 2.9.
+- **Per part.**
+  - The lower part agrees: median 40.96 in both, sd 4.37 against 4.35.
+  - The difference is in the upper part: median 69.02 against 68.07, and sd
+    12.25 against 11.99.
+  - There the two direct seeds differ by 0.9 in median, and the four
+    reweighted chains span 67.4 to 68.8.
+- **Evidence.** The reweighted ln Z at limit 2 is −682.92 for the upper part
+  (four seeds, −682.63 to −683.34) and −684.75 for the lower (−684.58 to
+  −684.99). The direct chains give −683.04 and −684.86, within 0.12 in each
+  part.
+
+#### Against limit 4 (12AB bands)
+
+| | shift (limit-4 sd) | sd ratio | 68% width ratio | band |
+|---|---|---|---|---|
+| direct, combined | +0.02 ± 0.02 | 1.08 ± 0.02 | 1.07 | robust |
+| direct, 45 to 140 | +0.03 ± 0.01 | 1.09 ± 0.01 | 1.07 | robust |
+| direct, 20 to 45 | +0.16 ± 0.01 | 1.01 ± 0.01 | 0.92 | robust |
+| reweighting, combined | −0.06 ± 0.01 | 1.06 ± 0.004 | 1.06 | robust |
+
+- **"H0 does not depend on the limit on the stricter side" stands.** The
+  direct limit-2 result is in the robust band. The errors are the
+  bootstrap's, which understate the scatter between chains (see above). The
+  combined shift is not resolved.
+- **The sd ratio, 1.08, is 0.02 inside the band's edge.** Both matched pairs
+  are inside the band: shifts +0.06 and −0.03, ratios 1.088 and 1.079.
+- The earlier comparison, on pooled equal-weighted samples, gave +0.02 and
+  1.08.
+
+#### Peak widths and the guard
+
+- **σ1 follows the limit, as expected.**
+  - Median 0.39 [0.25, 0.57]; the reweighting gives 0.39 and limit 4 0.20.
+    Across limits 4, 3 and 2 the median is 0.20, 0.27 (reweighted) and 0.39.
+  - Its 1% quantile is 0.13 (limit 4: 0.050). No posterior lies below 0.05
+    solar masses (limit 4: 1.0%).
+- **σ2.** Median 2.4 [0.86, 6.0]; the reweighting gives 2.35 and limit 4
+  1.8. Its 1% quantile is 0.28 (limit 4: 0.13), and 0.01% lies below 0.05
+  (limit 4: 0.09%).
+- **No collapse.** Neither width runs to its lower bound of 0; both move
+  away from it. The comparison's rule raises no flag.
+- **The posterior presses on the limit again, as at 4 and 8.**
+  - Penalised share: 26% to 27% in the upper part and 21% to 24% in the
+    lower. Limit 4 has 19% to 21%, and the reweighting at limit 2 has 22% to
+    28%.
+  - N_eff over its threshold: 1% quantile 0.996 to 0.999, median 1.32 to
+    1.39, 95% quantile 2.11 to 2.25. The reweighting gives a median of 1.30
+    to 1.37 and a 95% quantile of 2.10 to 2.25.
+
+#### Reading
+
+- **The reweighting to limit 2 is confirmed** by the declared rule. The
+  median's agreement is marginal: 1.7 combined errors, and 3.1 with the
+  other pairing. The difference is 1.0 km/s/Mpc, or 0.08 limit-4 sd.
+- **H0 does not depend on the limit on the stricter side.** The direct
+  result is in the robust band against limit 4 (shift +0.02 sd, ratio
+  1.08).
+- **σ1 is set by the limit** (0.39 at 2). σ2 moves away from 0. There is no
+  collapse.
+- **Two points on the method, for the owner.** The declared rule requires
+  no action.
+  - The bootstrap of nested points understates the scatter between chains,
+    by up to 4.6 times.
+  - With two seeds per part, the matched-pair spread rests on a single
+    difference, and its value depends on the pairing.
+
+#### Notes
+
+- **The earlier analyse step ran in float32.** The reweighting's analyse
+  step (`phase12_5_a1_guard_reweight.py analyse`, HENON jobs 1385554 and
+  1385555) recomputed core's selection correction without core's float64
+  runtime, which rounds ln L by about 1e-4.
+  - Its weights, Kish ESS and H0 numbers are unaffected: they are reproduced
+    here in float64 to 3e-7.
+  - Its penalised flags count that rounding as a penalty: about 30% at
+    limit 4, against the chains' own 20%. This affects its
+    `fraction_penalised` fields and its penalised/unpenalised split.
+    Neither is quoted in this record; the penalised shares here come from
+    the chains' own guard samples.
+  - Here the corrections are float64, and they match the chains' to 2e-13.
+  - The first run of this reading (job 1389638) was in float32. It is kept
+    in `checks_var2/confirm/smoke/` and differs only in the penalised
+    shares.
+- No point gains weight at the stricter limit: the largest change in ln L
+  is 0. The evaluated nested points hold at least 0.9999 of each chain's
+  weight.
