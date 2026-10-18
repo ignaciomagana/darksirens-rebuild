@@ -24,6 +24,34 @@ is as declared. Part 1 keeps pin off and is running (rita job 1389044).
 north/south GPU job 1389048.** See "Part 2 amendment (2026-10-18)" at the
 end of Part 2.
 
+**Part 2 SUBMITTED (2026-10-18, 13:28 UTC) on rita**, from the consumer
+worktree `phase12_5/repo_B2` (branch `phase12.5/direct-desi`, commit
+0c9e6d7, clean), manifest `config/phase12_5_12AE_gamma_mu1_manifest.json`,
+env `consumer_e7c3007_cuda12` (core e7c3007), outputs in
+`/hildafs/projects/phy230054p/magana/darksirens-core-data/phase12_5/gamma_mu1/`.
+
+| rita job | what | dependency | runs, in order | state at 13:29 UTC |
+|---|---|---|---|---|
+| 1389599 | A100 number 1 | `afterany:1389044` (Part 1) | spectral upper 41, spectral lower 31, DESI upper 41, DESI lower 31 | pending, waits for 1389044 |
+| 1389600 | A100 number 2 | none | spectral upper 42, spectral lower 32, DESI upper 42, DESI lower 32 | running on rita (started 13:28 UTC) |
+| 1389601 | HENON CPU | `afterok:1389599:1389600` | both members' combinations, then the summary (Δ and R, B1 beside) | pending, waits for both |
+
+- Each GPU job: account phy220048p, partition RITA-GPU, qos rita, one
+  a100-80, 16 CPUs, 64G, 7 days, through the shared
+  `slurm/phase12_5_12AE_gamma_mu1_rita.sbatch`. Logs in
+  `gamma_mu1/logs/`.
+- Two changes from the amendment's table, in scheduling only:
+  - Each job runs its spectral chains first, then its DESI chains. This is
+    the manifest order.
+  - The second job has no dependency. Job 1389048 finished at 10:40 UTC
+    and has left the controller, so a dependency on it would be refused.
+    The second A100 was free.
+- Chains, settings and inputs are as declared and amended: kernel pin auto
+  for the DESI chains, no batching, limit 4 with the smooth guard, and the
+  LAL-consistent PE.
+- **The jobs run from the repo_B2 working tree.** Job 1389599 reads it when
+  it starts, after Part 1. Each job logs the commit it ran.
+
 ## Where this sits
 
 P12.5 reports a ladder of three population rows, each with and without the
