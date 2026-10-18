@@ -16,6 +16,14 @@ is read are fixed here, before any chain.
 Results are appended under each part. Absolute H0 values are written here, as
 in 12Y, 12AA and 12AD; none is sent to the clean-room session.
 
+**AMENDED (owner, 2026-10-18), before any Part 2 chain: Part 2's DESI chains
+use kernel pin "auto"** (equal to pin off to 1.8e-12 in ln L, not bitwise; a
+checkpoint is never resumed across pin settings). Everything else in Part 2
+is as declared. Part 1 keeps pin off and is running (rita job 1389044).
+**Part 2 runs on the two rita A100s, queued behind job 1389044 and the 12AB
+north/south GPU job 1389048.** See "Part 2 amendment (2026-10-18)" at the
+end of Part 2.
+
 ## Where this sits
 
 P12.5 reports a ladder of three population rows, each with and without the
@@ -161,7 +169,7 @@ population, e.g. the first peak's width σ1 at 0.78).
 | injections | the O3/O4 set `A_sel_chieffref_o3o4ab_v20_exact.h5` | same |
 | variance limit, guard | 4, smooth (as A1) | same |
 | sampler | dynesty, 1000 live points, dlogz 0.1 (as A1 and 12Y) | same |
-| core | e7c3007 with its defaults, kernel pin off | same |
+| core | e7c3007 with its defaults; **kernel pin auto** (amended 2026-10-18; first declared off) | e7c3007 with its defaults (no catalog, so no kernel pin) |
 
 The seed numbers follow A1's convention (its limit-8 bracket used these
 four); the owner set two seeds per part. The two members of each pair use
@@ -209,6 +217,8 @@ the width. Different bands are reported to the owner and not resolved here.
 
 ### Before the chains
 
+Check 6 was added by the amendment of 2026-10-18 (below).
+
 1. **B1's tests of the generalized target** (12AD) pass at the committed
    code: at the fixed population it equals the existing target bit for bit;
    with only γ moved it equals the step-1 target.
@@ -226,6 +236,14 @@ the width. Different bands are reported to the owner and not resolved here.
    the fraction penalised; and the four corners of (γ, μ1) at three H0
    values. Recorded here before the chains are submitted.
 5. **CPU smoke** of both chain commands at nlive 8.
+6. **Kernel pin on the Part 2 DESI target** (added 2026-10-18):
+   - pin auto against pin off, at the 12 H0 values of control 3 and at 64
+     prior draws per H0 part. Pass: largest |Δ ln L| at most 1e-9 and the
+     same non-finite pattern;
+   - a 10-minute timing stretch of the DESI chain command on a rita A100,
+     giving the seconds per call with the pin on.
+
+   Control 3 itself runs with the pin on, at its declared tolerance of 1e-6.
 
 ### What is reported
 
@@ -242,7 +260,8 @@ Per chain, per H0 part and for each combined member:
 
 ### Compute and outputs
 
-- **Both rita A100s**, the same job settings as Part 1.
+- **Both rita A100s**, the same job settings as Part 1. The queue order is
+  under "Part 2 amendment (2026-10-18)" below.
 - **The DESI chains:** six sampled parameters; at the 12Y rate (about
   0.23 s per call, 8 h for five parameters), about 8 to 12 hours each, in
   two rounds on the two GPUs. **The spectral chains:** three parameters at a
@@ -255,6 +274,80 @@ Per chain, per H0 part and for each combined member:
 - **Outputs:** `/hildafs/projects/phy230054p/magana/darksirens-core-data/phase12_5/gamma_mu1/`
   (`desi/<part>_seed<n>/`, `spectral/<part>_seed<n>/`, `combined/`, one
   `summary.json`).
+
+### Part 2 amendment (2026-10-18): kernel pin auto, and the rita queue
+
+Owner decision of 2026-10-18, before any Part 2 chain.
+
+**Kernel pin "auto" for Part 2's DESI chains.**
+
+- **What changes.** Only the DESI member's pin, from off to auto. Everything
+  else in Part 2 is as declared:
+  - the DESI and spectral members, γ flat on −10 to 10, μ1 flat on 5 to 20;
+  - the split at 45 and two seeds per part;
+  - variance limit 4 with the smooth guard, and the LAL-consistent GW inputs;
+  - dynesty with 1000 live points and dlogz 0.1, a queue size of 1, and no
+    batched pool.
+
+  Part 1 keeps pin off, as its column neighbour 12Y. It is already running.
+- **What the pin does.** Core's catalog kernel pin (darksirens-core #28 and
+  #30) builds the catalog kernel quadrature once per target, at a reference
+  H0. It then serves the kernel with the scalar shift 3 ln(H0/H0_ref)
+  instead of redoing the quadrature on every call. It applies exactly when
+  none of Om0, w0, wa, δ and σ_kde is sampled. That holds in Part 2, whose
+  coordinates are H0, γ, μ1 and the three catalog nuisances. Details are in
+  12AF (PR #54), "Kernel pin".
+- **The equality figure.** Pin auto equals pin off to **1.8e-12 in ln L**
+  (relative 2.1e-15), and is **not bitwise**.
+  - Measured on the Jetstream2 H100 on 2026-10-18, on the step-1 target
+    (union, δ 0, γ sampled, limit 20).
+  - 128 points were used, half prior draws and half near the reference
+    point. They were evaluated with the pin on, in batches of 1 to 64,
+    against single pin-off calls.
+  - 71% to 79% of the values are bitwise equal.
+  - Source: `phase12_5/batching/results/run_desi_vmap_K*_pinauto.json`.
+  - Core's own test (darksirens-core #30) gives rtol 1e-12, at worst 4.1e-13
+    relative.
+- **Never resumed across pin settings.** Each DESI checkpoint is stamped
+  with the resolved pin (setting, active, the pin's catalog digest). A
+  resume under another setting or digest is refused.
+- **The acceptance marker.** The consumer's acceptance marker admits only
+  pin off today. The Part 2 chain command admits auto for this record, on
+  the owner's decision, and records the resolved pin, as in 12AF.
+- **The reading does not change** at the precision of Δ and R. Part 2's
+  catalog effect is set beside B1's, which was computed with pin off; the
+  two likelihoods agree to about 2e-12.
+- **Cost.** On the H100 one DESI likelihood call took 27.6 ms with the pin
+  on, against 152 ms with it off: 5.5 times faster.
+  - The A100 figure is not measured; check 6 measures it.
+  - The declared 8 to 12 hours per DESI chain (at 0.23 s per call) is now an
+    upper bound.
+  - Core's dynesty adapter still evaluates the prior transform point by
+    point, so a chain gains less than the likelihood alone.
+
+**The rita queue.** Both rita A100s are held now, so Part 2 is queued
+behind:
+
+- **job 1389044:** Part 1 of this record, the ladder cell. It started on
+  2026-10-18 at 09:53 UTC and is estimated at 6 to 8 hours (limit 3 days);
+- **job 1389048:** the 12AB north/south scans moved to rita. It started at
+  10:05 UTC and takes about 2 minutes per task of three lattice nodes over
+  18 tasks, so it should finish within an hour (limit 6 hours).
+
+Part 2 is submitted when its code and checks are done: two GPU jobs with
+Part 1's settings (account phy220048p, partition RITA-GPU, qos rita, one
+a100-80, 16 CPUs, 64G), plus one short HENON task.
+
+| job | dependency | runs, in order |
+|---|---|---|
+| A | `afterany:1389048` (the north/south GPU job) | DESI upper part seed 41, DESI lower part seed 31, spectral upper 41, spectral lower 31 |
+| B | `afterany:1389044` (the ladder cell) | DESI upper part seed 42, DESI lower part seed 32, spectral upper 42, spectral lower 32 |
+| combination | `afterok` on A and B (HENON, CPU) | both members' combinations, Δ and R, `summary.json` |
+
+- `afterany` waits only for the GPU to be freed; Part 2 needs nothing from
+  those two jobs.
+- Each job checkpoints every 30 minutes. A resubmission skips finished
+  chains and resumes an unfinished one, under the same pin setting only.
 
 ## Expectations, not thresholds
 
