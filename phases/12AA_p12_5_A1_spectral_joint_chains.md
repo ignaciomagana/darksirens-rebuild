@@ -6,6 +6,11 @@
 run is the reference full-population spectral result.** Read "Results" at
 the end first.
 
+**LIMIT-2 CHAINS DECLARED (owner, 2026-10-18), before any limit-2 chain:**
+direct chains at variance limit 2, two per H0 part, on the Jetstream2 H100
+while the direct DESI chains of 12AF are written. See the last section,
+"Limit-2 chains (declared 2026-10-18)".
+
 **THIRD ATTEMPT DECLARED (owner, 2026-10-09): all seventeen population
 parameters, the GWTC-5 paper's priors, variance limit 4. Read the last two
 sections first: "Second attempt" gives the priors and what the variance
@@ -1041,3 +1046,165 @@ The limit-4 run is the reference full-population spectral result. The
 reweighting to limits 3 and 2 is quoted as its stability check, with the
 statement that σ1 is set by the limit. Not done here: the DESI target with
 the population free (decided separately).
+
+---
+
+## Limit-2 chains (declared 2026-10-18)
+
+Declared at the owner's decision of 2026-10-18, before any limit-2 chain.
+Nothing in this section has been run.
+
+### Why
+
+- **The stability check rests on reweighting.** The owner adopted the
+  limit-4 run as the reference, with its reweighting to limits 3 and 2 as the
+  stability check (above). At limit 2 the reweighting keeps 25% to 29% of
+  each chain's samples (Kish effective sample size). It moves H0 by at most
+  0.22 limit-4 sd, with sd ratios of 1.00 to 1.08, and it moves σ1's median
+  from about 0.19 to about 0.39.
+- **Direct chains test the reweighting.** The reweighting is valid in
+  principle: a point inside limit 2 is inside limit 4, so the stricter
+  target has no mass outside what the limit-4 chains sampled. But it rests
+  on a quarter of the samples. It also cannot sample more densely where the
+  limit-4 chains were sparse.
+- **They keep the charged Jetstream2 H100 busy** while the code of the
+  direct DESI chains (12AF, PR #54) is written.
+
+### Setup
+
+- **Variance limit 2** (`numerics.max_likelihood_variance=2.0`). Everything
+  else is as in the limit-4 run:
+  - the priors table of the second attempt and the 18 dimensions;
+  - the smooth cutoff, the cosmology and core e7c3007;
+  - dynesty with 1000 live points, dlogz 0.1, walks "scaled" (108 steps) and
+    a queue size of 1;
+  - the unchanged start check.
+- **Inputs as in the limit-4 run:** `A_pe_chieff_bbh259_n4096_v20_exact.h5`
+  and `A_sel_chieffref_o3o4ab_v20_exact.h5`, not the LAL-consistent build.
+  The comparison with the limit-4 chains and their reweighting is then like
+  for like.
+- **Two chains per H0 part:** H0 45 to 140 with seeds 41 and 42, H0 20 to 45
+  with seeds 31 and 32. They run in the order upper 41, lower 31, upper 42,
+  lower 32, followed by their combination by evidence.
+- **No new code.** One new manifest, `config/phase12_5_A1_var2_manifest.json`:
+  the limit-8 manifest with the limit set to 2.0 and outputs in
+  `A1/runs_var2/`.
+  - It is committed on `phase12.5/spectral-joint-brackets` (worktree
+    `phase12_5/repo_A1b`, now at 0934239).
+  - Before the launch, the checkout at the same path on the Jetstream2 H100
+    is moved, clean, to that commit.
+  - The chain code is that of the limit-8 bracket.
+
+### Expected at limit 2 (from the limit-4 checks)
+
+- **No penalty at the reference population at any H0 from 20 to 140.**
+  - The threshold on N_eff is 259²/(2 − v), with v the events' variance
+    (0.16 to 0.25 in check 2 of the third attempt).
+  - N_eff there is 2.0 (H0 20) to 3.4 (H0 140) times that threshold. The
+    smooth penalty is numerically zero above about 1.15 times.
+  - Both start points (H0 32.5 and 92.5) pass the start check.
+- **The first attempt's spike is rejected.** The events' variance alone is
+  6.1 to 9.9 there, above the limit, so no N_eff admits it.
+- **Inside the limit:** expected between the 0.2% to 0.3% of the prior
+  inside limit 1 and the 3% inside limit 4. The sampler starts on the
+  penalty's slope, as at limit 1, where a 7-minute stretch climbed steadily.
+- **From the reweighting:** H0 within about 0.2 limit-4 sd of limit 4, an
+  sd ratio near 1.05, and σ1's median near 0.39. The posterior is expected
+  to press on the limit again, as it did at 4 and 8. Its penalised share is
+  not predicted.
+
+### Checks before the launch (HENON CPU, existing commands)
+
+The checks of the limit-8 bracket (HENON job 1385447), with the commands of
+`slurm/phase12_5_A1_var8_preflight_henon.sbatch` at limit 2, into
+`A1/checks_var2/`. A copy of that launcher with the limit at 2 is the only
+change.
+
+- **Control at limit 2** against the stored spectral grids at both rate
+  indices: equal to 1e-8 at every H0, and no penalty at the reference
+  population at any H0.
+- **The first attempt's 400 best points:** penalised at limit 2, and
+  reproduced at limit 20 to 1e-9.
+
+**If either fails, nothing is launched.**
+
+### Run plan
+
+- **On the Jetstream2 H100:** one process in a tmux session through
+  `/media/volume/datasets/phase12/tools/launch_tmux.sh` (its log ends
+  `EXIT=<rc>`), running
+  `scripts/phase12t_runner.py --manifest config/phase12_5_A1_var2_manifest.json`.
+- **Queued behind B1.** It starts when B1's Jetstream2 half ends. A shell
+  loop on the Jetstream2 machine waits for B1's log there
+  (`/media/volume/datasets/phase12/logs/b1_eval.20261018T095315Z.log`) to
+  print its `EXIT=` line, then launches. No agent polls it, and B1 and these
+  chains never share the GPU.
+- **Inputs.** The two GW files are in the Jetstream2 mirror: they were
+  copied for B1 and checked by sha256 against Hildafs. The runner checks
+  them again against the manifest's checksums.
+- **Checkpoint every 30 minutes**, as for every A1 chain.
+- **Outputs** are written in the Jetstream2 mirror of `phase12_5/A1/runs_var2/`.
+  They are copied back to Hildafs and checked by sha256 at the pause and at
+  the end. `A1/runs/` and `A1/runs_var8/` are not touched.
+- **Estimated cost.**
+  - The limit-4 chains took 5.9 to 6.3 hours each on a rita A100 (4.0 to
+    4.3 million calls at about 0.006 s).
+  - On the Jetstream2 H100, dynesty's single-call path ran at 5.9 ms per
+    call (12AF's batching test, from the A1 checkpoint), about the A100's
+    rate.
+  - That is 6 to 8 hours per chain if limit 2 needs as many iterations as
+    limit 4. It may need more, because the allowed region is smaller.
+    **About 1 to 1.5 days for the four.**
+
+### Pause and resume
+
+- **Paused** when 12AF's direct DESI chains are ready on the Jetstream2 H100
+  (12AF, "What pauses the limit-2 chains"):
+  - the process is stopped right after its next checkpoint write, so at most
+    30 minutes are lost;
+  - the stop and the checkpoint's sha256 are logged;
+  - the checkpoint and the finished chains are copied to Hildafs.
+- **Resumed later** with the same manifest, from the same commit.
+  - A finished chain is skipped, and the unfinished one resumes its
+    checkpoint.
+  - A resumed chain must match the checkpoint's target, priors, H0 part,
+    seed, sampler settings and input hashes; core refuses it otherwise.
+  - By default it resumes on the Jetstream2 H100 after the 12AF chains
+    there; the owner may decide otherwise.
+- **If 12AF's chains are ready before B1's half ends**, the limit-2 chains
+  do not start.
+- **The combination** uses the chains that have a result (at least one per
+  part) and names any chain left out, as for limits 4 and 8.
+
+### What will be compared
+
+Against the limit-4 chains and against their reweighting to limit 2
+(`checks4/<chain>/reweight.json`), per chain, per H0 part and combined:
+
+- H0: the median shift and the sd ratio in units of the limit-4 sd, for the
+  direct limit-2 chains beside the reweighting;
+- σ1 (median, and the fraction below 0.05 solar masses) and σ2;
+- the fraction of posterior samples penalised, and N_eff over its threshold
+  (quantiles);
+- ln Z per chain, and the lower part's weight against limit 4's 0.037 and
+  the reweighting's;
+- convergence.
+
+### Reading (declared now)
+
+- **The reweighting is confirmed** if the direct limit-2 combined H0 median
+  and sd agree with the reweighted ones within twice their combined Monte
+  Carlo error.
+  - The reweighting's error comes from its bootstrap.
+  - The chains' error is the larger of two estimates: a bootstrap of the
+    nested samples with each part's ln Z drawn from its error, and half the
+    spread between the two matched-pair combinations.
+- **"H0 does not depend on the limit on the stricter side" stands** if, in
+  addition, the direct limit-2 result falls in 12AB's robust band against
+  limit 4: |shift| < 0.2 limit-4 sd and an sd ratio of 0.9 to 1.1.
+  - In the mild band it is quoted as a systematic.
+  - In the material band the owner decides.
+- **σ1 is expected to follow the limit**, as in the reweighting. That is the
+  known statement that σ1 is set by the limit, not a failure.
+- **Read as a collapse**, as at limit 8, if σ1 or σ2 runs to its lower
+  bound. That is not expected at a stricter limit.
