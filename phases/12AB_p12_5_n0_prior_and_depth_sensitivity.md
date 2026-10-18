@@ -772,4 +772,10 @@ they are appended location-free.
   tasks 6 to 23 (section "Moved to rita (2026-10-18)").
 - **The analysis:** HENON job 1389007, after Part B and both north/south
   jobs.
+- **Rerun of one Part B task (2026-10-18, 20:45 UTC).** Task 65 of 1389004
+  failed at start-up on henon08 ("TaskProlog failed", 0 s, nothing run). The
+  other 65 scans completed. Task 65 was resubmitted unchanged as HENON job
+  1389664 (array index 65, henon08 excluded). The analysis job 1389007,
+  which the failed task had left unable to start, now depends on
+  `afterok:1389664`. Its other dependencies were already met.
 - **Part C** waits for B1 (12AD) and its acceptance.
