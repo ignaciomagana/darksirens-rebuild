@@ -57,6 +57,17 @@ env `consumer_e7c3007_cuda12` (core e7c3007), outputs in
 R = 1.01. The control passed bit for bit. See "Results (2026-10-18)" at the
 end of Part 1. Job 1389599 started after it, as queued.
 
+**PART 2 DONE (2026-10-18, 22:40 UTC): robust, the same band as B1.** With γ
+and μ1 free, the DESI chains give H0 65.85 [58.85, 73.68] (sd 7.29) against
+the spectral 66.14 [59.40, 73.26] (sd 7.00), so Δ = −0.04 and R = 1.04. B1
+is robust too, with Δ = +0.08 and R = 1.04. The same band in both supports
+B1's reading on the parameter that carries most of the width: the catalog
+leaves μ1 (10.02 in both members), and with it H0, where the spectral sirens
+put them. All eight chains converged and none is penalised; the lower H0
+part holds 4.5e-4 (DESI) and 3.3e-4 (spectral) of the mass. Part 2 frees
+two of the seventeen parameters and is not the population-free result. See
+"Results (2026-10-18)" at the end of Part 2.
+
 ## Where this sits
 
 P12.5 reports a ladder of three population rows, each with and without the
@@ -425,6 +436,186 @@ a100-80, 16 CPUs, 64G), plus one short HENON task.
   those two jobs.
 - Each job checkpoints every 30 minutes. A resubmission skips finished
   chains and resumes an unfinished one, under the same pin setting only.
+
+### Results (2026-10-18): robust, the same band as B1
+
+rita jobs 1389599 (14:53 to 22:40 UTC, 7.8 h) and 1389600 (13:28 to 21:11
+UTC, 7.7 h), one A100 each; the combination and summary on HENON, job
+1389601 (22:40 UTC, 4 s). Times from `sacct`. Env `consumer_e7c3007_cuda12`
+(core e7c3007), worktree `phase12_5/repo_B2` (branch `phase12.5/direct-desi`).
+Kernel pin auto, active in all four DESI chains (one pin digest); a queue of
+1 and no batched pool; limit 4 with the smooth guard; the LAL-consistent PE.
+Outputs in `phase12_5/gamma_mu1/` (`desi/`, `spectral/`, `combined/`,
+`summary.json`).
+
+**The chains ran at three commits of the working tree, all clean.** Each
+chain reads the working tree when it starts, and the B2 work (12AF)
+committed to it during the run:
+
+- 0c9e6d7: spectral upper 42 and lower 32 (the commit job 1389600 logs at
+  its start);
+- fc5792c: DESI upper 42;
+- 78b84f9: the other five chains and the combination.
+
+From 0c9e6d7 to 78b84f9 the chain driver changes only in the batched pool
+(it now refuses a dynesty other than 2.1.4), which these chains do not use.
+The other changes are B2 scripts, a B2 smoke manifest and tests. The eight
+chains ran the same code path.
+
+**The combined members** (A1's combination, 40,000 draws). H0 in km/s/Mpc,
+the slope in km/s/Mpc per solar mass:
+
+| member | H0 median [68%] | 90% | sd | γ median [68%] | μ1 median [68%] | H0–μ1 correlation, slope |
+|---|---|---|---|---|---|---|
+| DESI | **65.85 [58.85, 73.68]** | [54.46, 78.49] | **7.29** | 2.34 [1.97, 2.73] | 10.02 [9.77, 10.27] | −0.64, −18.4 |
+| spectral | **66.14 [59.40, 73.26]** | [55.46, 78.45] | **7.00** | 2.27 [1.91, 2.64] | 10.02 [9.77, 10.27] | −0.63, −17.7 |
+
+The H0 means are 66.20 and 66.36.
+
+| comparison | Δ | R | band |
+|---|---|---|---|
+| this record: DESI against spectral, γ and μ1 free | **−0.042** | **1.042** | **robust** |
+| B1 (12AD): DESI against A1, all seventeen free, by importance weights | +0.082 | 1.035 | robust |
+
+- **The catalog does not change H0 with γ and μ1 free.** The DESI median is
+  0.04 spectral sd below the spectral one, and the width grows by 4%. B1 is
+  in the same band.
+- **The catalog leaves μ1 in place:** 10.022 against 10.017, 0.02 of its sd.
+  γ moves by +0.07 (0.18 of its sd). H0 follows μ1, so with μ1 unmoved H0 is
+  unmoved.
+- **The band holds seed by seed.** Over the four pairings of one DESI upper
+  seed with one spectral upper seed, Δ runs from −0.08 to −0.01 and R from
+  1.02 to 1.06. The lower part, under 5e-4 of the mass, is left out there.
+  Recombining from the nested points with their exact weights, instead of
+  40,000 draws with replacement, gives Δ = −0.038 and R = 1.042.
+- **H0 follows μ1 less than in A1:** correlation −0.64 and −0.63, a slope of
+  about −18, and 41% and 40% of the H0 variance, against A1's −0.85, −30 and
+  72%. σ1 and the other mass parameters are fixed here.
+- **Against Part 1 (γ and μ1 fixed), freeing them widens both members
+  alike:** the sd goes from 4.95 to 7.29 (1.47 times) with the catalog and
+  from 4.89 to 7.00 (1.43 times) without. The medians move by −0.3 and
+  −0.03. The spectral sd of 7.00 lies between the γ-free 5.40 and A1's
+  12.4, as expected.
+- **ln Z of the DESI member over 20 to 140** is −662.690, against Part 1's
+  −656.916: the evidence prefers γ and μ1 fixed by 5.77, the Occam factor
+  of two wide flat priors. The PE build and
+  the variance limit differ between the two (LAL-consistent and 4 here, the
+  earlier build and 20 in Part 1). Both differences are negligible for the
+  spectral likelihood at the fixed population; neither is checked for the
+  DESI one.
+
+**Per chain.** ln Z with dynesty's error.
+
+| chain | H0 median [68%] | 90% | sd | γ median [68%] | μ1 median [68%] | H0–μ1 correlation, slope | ln Z | commit |
+|---|---|---|---|---|---|---|---|---|
+| DESI upper 41 | 65.71 [58.59, 73.77] | [54.47, 78.63] | 7.38 | 2.34 [1.97, 2.74] | 10.02 [9.76, 10.28] | −0.65, −18.4 | −662.576 ± 0.106 | 78b84f9 |
+| DESI upper 42 | 65.99 [59.00, 73.67] | [54.44, 78.33] | 7.20 | 2.33 [1.96, 2.71] | 10.02 [9.77, 10.26] | −0.64, −18.3 | −662.338 ± 0.104 | fc5792c |
+| DESI lower 31 | 43.99 [42.45, 44.72] | [41.02, 44.92] | 1.33 | 3.25 [2.83, 3.67] | 10.58 [10.38, 10.78] | −0.21, −1.4 | −668.832 ± 0.110 | 78b84f9 |
+| DESI lower 32 | 43.98 [42.48, 44.73] | [41.05, 44.92] | 1.29 | 3.25 [2.83, 3.68] | 10.58 [10.39, 10.78] | −0.18, −1.2 | −668.841 ± 0.110 | 78b84f9 |
+| spectral upper 41 | 66.08 [59.34, 73.15] | [55.46, 78.34] | 6.94 | 2.27 [1.91, 2.64] | 10.01 [9.77, 10.27] | −0.62, −17.2 | −662.306 ± 0.107 | 78b84f9 |
+| spectral upper 42 | 66.30 [59.48, 73.46] | [55.19, 78.48] | 7.03 | 2.27 [1.91, 2.63] | 10.02 [9.77, 10.27] | −0.63, −17.8 | −662.233 ± 0.106 | 0c9e6d7 |
+| spectral lower 31 | 43.92 [42.29, 44.72] | [40.61, 44.92] | 1.44 | 3.18 [2.75, 3.58] | 10.59 [10.40, 10.80] | −0.19, −1.3 | −668.945 ± 0.110 | 78b84f9 |
+| spectral lower 32 | 43.90 [42.24, 44.72] | [40.55, 44.92] | 1.46 | 3.18 [2.75, 3.60] | 10.59 [10.39, 10.81] | −0.18, −1.3 | −668.941 ± 0.110 | 0c9e6d7 |
+
+**Per H0 part** (the two seeds pooled with equal mass, as in the
+combination). ln Z is the mean of the two seeds, with their half-range.
+
+| part, member | H0 median [68%] | 90% | sd | γ median [68%] | μ1 median [68%] | H0–μ1 correlation, slope | ln Z |
+|---|---|---|---|---|---|---|---|
+| upper (45 to 140), DESI | 65.86 [58.83, 73.71] | [54.46, 78.50] | 7.29 | 2.34 [1.96, 2.73] | 10.02 [9.76, 10.27] | −0.64, −18.4 | −662.457 (0.119) |
+| lower (20 to 45), DESI | 43.98 [42.46, 44.73] | [41.04, 44.92] | 1.31 | 3.25 [2.83, 3.68] | 10.58 [10.38, 10.78] | −0.19, −1.3 | −668.837 (0.005) |
+| upper (45 to 140), spectral | 66.18 [59.40, 73.28] | [55.38, 78.41] | 6.99 | 2.27 [1.91, 2.64] | 10.02 [9.77, 10.27] | −0.63, −17.5 | −662.269 (0.037) |
+| lower (20 to 45), spectral | 43.91 [42.26, 44.72] | [40.57, 44.92] | 1.45 | 3.18 [2.75, 3.59] | 10.59 [10.39, 10.80] | −0.18, −1.3 | −668.943 (0.002) |
+
+**The lower part's weight** by A1's rule: prior mass (25/120, 95/120) times
+evidence, each part's ln Z the mean of its two seeds. Recomputed here from
+the per-chain ln Z; it equals `combined.json`.
+
+| member | weight of the lower part | over the four pairings of one seed per part | ln Z, lower minus upper |
+|---|---|---|---|
+| DESI | 4.46e-4 | 3.94e-4 to 5.05e-4 | −6.38 |
+| spectral | 3.32e-4 | 3.20e-4 to 3.45e-4 | −6.67 |
+| A1, for reference (12AA) | 0.037 | 0.021 to 0.065 (sixteen pairings) | |
+
+- **No low-H0 mode with only γ and μ1 free.** The lower part's mass piles
+  against its upper edge: medians 43.9 to 44.0, 90% upper bounds 44.92, and
+  2% (DESI) and 3% (spectral) of its mass below H0 = 40. It sits at a higher
+  μ1 (10.58) and γ (3.2), along the same degeneracy. It is the tail of the
+  one mode, not A1's mode at H0 ≈ 40 and μ1 ≈ 10.8. With the other mass
+  parameters fixed, that mode does not return.
+- **The lower part's weight is 1.34 times larger with the catalog,** and the
+  two pairing ranges do not overlap. At under 5e-4 of the mass it moves no
+  number reported here.
+- **The seed spread is small:** a factor of 1.28 (DESI) and 1.08 (spectral)
+  between the extreme pairings, against a factor of three in A1. The DESI
+  spread comes from its upper part, whose two ln Z differ by 0.24 (each
+  ± 0.105).
+
+**Penalised fraction: zero.**
+
+- In each of the eight chains, none of the 4,000 guard points (posterior
+  samples) is penalised by the variance limit: a 95% upper bound of 7.5e-4
+  per chain. So the fraction is 0 for both members.
+- The smallest selection N_eff over its threshold among those points is 3.30
+  to 3.53 (DESI) and 3.98 to 4.20 (spectral). The total MC variance at the
+  posterior mean is 0.98 (DESI upper), 1.12 (DESI lower), 0.89 (spectral
+  upper) and 0.99 (spectral lower), against the limit of 4.
+- **Precision: float64.** The samples, ln L and guard values on disk are
+  float64, and none of the stored ln L or N_eff values is exactly a float32
+  number (0 of 11,599 to 13,021 and 0 of 4,000 per chain). They were
+  evaluated in float64; core sets x64 at runtime. No likelihood or guard
+  quantity was recomputed for this write-up. The statistics here were
+  computed in float64 from the stored samples.
+
+**Convergence and the gate.**
+
+| chain | stop reason | final dlogz (target 0.1) | iterations | calls | sampling time | per call | gate 7 |
+|---|---|---|---|---|---|---|---|
+| DESI upper 41 | convergence | 0.09996 | 11,197 | 312,622 | 13,168 s (3.66 h) | 42 ms | met |
+| DESI upper 42 | convergence | 0.09996 | 10,941 | 304,207 | 12,765 s (3.55 h) | 42 ms | met |
+| DESI lower 31 | convergence | 0.09993 | 11,988 | 337,274 | 13,466 s (3.74 h) | 40 ms | met |
+| DESI lower 32 | convergence | 0.09992 | 12,021 | 337,101 | 13,592 s (3.78 h) | 40 ms | met |
+| spectral upper 41 | convergence | 0.09990 | 10,669 | 198,880 | 353 s | 1.8 ms | met |
+| spectral upper 42 | convergence | 0.09994 | 10,599 | 196,608 | 348 s | 1.8 ms | met |
+| spectral lower 31 | convergence | 0.09993 | 11,561 | 219,028 | 357 s | 1.6 ms | met |
+| spectral lower 32 | convergence | 0.09995 | 11,544 | 218,782 | 356 s | 1.6 ms | met |
+
+- All eight stopped on convergence, each in one session, none resumed.
+  Gate 7 is met in every chain: convergence verified, unpenalised at the
+  posterior mean and median.
+- **Both parts start for the DESI target:** the start points at H0 92.5 and
+  32.5 pass the MC-reliability gate. This was listed under "Not verified".
+- **The DESI target costs 40 to 42 ms per call** on the A100 with the pin on,
+  against 0.23 s for 12Y with the pin off. Each DESI chain took 3.6 to 3.8 h
+  of sampling, against the declared 8 to 12 h.
+
+**Catalog nuisances (DESI member) against their priors.**
+
+| nuisance | prior | posterior, mean ± sd | shift, in prior sd | width over prior |
+|---|---|---|---|---|
+| M0hat | N(−20.500, 0.199) | −20.50 ± 0.20 | +0.01 | 1.01 |
+| sigma_M | N(0.557, 0.130) | 0.56 ± 0.13 | 0.00 | 0.99 |
+| log10 n0 | N(−1.8105, 0.0364) | −1.816 ± 0.035 | −0.14 | 0.97 |
+
+- Per chain, M0hat and sigma_M stay within 0.04 prior sd of the prior centre,
+  with widths 0.99 to 1.01. log10 n0 moves by −0.12 and −0.15 prior sd in
+  the upper part and by −0.24 and −0.26 in the lower.
+- The catalog does not constrain them, as in Part 1 and 12Y. log10 n0 of the
+  combined draws is mapped from its sampled prior quantile.
+
+**Read within the limits.**
+
+- **Not the population-free result.** Part 2 frees two of the seventeen
+  parameters, and its H0 is conditional on the other fifteen (σ1 at 0.78
+  among them). It gives the catalog's effect at this freedom, beside B1's.
+  `summary.json` also sets the DESI member's median and sd against B1's
+  (−0.25 of B1's sd, 0.57 of its width). Those are different freedoms and
+  are not read.
+- The μ1 samples stay between 8.9 and 11.5 in every chain, far from the prior
+  edges at 5 and 20. The variance limit penalises neither member in its
+  posterior; the edges themselves are not tested.
+- The checks before the chains (1 to 6 above) are not written up in this
+  record.
 
 ## Expectations, not thresholds
 
