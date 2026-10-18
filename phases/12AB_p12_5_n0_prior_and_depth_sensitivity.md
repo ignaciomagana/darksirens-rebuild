@@ -26,6 +26,11 @@ analysis are unchanged. See "Moved to rita (2026-10-18)" in the north/south
 section. The production jobs are listed under "Submitted (2026-10-18)" at
 the end.
 
+**PART C STOP RAISED TO 100 TASK-HOURS (owner, 2026-10-18, before Part C was
+submitted).** The declared stop at 40 task-hours is raised to 100 task-hours,
+so Part C can run through the night on HENON. Nothing else in Part C changes.
+See Compute.
+
 **Blinding.** No H0 value from real data (median, interval or shift) is
 written here. Results will be appended location-free: shifts in units of the
 baseline posterior sd, width ratios, effective sample sizes. The absolute
@@ -631,7 +636,9 @@ nodes.
 
 - **Expected total: about 75 to 140 task-hours (38 to 70 node-hours)** with
   Part C at d200 only; each further Part C variant adds 12 to 22. If Part C
-  would exceed 40 task-hours, it stops for the owner, as declared.
+  would exceed 100 task-hours, it stops for the owner. The declared stop was
+  40 task-hours; the owner raised it to 100 on 2026-10-18, before Part C was
+  submitted.
 - **Order:** Part A has run. The step task, Part B and the north/south scans
   are submitted after this amendment is pushed; the A1 chains (rita 1376492)
   and their follow-ups have finished, so there is no dependency. The
