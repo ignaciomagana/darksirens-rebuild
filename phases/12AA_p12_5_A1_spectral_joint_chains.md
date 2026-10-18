@@ -1134,6 +1134,7 @@ change.
   `/media/volume/datasets/phase12/tools/launch_tmux.sh` (its log ends
   `EXIT=<rc>`), running
   `scripts/phase12t_runner.py --manifest config/phase12_5_A1_var2_manifest.json`.
+- **Changed on 2026-10-18, from about 11:22 UTC: the four chains run concurrently on the Jetstream2 H100, settings unchanged** (one tmux session per chain, each the runner's `--only <chain>` stage; upper 41 resumed its 11:22 checkpoint; pause and resume in `A1/runs_var2_PAUSE_RESUME.md`).
 - **Queued behind B1.** It starts when B1's Jetstream2 half ends. A shell
   loop on the Jetstream2 machine waits for B1's log there
   (`/media/volume/datasets/phase12/logs/b1_eval.20261018T095315Z.log`) to
