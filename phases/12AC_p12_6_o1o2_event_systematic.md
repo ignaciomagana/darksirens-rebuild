@@ -257,3 +257,25 @@ With γ fixed at 2.5439 and with γ free, 249 against 259 events:
 - gwcat's own validation of the subset. The 259-event file passes it only
   with a spin-prior allow-list that is not approved; the Phase 12 runs use it
   by its sha256, and the subset is used the same way.
+
+---
+
+## Results (2026-10-18)
+
+Rita jobs 1388969 (control, then 17 grids) and 1388970 (17 grids), both on A100-80, 20 minutes each; comparison HENON job
+1388971. Output `phase12_5/o1o2_check/compare.json`.
+
+- **Control:** the 259-event grid at γ = 2.5439 on the GPU equals the stored CPU grid to 9.1e-13 in ln L at all 241 H0
+  values (declared tolerance 1e-6). Pass.
+- **No grid point is penalised** by the selection guard, for either event set (smallest N_eff 28,331 at γ = −2, H0 = 140).
+
+| | 259 events | 249 events (O3 and O4) | shift in 259-event sd | sd ratio | band |
+|---|---|---|---|---|---|
+| γ fixed at 2.5439 | 66.17 [61.45, 71.15], sd 4.89 | 66.71 [61.92, 71.75], sd 4.95 | +0.11 | 1.01 | robust |
+| γ free (flat on [−2, 6]) | 67.95 [62.73, 73.45], sd 5.40 | 67.08 [61.86, 72.59], sd 5.41 | −0.16 | 1.00 | robust |
+| γ (γ free) | 2.22 ± 0.34 | 2.45 ± 0.35 | +0.67 (γ sd) | 1.02 | not read |
+
+**Reading: robust.** Dropping the 10 O1/O2 events moves H0 by 0.11 and 0.16 of its sd, below the 0.20 sd expected from
+dropping any 10 of 259 events, and leaves the width unchanged. The rate index moves up by 0.23, toward the GWTC-5 value
+2.54; it is reported, not read. As declared, the check is recorded and closed. The rebuild of the selection from the LVK
+O1 to O4 mixture file stays a standing alternative, not triggered.
