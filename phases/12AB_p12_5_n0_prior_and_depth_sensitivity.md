@@ -16,6 +16,16 @@ and the north/south identity test; their results are under "Results
 (2026-10-18)". The A1 chains (rita 1376492) have finished, so the dependency
 declared under Compute is met.
 
+**NORTH/SOUTH SCANS MOVED TO RITA (owner, later on 2026-10-18).** Of the
+north/south array on HENON (job 1389006), tasks 0 to 5 are kept and tasks 6
+to 23 were cancelled before they started. Those 18 tasks run on one rita
+A100 as job 1389048, after a GPU check that matched the CPU scan of the same
+node to 1.4e-12 in ln L. The analysis job (1389007) was re-chained. This is
+recorded after the move; the scans' configuration, command, lattice and
+analysis are unchanged. See "Moved to rita (2026-10-18)" in the north/south
+section. The production jobs are listed under "Submitted (2026-10-18)" at
+the end.
+
 **Blinding.** No H0 value from real data (median, interval or shift) is
 written here. Results will be appended location-free: shifts in units of the
 baseline posterior sd, width ratios, effective sample sizes. The absolute
@@ -516,11 +526,92 @@ and the two new presets. The first full run gave 103 passed and 3 failed,
 all three cases in those two tests before their update; after it they passed
 on rerun. The new file passes.
 
+### Moved to rita (2026-10-18)
+
+A later owner decision of 2026-10-18 moved most of the north/south scans
+from HENON to one rita A100.
+
+- **Recorded after the move.** The configuration, the scan command, the
+  lattice, the analysis and the blinding rule are unchanged. Only the
+  machine that computes 54 of the 72 nodes changes.
+
+**The jobs.**
+
+- **Submitted first:** HENON array job 1389006, 24 tasks of three lattice
+  nodes each, six at a time, as declared above.
+- **Kept on HENON:** tasks 0 to 5 (18 nodes), started between 09:20 and
+  09:58 UTC.
+- **Cancelled on HENON:** tasks 6 to 23 (54 nodes), before any of them
+  started.
+- **Run on rita instead: job 1389048.**
+  - Settings: account phy220048p, partition RITA-GPU, qos rita, one
+    a100-80, 16 CPUs, 64 GB, a 6-hour limit. It started at 10:05 UTC.
+  - Launcher: `n0_depth/NS/phase12ab_ns_scan_rita.sbatch`.
+  - It runs tasks 6 to 23 one after another, through the GPU route committed
+    on the north/south branch (`slurm/phase12ab_ns_scan_gpu.sh` at 10a42de,
+    clean checkout). That is the same scan command, grid, arguments and
+    output root (`NS/scans/`) as the HENON array.
+  - A node already written is skipped, and the analysis reads node files
+    wherever they were made.
+  - No node is written by two runs: the rita job was submitted only after
+    the HENON tasks for its indices had been cancelled.
+
+**GPU check before the move** (rita job 1389046, 09:56 UTC;
+`NS/gpu_check/compare.json`).
+
+- The first node of task 0 (log10 n0_N −1.919601, log10 n0_S −1.955962) was
+  scanned on a rita A100 with the same command.
+- It was written into a separate grid and root (`NS/gpu_check/`), never into
+  `NS/scans/`.
+- It was compared at all 37 H0 values with HENON's CPU scan of the same node
+  (task 0, henon08):
+
+| field | largest \|GPU − CPU\| |
+|---|---|
+| ln L | 1.4e-12 |
+| selection log correction | 1.4e-12 |
+| ln μ | 3.6e-15 |
+| selection N_eff | 7.1e-10 (relative about 1e-14) |
+| total Monte Carlo variance | 8.0e-15 |
+| sampled coordinates | 0 (identical) |
+| accepted flags | identical at every point |
+
+- These are likelihood differences, not H0 values.
+- Time per point: 0.27 s on the A100 against 44 s on henon08. Building the
+  target took 15 s on both.
+
+**The split of the work.** 18 nodes (666 points) are scanned on HENON and 54
+nodes (1,998 points) on rita. On rita each task of three nodes takes about 2
+minutes, so the 18 tasks finish in under an hour. Each HENON task takes 1.4
+to 2.4 hours at 44 to 79 s per point.
+
+**The analysis job re-chained.** The analysis (HENON job 1389007,
+`n0_depth/phase12ab_analysis_henon.sbatch`: Part B's analysis, the
+north/south analysis, the merge) now waits for:
+
+- the Part B array (1389004) to succeed (`afterok`);
+- the rita job (1389048) to succeed (`afterok`);
+- the HENON array's tasks (1389006) to end (`afterany`, because its
+  cancelled tasks would never satisfy `afterok`).
+
+The step task (1389005) has already finished. A failed HENON task cannot
+pass silently: `phase12ab_ns.py analyze` stops if any of the 72 node scans
+is missing, and writes `missing_nodes.json`.
+
+**Blinding.** The rule is unchanged.
+
+- The rita log prints only, per point, whether it was accepted and the N_eff
+  over its threshold.
+- The analysis prints location-free numbers.
+- Absolute H0 values go only to the `*_absolute.json` files.
+
 ## Compute
 
 All CPU on HENON (owner decision 2026-10-18): account phy220048p, partition
 HENON, qos henon, 32 cores and 200 GB per task (as the 12W and 12Y checks),
 so two tasks per 128-core, 512 GB node. Part C, after B1, also on HENON.
+**Exception (later owner decision, 2026-10-18):** 54 of the 72 north/south
+nodes run on one rita A100 (section "Moved to rita (2026-10-18)").
 
 The cost per point depends on the node: 41.5 s per scan point on henon08
 (check e), 79 s on henon02 (the Part B smoke and the north/south identity
@@ -535,7 +626,7 @@ nodes.
 | A | prior ratios on stored samples | done, about 6 seconds |
 | step | 10 target states at the calibration point | one task, under 1 hour |
 | B | 66 scans × 37 H0 values, one scan per task (array of 66, 6 at a time, 2-hour limit) | 30 to 55 task-hours |
-| north/south | 72 nodes × 37 H0 values (2,664 points), 24 tasks of three nodes (6-hour limit), then one 8-CPU analysis task under 1 hour | 31 to 59 task-hours |
+| north/south | 72 nodes × 37 H0 values (2,664 points), 24 tasks of three nodes (6-hour limit), then one analysis task under 1 hour. As run since 2026-10-18: tasks 0 to 5 on HENON, tasks 6 to 23 on one rita A100 | declared 31 to 59 task-hours; as run, 8 to 14 HENON task-hours plus under 1 rita GPU-hour |
 | C | 1024 calls per variant: d200 always, plus the variants Part B flags (at most 6 in all) | 12 to 22 task-hours per variant |
 
 - **Expected total: about 75 to 140 task-hours (38 to 70 node-hours)** with
@@ -663,4 +754,15 @@ the baseline sd and R is the sd ratio, each with a paired-bootstrap error
 
 See "The identity test" in the north/south section above.
 
-No production scan has been submitted.
+### Submitted (2026-10-18)
+
+The production jobs submitted since the amendment above. No results yet;
+they are appended location-free.
+
+- **The step task:** HENON job 1389005 (finished).
+- **Part B:** HENON array 1389004, 66 tasks, six at a time.
+- **North/south:** HENON array 1389006, tasks 0 to 5, and rita job 1389048,
+  tasks 6 to 23 (section "Moved to rita (2026-10-18)").
+- **The analysis:** HENON job 1389007, after Part B and both north/south
+  jobs.
+- **Part C** waits for B1 (12AD) and its acceptance.
