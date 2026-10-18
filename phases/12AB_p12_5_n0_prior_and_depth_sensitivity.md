@@ -37,6 +37,20 @@ robust, and so do both north/south variants. No variant is flagged, so
 **Part C runs for d200 only.** The location-free results are under "Results
 (2026-10-18)".
 
+**PART C SUBMITTED (2026-10-18, 21:43 UTC): d200 only.** Part C runs on B1's
+evaluated draws, through B1's own target.
+
+- **Jobs:** HENON array 1389692, 9 tasks, six at a time: control 5 and eight
+  slices of 128 draws. The analysis job 1389693 follows with `afterok` on
+  the array.
+- **Plan:** 1,056 calls, 13 to 24 task-hours, under the 100 task-hour stop.
+- **Code:** before submission the driver was fitted to B1's actual outputs
+  (commits 0d75a0a and 794cfde). It passed a timing check and a smoke on
+  HENON.
+
+See "Part C (2026-10-18): fitted to B1, tested, submitted" under Results,
+and Compute.
+
 **Blinding.** No H0 value from real data (median, interval or shift) is
 written here. Results will be appended location-free: shifts in units of the
 baseline posterior sd, width ratios, effective sample sizes. The absolute
@@ -645,6 +659,14 @@ nodes.
   would exceed 100 task-hours, it stops for the owner. The declared stop was
   40 task-hours; the owner raised it to 100 on 2026-10-18, before Part C was
   submitted.
+- **Part C as submitted (2026-10-18), d200 only:**
+  - work: 1,056 calls (1,024 d200 draws plus the 32 draws of control 5), in
+    9 tasks of 32 CPUs and 200 GB with a 4-hour limit;
+  - rate: 41.5 s per call measured by the timing check on henon04, against
+    79 s on the slowest HENON nodes (henon01 and henon02);
+  - estimate: 13.1 to 24.1 task-hours, 1.6 to 2.9 hours per slice task,
+    under the 100 task-hour stop;
+  - the plan is `n0_depth/C/plan.json`.
 - **Order:** Part A has run. The step task, Part B and the north/south scans
   are submitted after this amendment is pushed; the A1 chains (rita 1376492)
   and their follow-ups have finished, so there is no dependency. The
@@ -692,8 +714,20 @@ are pushed to origin; neither is merged and no PR is opened.
   (`phase12/desi_selection.py`), `scripts/phase12ab_ns_priors.py`,
   `scripts/phase12ab_ns.py` (plan, identity, scan, analyze), the scan-row and
   build-info records, the HENON launchers and `tests/test_north_south_n0.py`.
-- Part C: B1's reweighting command with the variant's n0 draw and depth; no
+- Part C: B1's own target, built from B1's recorded configuration with the
+  variant's depth (and, for n0_w3 and n0_free, the uniform encoding); no
   change to the target.
+- **Part C fitted to B1 (2026-10-18, before the Part C array):**
+  - the commits: 0d75a0a and 794cfde on `phase12.5/n0-depth`, pushed (no
+    PR, no merge);
+  - the driver: `partc-prepare` reads B1's evaluation files and summary,
+    `partc-evaluate` loads B1's script from its clean worktree at 596651c,
+    and `partc-plan` gives a task-hour estimate and the stop;
+  - `partc-analyse` gets a launcher,
+    `slurm/phase12_5_n0_depth_C_analyse.sbatch`;
+  - tests: 386 repository tests pass on HENON (job 1389684).
+
+  See "Part C (2026-10-18): fitted to B1, tested, submitted" under Results.
 
 ## Not verified
 
@@ -701,7 +735,10 @@ are pushed to origin; neither is merged and no PR is opened.
   selection guard. Penalised points are reported, not removed.
 - That the 12O depth script, which ran end to end at two depths in the smoke,
   gives all ten values without change.
-- B1 (12AD) has no outputs yet; Part C depends on them.
+- B1 (12AD) has no outputs yet; Part C depends on them. *(2026-10-18: B1 is
+  done and accepted. Control 5 at full size, 32 draws, and the d200 run are
+  checked by the Part C array and its analysis. The no-call centre shifts on
+  B1's set are computed in that analysis.)*
 - North/south: the identity at production scale (the lattice diagonal
   against Part B's d245 scans) and the lattice interpolation are checked only
   after the scans. The 0.12% of galaxies on which the pixel-centre rule and
@@ -951,3 +988,107 @@ change the DESI H0 at this precision.
 - The step: 0.7 task-hours.
 - North/south: 9.2 HENON task-hours plus 0.6 rita GPU-hours.
 - The analysis: 14 seconds.
+
+### Part C (2026-10-18): fitted to B1, tested, submitted
+
+B1 is done and accepted, and its population-free DESI value is the headline
+(owner, 2026-10-18). This entry is written before any Part C result, and
+records how Part C uses B1.
+
+**What B1 provides.**
+
+- B1 evaluated 4,096 equal-weight draws of each of the 8 A1 chains: two H0
+  parts, 16,384 points in each.
+- Each point carries one draw from the priors of M0hat, sigma_M and u (u is
+  the target's `log10n0_q`), and B1 stored ln L_DESI and ln L_spectral for
+  it.
+- B1 has no command that evaluates a given draw set, which is what the
+  draft driver assumed. The driver was rewritten around what B1 does have.
+
+**How Part C reads B1** (`partc-prepare`).
+
+- **B1's weights.** It rebuilds B1's combined weights from the evaluation
+  files and checks them against B1's summary. The largest weight difference
+  is 1.9e-18 (the largest weight is 6.7e-4), and the A1 part weights are
+  identical. B1 exited 0 and is complete.
+- **The draw set.** It takes the declared 1024 equal-weight draws of the A1
+  combined posterior (seed 20261018) from B1's points:
+  - each H0 part gets a share by its A1 part weight (largest remainders);
+  - within a part, the draws are uniform without replacement;
+  - the set is put in a random order;
+  - each draw keeps B1's coordinates and nuisance draws, so M0hat, sigma_M
+    and u are shared by every variant, as declared;
+  - each draw's mass in the A1 mixture (its part's weight over the part's
+    number of draws) corrects the rounding.
+- **The baseline weight** is that mass times L_DESI / L_spectral, with B1's
+  stored values. It is B1's estimator on the 1024 draws. Against B1's full
+  set this baseline has Δ -0.059 and R 0.946 (ESS 639, limit 200). Every
+  variant is compared with this baseline on the same draws.
+- **d200** keeps B1's own n0 coordinate, the baseline prior's quantile at u,
+  as declared; only `catalog.z_depth` changes, to 0.200. n0_w3 and n0_free,
+  which are not run, would use Part B's uniform encoding.
+- **The centre shifts** (Part A on the B1 set) are prior ratios on B1's full
+  weighted set: 32,768 points, ESS 11,850, with the ESS limit of 500 used for
+  12Y. They need no calls and are computed by `partc-analyse`.
+
+**How a task runs** (`partc-evaluate`).
+
+- It loads B1's script from its worktree (`phase12_5/repo_B1`) and refuses
+  unless that worktree is clean at B1's commit 596651c.
+- It rebuilds B1's target from B1's recorded configuration, with the inputs
+  sha256-checked.
+- It calls B1's per-point diagnostics, as B1 did.
+- **Checks:** the baseline variant's configuration must equal B1's digest,
+  and the coordinate and guard must equal B1's.
+- It checkpoints every 8 draws, and a rerun resumes.
+
+**Code** (on `phase12.5/n0-depth`, pushed; no PR):
+
+- **0d75a0a** puts Part C on B1's outputs.
+- **794cfde** fixes the population order. B1 stores its records with sorted
+  keys, so the population entries of its recorded configuration come back
+  in alphabetical order, not in the target's coordinate order. They are now
+  put back in coordinate order, with B1's digest unchanged.
+- The first smoke and timing jobs (1389681 and 1389680) stopped at the
+  coordinate check, after the build and before any call. That is how the
+  order problem showed up.
+- **Tests:** 386 repository tests pass on HENON (job 1389684, henon05, 14
+  minutes). That is 381 from before plus 5 new Part C tests on a synthetic
+  B1: weights, selection, encoding, plan and stop, evaluation with resume,
+  and the analysis against direct weights.
+
+**Timing check: PASS** (job 1389682, henon04; the control-5 task on its
+first 4 draws, written to `n0_depth/smoke/C_timing/`).
+
+- The jitted log-likelihood alone takes 41.5 s per call (median of 5, range
+  41.3 to 41.6). Its first call, with compilation, takes 85 s.
+- B1's diagnostics call, which Part C uses, takes 41.4 s per call.
+- Building the target takes 15 s.
+- At these 4 draws, Part C's baseline equals B1's stored ln L_DESI, computed
+  on an H100, to 4.5e-13.
+
+**Smoke: PASS** (job 1389683, henon06; the first d200 slice on 3 draws,
+written to `n0_depth/smoke/C/`).
+
+- It ran end to end: 41.3 s per call, with the target built in 18 s.
+- ln L at d200 minus B1's baseline ln L is -0.33 to -0.10 at the three
+  draws. These are likelihood differences, not H0 values.
+
+**Plan** (`n0_depth/C/plan.json`).
+
+- d200 only, because Part B flags no variant.
+- 9 tasks: control 5 (the first 32 baseline draws) and 8 slices of 128 d200
+  draws, 1,056 calls in all.
+- 13.1 to 24.1 task-hours at 41.5 to 79 s per call, or 1.6 to 2.9 hours per
+  slice task. That is under the 100 task-hour stop.
+
+**Submitted** (21:43 UTC).
+
+- **The scans:** HENON array 1389692, tasks 0 to 8, six at a time, each with
+  32 CPUs, 200 GB and a 4-hour limit (`slurm/phase12_5_n0_depth_C.sbatch` at
+  794cfde).
+- **The analysis:** HENON job 1389693, with `afterok` on the array
+  (`slurm/phase12_5_n0_depth_C_analyse.sbatch`). It writes
+  `n0_depth/C/summary.json` (location-free) and `C/summary_absolute.json`
+  (blinded).
+- The analysis exits 3 if control 5 fails or any draw is missing.
