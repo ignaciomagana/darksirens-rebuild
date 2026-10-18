@@ -2,6 +2,10 @@
 
 ## Status
 
+**RESULTS APPENDED (2026-10-18). Owner decision 2026-10-18: the limit-4
+run is the reference full-population spectral result.** Read "Results" at
+the end first.
+
 **THIRD ATTEMPT DECLARED (owner, 2026-10-09): all seventeen population
 parameters, the GWTC-5 paper's priors, variance limit 4. Read the last two
 sections first: "Second attempt" gives the priors and what the variance
@@ -927,3 +931,113 @@ limit moving with the limit.
   at both rate indices. No penalty at the reference population at any H0;
   N_eff is at least 8.7 times its threshold.
 - Submitted: rita job, dependency `afterany:1376492` (job ID in the report).
+
+---
+
+## Results (2026-10-18)
+
+Outputs under `/hildafs/projects/phy230054p/magana/darksirens-core-data/phase12_5/A1/`:
+`runs/` (limit 4), `runs_var8/` (limit 8), `checks4/` (reweighting and the
+comparison). Consumer commits as declared (cc5fb8e for limit 4, the brackets
+branch 0934239 for limit 8 and the comparison).
+
+### Limit 4: the eight chains (rita job 1376492, 9 to 11 October)
+
+Every chain converged and met its gate, in 5.9 to 6.3 hours on one A100.
+
+| H0 part | seed | H0 median [68%] | ln Z | posterior penalised |
+|---|---|---|---|---|
+| 45 to 140 | 41 | 67.9 [55.9, 80.0] | −681.23 ± 0.20 | 20.1% |
+| 45 to 140 | 42 | 68.8 [56.6, 80.2] | −681.48 ± 0.20 | 20.0% |
+| 45 to 140 | 43 | 68.8 [57.0, 80.1] | −681.53 ± 0.21 | 19.6% |
+| 45 to 140 | 44 | 69.2 [57.1, 81.1] | −682.00 ± 0.20 | 19.8% |
+| 20 to 45 | 31 | 40.2 [34.6, 43.6] | −683.55 ± 0.20 | 19.3% |
+| 20 to 45 | 32 | 39.9 [34.0, 43.7] | −683.76 ± 0.20 | 21.5% |
+| 20 to 45 | 33 | 40.3 [34.7, 43.7] | −683.33 ± 0.20 | 20.4% |
+| 20 to 45 | 34 | 40.5 [34.8, 43.8] | −683.36 ± 0.20 | 19.8% |
+
+- **Combination** (prior mass times evidence, 40,000 pooled samples):
+  ln Z −683.50 ± 0.10 (lower part) and −681.56 ± 0.16 (upper). Weight of
+  the lower part 0.037; over the 16 seed pairings 0.021 to 0.065.
+- **H0 = 68.0 [55.0, 80.1] km/s/Mpc, sd 12.4; 90% [46.7, 86.6].** The
+  population-fixed spectral result with γ free is 67.9 [62.7, 73.4], sd 5.40
+  (12Y amendment): the median does not move and the width grows by 2.3.
+- **Population.** Every parameter's 68% interval contains its GWTC-5 value
+  except the first peak's width σ1, 0.20 [0.10, 0.42] against 0.78, and the
+  second peak's position μ2, 34.1 [32.7, 35.7] against 32.3. The spin pair is
+  0.035 [0.025, 0.046] and 0.110 [0.099, 0.121], consistent with the
+  corrected fixed values (0.04, 0.10). γ is 2.41 [1.97, 2.88]. The second
+  peak's width is 1.8 [0.47, 5.1]: the first attempt's collapse did not
+  recur.
+
+### What sets the width
+
+In the upper part (38,540 of the 40,000 pooled samples), H0 follows the
+position of the first mass peak:
+
+- correlation of H0 with μ1: −0.85; a linear fit gives −30.3 km/s/Mpc per
+  solar mass and explains 72% of the H0 variance; the residual sd is 5.9;
+- the next correlations: σ2 −0.40, μ2 −0.38, break mass −0.32, γ −0.18;
+  every other parameter |r| ≤ 0.11; a linear fit on all 17 explains 83%;
+- μ1 = 10.04 [9.70, 10.34] (GWTC-5 value 9.91). The lower part sits at
+  μ1 ≈ 10.8 (median 10.84).
+
+The population-fixed runs hold μ1 at the GWTC-5 value, which was fitted with
+the cosmology fixed. The residual sd once the μ1 trend is removed (5.9) is
+close to the population-fixed width (5.4): most of the difference between the
+two widths is that one parameter.
+
+### Limit-8 bracket (rita job 1385547, 11 to 12 October)
+
+| H0 part | seed | H0 median [68%] | ln Z | posterior penalised |
+|---|---|---|---|---|
+| 45 to 140 | 41 | 66.2 [57.6, 73.5] | −679.94 ± 0.21 | 41.8% |
+| 45 to 140 | 42 | 67.2 [59.0, 74.5] | −679.49 ± 0.21 | 41.3% |
+| 20 to 45 | 31 | 32.5 [31.4, 38.5] | −680.45 ± 0.21 | 55.7% |
+| 20 to 45 | 32 | 32.6 [31.5, 41.3] | −680.87 ± 0.22 | 55.6% |
+
+Against limit 4 (`checks4/var8_vs_var4.json`, HENON job 1385556):
+
+- **σ1 runs to its lower bound**: median 0.049, 51% of the combined
+  posterior below 0.05 solar masses (1.0% at limit 4); 74% in the lower part.
+  This is the declared reading of "heading toward the first attempt's
+  collapse".
+- Penalised share 41% to 56% (19% to 21% at limit 4).
+- Weight of the lower part 0.093 (0.062 to 0.137 over pairings), and its H0
+  moves from about 40 to about 32.5, the known low mode.
+- Combined H0 65.9 [54.2, 73.3], sd 12.5; shift −0.19 limit-4 sd. The upper
+  part is narrower (sd 8.6 against 11.3, 68% width ratio 0.66), which comes
+  with the collapse and is not read as information.
+- σ2 is unchanged (median 1.9).
+
+**Reading: limit 8 is not usable.** The pile-up at the limit moves with the
+limit.
+
+### The stricter side, by reweighting (HENON jobs 1385554 and 1385555; the last slice rerun as 1388950 and 1388951 after a node start-up failure)
+
+Each limit-4 chain reweighted to limits 3 and 2 (`checks4/<chain>/reweight.json`):
+
+| chain | σ1 median at 4 | limit 3: Kish ESS, H0 shift (sd), sd ratio, σ1 | limit 2: Kish ESS, H0 shift (sd), sd ratio, σ1 |
+|---|---|---|---|
+| high 41 | 0.19 | 56%, +0.00, 1.03, 0.27 | 25%, −0.04, 1.07, 0.38 |
+| high 42 | 0.20 | 58%, +0.01, 1.03, 0.29 | 26%, −0.12, 1.06, 0.40 |
+| high 43 | 0.20 | 57%, +0.02, 1.04, 0.28 | 26%, −0.03, 1.06, 0.39 |
+| high 44 | 0.20 | 57%, +0.00, 1.04, 0.28 | 26%, −0.04, 1.08, 0.39 |
+| low 31 | 0.17 | 60%, +0.12, 0.98, 0.26 | 29%, +0.15, 1.02, 0.39 |
+| low 32 | 0.17 | 58%, +0.18, 0.97, 0.26 | 29%, +0.22, 1.00, 0.41 |
+| low 33 | 0.16 | 56%, +0.12, 0.97, 0.24 | 26%, +0.15, 1.00, 0.38 |
+| low 34 | 0.17 | 59%, +0.10, 0.98, 0.25 | 29%, +0.13, 1.00, 0.39 |
+
+- Every reweighting is trusted by its declared rule (Kish ESS ≥ 200 and
+  ≥ 5% of the chain's).
+- **H0 does not depend on the limit on the stricter side:** shifts at most
+  0.22 sd, sd ratios 0.97 to 1.08.
+- **σ1 does:** its median follows the limit (about 0.19, 0.27, 0.39 at 4, 3,
+  2). The first peak's width is set by the Monte Carlo budget, not measured.
+
+### Owner decision (2026-10-18)
+
+The limit-4 run is the reference full-population spectral result. The
+reweighting to limits 3 and 2 is quoted as its stability check, with the
+statement that σ1 is set by the limit. Not done here: the DESI target with
+the population free (decided separately).
