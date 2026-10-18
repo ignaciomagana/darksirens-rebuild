@@ -31,6 +31,12 @@ submitted).** The declared stop at 40 task-hours is raised to 100 task-hours,
 so Part C can run through the night on HENON. Nothing else in Part C changes.
 See Compute.
 
+**PARTS A AND B, THE STEP AND NORTH/SOUTH: DONE (analysis job 1389007,
+2026-10-18 21:10 UTC).** Every control passes. All 15 Part B variants read
+robust, and so do both north/south variants. No variant is flagged, so
+**Part C runs for d200 only.** The location-free results are under "Results
+(2026-10-18)".
+
 **Blinding.** No H0 value from real data (median, interval or shift) is
 written here. Results will be appended location-free: shifts in units of the
 baseline posterior sd, width ratios, effective sample sizes. The absolute
@@ -779,3 +785,169 @@ they are appended location-free.
   which the failed task had left unable to start, now depends on
   `afterok:1389664`. Its other dependencies were already met.
 - **Part C** waits for B1 (12AD) and its acceptance.
+
+### Part B — the map at a fixed population
+
+The 66 scans (HENON array 1389004 plus the rerun 1389664) cover 37 H0 values
+each, 2,442 points in all, at the committed code 4cf6bd5. They were analysed
+by job 1389007 (`phase12_5_n0_depth.py analyse --require-complete`, 21:10
+UTC). Outputs: `n0_depth/B/summary.json` (location-free) and
+`B/summary_absolute.json` (absolute values, blinded). The merged file is
+`n0_depth/summary_location_free.json`.
+
+Δ is in units of the sd of the baseline (d245, n0_base) and R is the sd
+ratio. Each variant is a quadrature over the same scans, so Part B has no
+bootstrap errors.
+
+| variant | depth | n0 prior | Δ | R | 68%-width ratio | reading |
+|---|---|---|---|---|---|---|
+| baseline | 0.245 | n0_base | 0 | 1 | 1 | |
+| n0_m083 | 0.245 | -0.83 sd | +0.000 | 0.993 | 0.995 | robust |
+| n0_p1 | 0.245 | +1 sd | +0.008 | 1.009 | 1.006 | robust |
+| n0_m1 | 0.245 | -1 sd | +0.001 | 0.992 | 0.993 | robust |
+| n0_p2 | 0.245 | +2 sd | +0.026 | 1.017 | 1.012 | robust |
+| n0_m2 | 0.245 | -2 sd | +0.012 | 0.984 | 0.987 | robust |
+| n0_w3 | 0.245 | width × 3 | +0.022 | 0.992 | 0.993 | robust |
+| n0_free | 0.245 | flat | +0.056 | 0.988 | 0.988 | robust |
+| d230 | 0.230 | n0_base | -0.060 | 0.988 | 0.988 | robust |
+| d215 | 0.215 | n0_base | -0.119 | 0.996 | 0.984 | robust |
+| d200 | 0.200 | n0_base | -0.155 | 1.018 | 1.007 | robust |
+| d260 | 0.260 | n0_base | +0.046 | 1.021 | 1.022 | robust |
+| d230/n0_m083 | 0.230 | -0.83 sd | -0.068 | 0.984 | 0.982 | robust |
+| d215/n0_m083 | 0.215 | -0.83 sd | -0.130 | 0.997 | 0.986 | robust |
+| d200/n0_m083 | 0.200 | -0.83 sd | -0.156 | 1.023 | 1.015 | robust |
+| d260/n0_m083 | 0.260 | -0.83 sd | +0.054 | 1.010 | 1.011 | robust |
+
+**Diagnostics.**
+
+- No scan point is rejected (0 of 2,442).
+- The selection N_eff over its threshold is 8.3 to 37.1 at z_depth 0.245,
+  where the lowest values sit at the outer n0 nodes. At the other depths it
+  is 13.2 to 36.2.
+- For every variant, the posterior mass within 5 of an H0 grid edge is below
+  2e-13.
+- The scan nodes cover at least 0.999996 of every prior's mass.
+
+**Controls.**
+
+| control | result | tolerance | |
+|---|---|---|---|
+| 1. reference scan (check e) | max \|d ln L\| 0.0 at the 13 shared H0 values; decoded n0 identical | 1e-6 | PASS |
+| 2. decoded n0 | max \|decoded − node\| 0.0 over all 66 scans | 1e-9 | PASS |
+| 3. leave-one-out interpolation | largest error 2.6e-4 in ln L, at any H0 and node; no node added | 0.05 | PASS |
+| 4. trapezoid against spline | medians within 0.0010 baseline sd, sds within 7.5e-5 | 0.01 | PASS |
+
+Control 6 belongs to the step and is reported in the step's section below.
+
+**Headline numbers** (as declared under "What is reported"):
+
+1. **n0.** n0_m083 gives Δ +0.000 (R 0.993). The largest |Δ| over ±1 sd is
+   0.008 (n0_p1) and over ±2 sd 0.026 (n0_p2). n0_w3 gives +0.022 (R 0.992)
+   and n0_free +0.056 (R 0.988).
+2. **Depth.** The window spread is 0.155, from d200 (-0.155) to d245 (0),
+   and the R farthest from 1 is 1.018 (d200). That is robust. d260 gives
+   +0.046 (R 1.021).
+3. **Interaction.** Under n0_m083 the window spread is 0.157, and the R
+   farthest from 1 is 1.023 (d200). That is robust. Measured against d245
+   under n0_m083 itself: d200 -0.158 (R 1.030), d215 -0.131, d230 -0.069,
+   d260 +0.054.
+
+**The n0 posterior** (n0 values are not blinded):
+
+- under the baseline: median -1.821, sd 0.035 (prior sd 0.036);
+- under n0_w3 (prior sd 0.109): median -1.859, sd 0.076;
+- under n0_free (flat on [-2.346, -1.146]): median -1.898, sd 0.102.
+
+**Readings.**
+
+- All 15 variants read robust: every |Δ| is below 0.2 and every R lies in
+  [0.98, 1.03].
+- With a prior wide enough, the events alone do constrain n0, but the H0
+  median moves by at most 0.056 sd.
+- The depth is the larger of the two effects, and it moves the median
+  monotonically from d260 to d200. The whole window still stays inside the
+  robust band.
+- **Part C runs for d200 only.** No variant is flagged, and d200 runs
+  always, as declared.
+- **Compared with Part A.** On the 12Y chain the centre shifts followed
+  k × corr (corr +0.098), for example Δ -0.082 for n0_m083. At a fixed
+  population, with M0hat and sigma_M at their prior means, the same shifts
+  give |Δ| ≤ 0.026 up to ±2 sd. What separates the two is what the chain
+  samples and Part B holds fixed: the rate index, M0hat and sigma_M.
+
+### The step (HENON job 1389005, henon04)
+
+The step was computed at the five depths and two n0 values (ten values), at
+12O's calibration point. Output `n0_depth/step/step.json`. These are catalog
+quantities, not blinded.
+
+| depth | step, log10 n0 -1.810518 (baseline) | step, -1.8406 (n0_m083) | missing share of T (baseline) | control 6: deviation |
+|---|---|---|---|---|
+| 0.200 | +0.041 | +0.105 | 14.0% | 0.94% |
+| 0.215 | +0.018 | +0.081 | 14.3% | 0.96% |
+| 0.230 | +0.009 | +0.071 | 14.5% | 0.97% |
+| 0.245 | -0.034 | +0.024 | 15.2% | 1.02% |
+| 0.260 | -0.072 | -0.016 | 15.9% | 1.06% |
+
+- **Above the depth.** T/E just above the depth is 1.000 at every depth and
+  both n0.
+- **Gathered state.** The target's gathered state equals the grid state
+  exactly (relative difference 0.0).
+- **Control 6 (step scaling): PASS at every depth.** The ratio of the two
+  (1 + step) values is 1.0603 to 1.0617, against the n0 ratio
+  10^0.0301 = 1.0717. The relative deviation, 0.94 to 1.06%, lies inside the
+  missing budget's share of T (14 to 16%).
+- **The sign of the step.** At the baseline n0 the step changes sign
+  between 0.230 and 0.245. Under n0_m083 it changes sign between 0.245 and
+  0.260, and the negative step at 0.245 becomes +0.024, as expected.
+- **The step against Δ.** Across depths the two move in opposite
+  directions, each monotonically. From d200 to d260 the step falls from
+  +0.041 to -0.072, while Δ rises from -0.155 to +0.046.
+- **Timing** (henon04, 32 CPUs). The jitted log-likelihood takes 42.5 s per
+  call (median of 5, range 42.3 to 42.5). The first call, with compilation,
+  takes 86 s, and the diagnostics call 43.2 s. The smoke on henon01 took
+  77 s.
+
+### North/south
+
+The 72 lattice nodes (2,664 points) ran as HENON array 1389006 (tasks 0 to
+5) and rita job 1389048 (tasks 6 to 23). They were analysed by job 1389007
+(`phase12ab_ns.py analyze`, 10a42de). Output `NS/summary_location_free.json`;
+`NS/summary_absolute.json` holds the blinded absolute values. Both variants
+are read against the baseline (iii).
+
+| variant | Δ | R | 68%-width ratio | prior mass on the lattice | reading |
+|---|---|---|---|---|---|
+| (i) per-hemisphere priors | +0.006 | 1.002 | 1.001 | 0.998 | robust |
+| (ii) pooled prior with the ratio | +0.011 | 1.000 | 0.999 | 0.999 | robust |
+
+**n0 under (i)** (not blinded):
+
+- north: mean -1.777, sd 0.041, against the prior N(-1.763, 0.043);
+- south: mean -1.824, sd 0.034, against the prior N(-1.823, 0.037);
+- posterior over prior sd: 0.94 (north) and 0.93 (south);
+- log10(n0_N / n0_S): +0.047 ± 0.051, against the measured 0.060.
+
+**Controls: all pass.**
+
+- No point is rejected.
+- The selection N_eff over its threshold is 14.4 to 35.7.
+- Each decoded n0 lies within 1.1e-15 of its node.
+- Leave-one-lattice-line-out: the largest ln L error is 2.5e-4 (tolerance
+  0.05).
+- Lattice trapezoid against the spline: Δ and R each differ by 3e-6.
+- **Identity at production scale:** the 7 diagonal nodes equal Part B's d245
+  scans to 1.1e-12 in ln L.
+- The posterior mass within 5 of an H0 grid edge is below 4e-14.
+- The baseline prior's mass on the lattice is 0.997.
+
+**Reading.** A host density that differs between the hemispheres does not
+change the DESI H0 at this precision.
+
+**Compute used.**
+
+- Part B: 32.9 HENON task-hours, 0.44 to 0.83 hours per task (65 tasks plus
+  the rerun; declared 30 to 55).
+- The step: 0.7 task-hours.
+- North/south: 9.2 HENON task-hours plus 0.6 rita GPU-hours.
+- The analysis: 14 seconds.
