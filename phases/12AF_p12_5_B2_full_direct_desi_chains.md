@@ -17,6 +17,70 @@ Results are appended at the end. Absolute H0 values are written there, as in
 12Y, 12AA, 12AD and 12AE; none is sent to the clean-room session. This
 declaration quotes no H0 value.
 
+**AMENDED (owner, 2026-10-18, 12:50 UTC): the limit-2 filler is not
+paused.** The Jetstream2 half of B2 waits until the limit-2 chains have
+finished. It then starts on the same GPU. "What pauses the limit-2 chains"
+below is superseded and kept as declared. Nothing on MIKO waits.
+
+**LAUNCH PLANNED (recorded 2026-10-18, 13:30 UTC).** The coordinating session
+starts it with the commands below. No B2 chain had started when this was
+written.
+
+- **Code.** Consumer worktree `phase12_5/repo_B2`, branch
+  `phase12.5/direct-desi`, commit 0c9e6d7, clean. The per-GPU pipeline is
+  commits 2d8007b and 6f2fb1c.
+  - Manifest: `config/phase12_5_B2_full_manifest.json`.
+  - Env: `consumer_e7c3007batch_cuda12`.
+  - Batched pool at Q = 32 with the likelihood form "rows". Kernel pin
+    "auto".
+- **Launcher.** `phase12_5/B2/run_b2_h100.sh` is byte-identical to the
+  committed `slurm/phase12_5_B2_run_h100.sh` at 0c9e6d7. This was checked
+  with cmp at 13:30 UTC.
+
+  ```
+  B=/hildafs/projects/phy230054p/magana/darksirens-core-data/phase12_5/B2
+  $B/run_b2_h100.sh js2h100
+  nohup setsid $B/run_b2_h100.sh miko    > $B/logs/run_b2_miko.out 2>&1 < /dev/null &
+  nohup setsid $B/run_b2_h100.sh combine > $B/logs/run_b2_combine.out 2>&1 < /dev/null &
+  ```
+
+- **The Jetstream2 H100 (`js2h100` mode).**
+  - It syncs repo_B2 and the inputs, then checks them: sha256 of every
+    input on both sides, the same clean commit, the same batch env.
+  - It then starts the tmux session `b2_full` and returns.
+  - `b2_full` waits until `VAR2 DONE` appears in the limit-2 combination
+    log and no `a1_var2` chain session is left. It then runs upper part
+    seed 41, then lower part seed 31.
+  - It never touches the limit-2 sessions or their pause file.
+  - To start earlier is the owner's call. First stop the limit-2 chains,
+    then `ssh js2h100 touch /media/volume/datasets/phase12/b2_full.GO_NOW`.
+- **MIKO (`miko` mode).** Upper part seed 42, then lower part seed 32, in
+  the holder job. They start at once.
+  - B1's MIKO half has finished (B1 DONE at 10:56 UTC), so the GPU is free.
+  - The holder job ends on 2026-10-25 at 06:19 UTC. A chain still running
+    then resumes from its checkpoint in the next holder job.
+- **The combination (`combine` mode).**
+  - It waits for both halves.
+  - It copies the Jetstream2 chain directories back and checks every file
+    by sha256.
+  - It then runs the split-prior combination and the comparison with A1
+    and B1, and ends with `B2 DONE rc=<rc>`.
+  - The status at any time: `$B/run_b2_h100.sh status`.
+- **GPU timing (check 6) passed** on the MIKO H100 NVL, for the full target
+  with the pin on. At Q = 32:
+  - 27.2 ms per point, against the 60 ms limit;
+  - 47 ms per point that costs a call, counting the padding of the
+    vmapped form;
+  - 26 ms per point in the rows form that the chains use.
+
+  This gives about 1 day per chain (1 to 2 days), which is not measured on a
+  full run. Records: `B2/checks/gpu_timing/timing.json` and
+  `B2/checks/gpu_timing.20261018T130744Z/timing.json`.
+- **Not yet in this record:** the results of the other checks under "Before
+  the chains". Their outputs are in `B2/checks/`. At 13:28 UTC the unit
+  tests at 0c9e6d7 were still running on HENON (jobs 1389593, batch env, and
+  1389594, e7c3007 env).
+
 ## Where this sits
 
 P12.5 replaces the fixed GWTC-5 population by its uncertainty. Its ladder
