@@ -7,9 +7,15 @@ this record has been run. The method, the control, what is reported and how
 it is read are fixed here, before any weight is computed. The code it needs
 (below) is written and tested on CPU before any GPU job.
 
-The owner first placed the work on rita. The owner then asked (2026-10-18)
-that it use all the GPUs at hand, **the Jetstream2 H100 first**, then the
-H100 of the MIKO holder job, then the two rita A100s (see "Compute").
+**Compute changed (owner, 2026-10-18), before any production run.** B1 runs
+on the **two H100s**: the Jetstream2 H100 (`js2h100`) and the H100 NVL of the
+MIKO holder job. It does not run on rita. Both H100s were idle, and this
+result decides whether a multi-day direct DESI chain with the population
+free is needed, so it runs now and fast. The Jetstream2 machine is charged
+in real compute, so it starts at once and is kept busy; the Vera GPUs cost
+allocation units only. (The owner first put the work on rita, then on all
+four GPUs; see "Compute".) The CPU checks and an 8-draw smoke of the whole
+pipeline have run. They are code checks, not results.
 
 ## Where this sits
 
@@ -214,33 +220,70 @@ flat and B1 equals A1. What would change it is a ratio that varies along the
 
 ## Compute
 
-**Work:** 32,768 DESI calls for the main run and 4,096 for the control, at
-about 0.23 s per call on an A100 (12Y: 127,829 calls in 8.0 h of sampling):
-**about 2.4 GPU-hours of DESI calls, 2.5 to 3 GPU-hours with the proposal
-recomputation (about 2 to 6 ms per call) and the build and compilation of
-each job.** On two A100s alone, about 1.5 hours of wall time; on all four
-GPUs, under an hour once the Jetstream2 machine is set up.
+**Work:** 32,768 DESI calls for the main run and 4,096 for the control, each
+beside a recomputation of the spectral likelihood. Measured on the B1 target
+itself in the smoke (2026-10-18): one DESI call takes **0.160 s on the
+Jetstream2 H100 and 0.189 s on the MIKO H100 NVL**; the proposal
+recomputation takes 6 and 10 ms; the first call, with compilation, 73 and
+98 s. In all, about 1.8 GPU-hours of DESI calls.
 
-**Slices:** nine independent pieces of about 16 minutes of DESI calls each:
-the control, and the 4,096 draws of each of the eight chains. Each slice
-writes its own file; the draws and the nuisance draws are fixed by the seed
-before any slice runs, so the result does not depend on which GPU ran which
-slice.
+**Plan (owner, 2026-10-18): the two H100s; rita is not used.**
 
-| GPU | how | takes | state on 2026-10-18 |
-|---|---|---|---|
-| Jetstream2 H100 80GB (`ssh js2h100`) | priority; inputs copied over (about 0.9 GB: catalog, two PE files, injections, footprint, the A1 sample files; checked by sha256) and a fresh environment of its own at core e7c3007 (no shared env is touched); outputs copied back to `B1/` | the four upper-part chains, after a one-slice timing | reachable, GPU idle; no core e7c3007 environment or inputs there yet |
-| MIKO holder job H100 NVL (job 1388940) | a step inside the running job; it sees Hildafs and the consumer environment `phase12t/envs/consumer_e7c3007_cuda12` | the control first, then lower-part chains | GPU idle |
-| rita, two A100-80 (Slurm) | account phy220048p, partition RITA-GPU, qos rita, `--gres=gpu:a100-80:1`, 16 CPUs, 64G per job | whatever slices remain; the ESS-rule job if needed | shared; queue behind other jobs |
-| HENON (CPU) | after all slices | weights, recombination, summary, the readings | |
+| GPU | runs | about |
+|---|---|---|
+| Jetstream2 H100 80GB (`ssh js2h100`; charged) | starts first, at once, detached: five chains, `high_seed41`, `high_seed42`, `high_seed43`, `low_seed31`, `low_seed32`, 4,096 draws each, in one process | 60 minutes |
+| MIKO holder job H100 NVL (steps inside the running job, `srun --overlap`) | the control (4,096 draws), then three chains, `high_seed44`, `low_seed33`, `low_seed34` | 15 + 45 minutes |
+| MIKO CPU (HENON when there is no holder job) | the summary, after both | seconds |
 
-**If the ESS rule fires:** about 166,000 to 172,000 DESI calls per part,
-about 11 GPU-hours per part at 0.23 s, split the same way.
+The chains are split five and three, not four and four. The Jetstream2 H100
+is faster per DESI call, and the MIKO GPU also runs the control. With this
+split both finish together, in about an hour of wall time, and the charged
+machine is not left waiting. It starts beside the control, not after it. The
+control decides whether the main result is read, not whether it is computed
+(see "Control"). A failed control stops the MIKO side at once; the Jetstream2
+half finishes and its outputs are kept.
+
+The draws and the nuisance draws are fixed by the seed (20261018) and the
+chain, so the result does not depend on which GPU evaluated which chain. The
+smoke checked this: one chain evaluated on each GPU gave bitwise-identical
+likelihoods.
+
+**The Jetstream2 copy.** The machine sees the Hildafs paths through a symlink
+to its own mirror. Before the launch, these were copied there and checked by
+sha256 on both sides: the union catalog, the footprint map, the A1 and the
+LAL-consistent PE builds, the injection set, the 12Y chain's result and
+configuration, and the result, configuration and sample files of its five
+chains. That is 22 files and no checkpoints. The environment there is a copy
+at the same path. It is identical by `pip freeze` and by the sources of core
+e7c3007. The code is this branch's worktree at the same clean commit.
+
+**Pipeline.** One script runs it all, and it is safe to rerun:
+`phase12_5/B1/run_b1_h100.sh production`, a copy of
+`slurm/phase12_5_B1_run_h100.sh` on the consumer branch
+`phase12.5/desi-reweight`. It copies and checks the inputs, starts the
+Jetstream2 half, then runs the control and the MIKO half. It checks the
+Jetstream2 log by ssh every 5 minutes, copies the outputs back (checked by
+sha256) and writes the summary. It never starts the ESS-rule job:
+`summary/ess_flag.json` names any part below 500. Its last line is
+`B1 DONE rc=<rc> summary=<path>`.
+
+**Smoke (2026-10-18; code check, not a result).** The whole pipeline ran at 8
+draws per chain with a 64-draw control, under `B1/smoke/`, once with a four
+and four split and once with this one. The second run was interrupted during
+the control and rerun, and it picked up the running Jetstream2 half. Every
+recomputed proposal value matched its stored one within 1.4e-12. The
+proposal's part weights equalled `combined.json`'s exactly. The two runs gave
+identical summaries. The control's tolerance is not tested at 64 draws.
+
+**If the ESS rule fires:** 166,000 to 172,000 DESI calls per part, about 7.5
+to 9 GPU-hours per part on these H100s, split between the two by slices.
 
 **Outputs** under `/hildafs/projects/phy230054p/magana/darksirens-core-data/phase12_5/B1/`:
-`draws/` (the draw indices, the nuisance draws and the seed), `slices/` (per
-chain: points, stored and recomputed ln L_proposal, ln L_target, the guard
-diagnostics of both), `control/`, and one `summary.json`. Under 1 GB.
+`control/` (`control.json`, `control.npz`); `evals/`, one file per chain (the
+points, the stored and recomputed ln L_proposal, ln L_target, the nuisance
+draws, both guards' diagnostics, the seconds per call, and a record of the
+seeds, draw digest, configurations, inputs and code); `summary/`
+(`summary.json`, `summary.npz`, `ess_flag.json`); and `logs/`. Under 1 GB.
 
 ## Code
 
@@ -264,6 +307,11 @@ which contains the step-1 branch `phase12.5/free-rate-index`):
 CPU tests and a CPU smoke of one small slice before any GPU job.
 
 ## Not verified
+
+Checked since, on 2026-10-18 (see "Compute"): the per-call cost on both
+H100s; that only the first call compiles (later chains' first calls take
+0.2 s); and the Jetstream2 environment and inputs. The last item below
+stands.
 
 - The per-call cost of the DESI target with seventeen population
   coordinates: 0.23 s is the γ-only figure (12Y) on an A100. The H100 figure
