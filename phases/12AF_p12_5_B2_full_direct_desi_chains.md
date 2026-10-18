@@ -870,6 +870,22 @@ limit-2 chains (12AA), which are not to be disturbed (owner, 12:50 UTC).
   production chain (`runs/high_seed41/stage.log`, and the samples the
   launcher's log carries). It is not measured before the start.
 - The prototype measured 23.6 ms per point there on the step-1 target.
+- **Measured (2026-10-18), production chain `high_seed41`, unshared:** the
+  four limit-2 chains were combined at 19:58 UTC. The chain started at 19:59
+  and began sampling at 20:01:14, after the build and the anchor. Over its
+  first 695 s of sampling it made 21,672 calls, all in the unit-cube phase:
+  **32 ms per call**. The GPU showed 87% use, and the chain process held
+  17.2 GB.
+- **For comparison, MIKO's production chain `high_seed42`** (unshared since
+  check 5 ended) made 1.03 million calls in its first 4.5 hours of sampling,
+  through the random-walk phase. That is 15.8 ms per dynesty call on average;
+  calls outside the unit cube cost nothing.
+- **Prior transform:** both production chains report "prior transform form
+  eager". On these GPUs the compiled transform does not reproduce the eager
+  one bit for bit, so the pinned values come from the eager, point-by-point
+  path. That is the declared behaviour of the pin. The measured rates above
+  already include it.
+- **The estimate stands** at 1.0 to 1.8 days per chain.
 
 ### 7. CPU smoke at 8 live points — passed
 
