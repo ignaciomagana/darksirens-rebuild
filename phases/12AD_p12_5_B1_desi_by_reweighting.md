@@ -322,3 +322,33 @@ stands.
   environment and the inputs are not set up.
 - Whether the DESI target is penalised by the variance limit at draws where
   the spectral one is not. Reported, not assumed.
+
+---
+
+## Results (2026-10-18)
+
+Pipeline `phase12_5/B1/run_b1_h100.sh production` on the two H100s (control and three chains on miko, five chains on js2h100),
+09:53 to 10:56 UTC. Outputs `phase12_5/B1/control/` and `phase12_5/B1/summary/summary.json`.
+
+**Control (fixed population, γ free):** reweighted spectral draws give H0 67.50, sd 5.54, against the 12Y DESI chain's 67.63,
+sd 5.59: a difference of −0.13 with a Monte Carlo error of 0.22, sd ratio 0.99, Kish ESS 3,501 of 4,096, largest weight share
+0.16%, nothing penalised. Pass.
+
+**Main run:** 4,096 draws per chain, 32,768 in all. The recomputed proposal likelihood matches every stored chain value
+(largest difference 3e-12). Kish ESS 8,506 in the lower part and 10,898 in the upper, 11,850 combined; largest weight share 0.07%;
+no part needed the nested-point extension.
+
+| | spectral (A1 proposal) | DESI, population free | shift | width ratio |
+|---|---|---|---|---|
+| H0 combined | 68.0 [55.2, 79.9], sd 12.31 | **69.0 [53.9, 80.4], sd 12.75** | +1.0 (+0.08 sd) | 1.04 |
+| H0, upper part | 68.6 [56.6, 80.1] | 69.8 [56.4, 80.7] | | |
+| H0, lower part | 40.3 [34.4, 43.7] | 40.3 [36.9, 43.7] | | |
+| lower part's weight | 3.65% | 4.22% (2.4% to 7.3% over seed pairings) | | |
+| γ | 2.41 ± 0.47 | 2.45 ± 0.47 | | |
+| μ1 | 10.05 ± 0.35 | 10.04 ± 0.37 | | |
+
+**Reading: robust.** The catalog moves the population-free H0 by 0.08 sd and widens it by 4%.
+
+**Where the +1.0 comes from:** with the DESI likelihood but the spectral target's guard penalty in place of its own (a diagnostic,
+not the declared result), the median is 67.9 [53.2, 80.0]. Most of the shift therefore comes from the DESI target's guard at limit 4,
+which penalises more draws than the spectral one does, not from the galaxies.
