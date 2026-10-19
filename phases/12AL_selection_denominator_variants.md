@@ -802,3 +802,69 @@ both nside-128 cells complete; if either fails, they stay held.
 
 **Expected:** about 70 min per nside-128 cell with both cards in parallel (B2.8), so the summary at about 17:45 UTC
 once both cards are ours (range 17:30 to 18:30).
+
+## Amendment B4 (2026-10-19): control 7 failed at every cell; the tables leave out core's g (declared before the rerun)
+
+**What failed.** All four cells completed (B3's nside-128 reruns 1390414 and 1390415, the nside-64 cells from the
+first lanes). The summary (1390416) withheld every reading, because control 7 gates and failed at all four cells.
+The worst relative errors at z ≥ 1e-3 were 1.7e-4 to 8.3e-4 against the declared 1e-4:
+
+| cell | D2 | D3r | D3a | D3b | native |
+|---|---|---|---|---|---|
+| ns64_sk3e-03 | 2.9e-4 | 8.3e-4 | 2.3e-4 | 5.1e-4 | 1.7e-4 |
+| ns64_sk1e-03 | 2.4e-4 | 1.7e-4 | 4.5e-4 | 4.7e-5 (pass) | 4.5e-4 |
+| ns128_sk3e-03 | 3.7e-5 (pass) | 2.2e-5 (pass) | 2.9e-4 | 2.5e-5 (pass) | 5.3e-4 |
+| ns128_sk1e-03 | 4.8e-4 | 6.8e-5 (pass) | 2.4e-4 | 2.8e-4 | 6.2e-4 |
+
+Every other control passed. Those include control 3 (the native table equals D0 per injection, ≤ 1e-4) and
+control 2 (CPU).
+
+**Diagnosis (H0-free; CPU, the saved tables and core's evaluator).** Control 7's pairs were reproduced bit for bit
+at ns64_sk3e-03 (D3r) and ns64_sk1e-03 (D3a, D2). Findings:
+- **Few pairs, all at core's nodes.** Only 3 or 4 of about 9,960 compared pairs exceed 1e-4. Every one lies
+  within one table step (1e-5) of a node of core's redshift grid: z_k = expm1(k ln 7 / 1085), which is 1.7951e-3,
+  3.5934e-3, 5.3949e-3 and so on with `DARKSIRENS_ZMAX` = 6.
+- **The tables are right at their nodes.** A dense evaluation across each failing table interval shows the
+  table's nodes equal core's exact values (≤ 5e-15) and no jumps.
+- **The cause.** Core's galaxy measure g(z) is interpolated linearly in log between those nodes
+  (`log_interp_zgrid`), so log g bends at each node. A two-point table interpolant that straddles a bend errs by
+  up to the slope change × h/4. That is about 8e-4 at the first node and falls as 1/z. The kernel window plays no
+  part: at nside 64 it spans every slot.
+- **Not a scale effect.** The error does not grow from sigma_kde 3e-3 to 1e-3, as interpolating the kernels
+  would, and declaration Implementation's bound (h/σ)²/8 holds for the kernel part.
+
+**The fix (departure: implementation; the owner chose it over changing the check).** g(z) is common to every
+row: core's catalog term is exp(log N_obs + log g(z) + log mix_r(z)). So the tables now hold the catalog term
+without g:
+- **Table quantity:** T_c(z_j) = Σ_r N_obs,r mix_r(z_j) / m_c. It is computed as core's
+  log N_obs + lp − log g(z) in log space (`catalog_term_pairs(..., without_g=True)`; at z = 0, where both S and g
+  underflow, this keeps the finite mixture).
+- **Evaluation:** the interpolated T is multiplied by g(z) from the tables' own kernel state (`log_g_grid` at the
+  kernel pin, 67.74), with core's own `log_interp_zgrid`. This is done in the variants' density, in control 7 and
+  in `table_lookup`. So the bends are core's, exactly, and only the smooth Gaussian mixture is interpolated.
+- **The saved tables keep their meaning:** `tables.npz` holds T × g on the nodes, S_c/m_c as before; metric 7 is
+  unchanged. It also holds `log_g_grid`.
+- **Controls, tolerances, gates, metrics and readings are unchanged.** Control 7's floor is S's cell maximum on
+  the nodes, as declared. Control 8 still checks S, the product. Separately, T and g each move with H0: a first
+  edit that checked them apart failed a test, by about 0.6 relative, and was reverted. Only the product is
+  H0-invariant, and the tables use both factors from one kernel state.
+
+**Checks before the rerun.**
+- **Tests:** 20 12AL CPU tests pass at consumer commit 5c2a096. These include a new test at core's nodes: pairs
+  within 3e-6 and 7e-6 of core's first nodes, ≤ 1e-4, and T × g = S on the nodes to 1e-12.
+- **Control 7 in the new form:** control 7's own pairs and seeds on the saved nside-64 tables, converted to the
+  new form (T = S/g on the nodes), give:
+  - ns64_sk3e-03 D3r 9.6e-7 (was 8.3e-4);
+  - ns64_sk1e-03 D3a 2.3e-5 (was 4.5e-4);
+  - below the gate, about 1e-6 at both.
+
+**Rerun (all four cells, from scratch, at 5c2a096).**
+- The CPU controls (1(c), 2, 5, 8) run first, as a miko holder step (HENON has no 32-CPU slot free), reniced.
+- The two rita lanes, each with its two cells, are held until the CPU controls pass. The Lane A grids are core's
+  stock D0, unchanged, and are skipped by their DONE.
+- The superseded cell outputs move to `runs/<cell>/superseded_pre_B4/`, and the withheld summary to
+  `summary/*_1390416_pre_B4.*`.
+- 12AK's lanes are paused for 12AL ("D1–D3 first"). They resume from their checkpoints.
+
+**Expected:** CPU controls about 80 min, then about 1.6 h per card. The summary is due about 3 h after the CPU
+controls start.
