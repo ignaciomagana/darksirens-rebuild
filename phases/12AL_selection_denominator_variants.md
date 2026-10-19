@@ -19,6 +19,11 @@ The only H0 values in this record are fixed a priori:
 
 Files holding absolute log-likelihoods are written by jobs and are not for agents to open.
 
+**RESULTS (2026-10-19, 20:48 UTC; location-free), at the end.** No reading is withheld. D2 (the sky-averaged
+density) is the recommendation: it points only. Under D2 the catalog-added selection variance is mostly gone and
+the catalog still does not narrow H0. Control 4 missed its tolerance narrowly at every cell, so, as declared, D1's
+consistency and the variance readings are marked.
+
 **Experimental.** As everything in 12AG to 12AJ, this is a measurement, kept as a record. Adopting any variant as a
 core option would be a core PR, and that is the owner's call.
 
@@ -868,3 +873,115 @@ without g:
 
 **Expected:** CPU controls about 80 min, then about 1.6 h per card. The summary is due about 3 h after the CPU
 controls start.
+
+## Results (2026-10-19, 20:48 UTC; location-free)
+
+**Runs.** The CPU controls ran as a reniced miko holder step from 17:50 to 19:10 UTC at 5c2a096 with a clean tree:
+rc 0, every control passed, no guard violation. The 12AK lanes were then paused: they were cancelled and
+resubmitted held as 1390498 and 1390499. rita0 1390484 (ns64_sk3e-03, ns128_sk1e-03) and rita1 1390485
+(ns128_sk3e-03, ns64_sk1e-03) both COMPLETED, 19:11 to 20:47 UTC (1 h 35 min and 1 h 36 min). The HENON summary
+1390486 COMPLETED in 33 s with rc 0: gating failures none, guard violations none, readings not withheld. The 12AK
+lanes were released at 20:47 UTC.
+
+Outputs: `summary/summary.json`, `controls.json` and `STATUS.json` are location-free. `absolute.npz` is not for agents.
+
+**Controls.**
+- Controls 1, 2, 3, 5, 6, 7, 8 and 10 pass at every cell.
+- Control 6: G_D = 1.8e-12 nat for D1, D2, D3a and D3b at both sigma_kde.
+- Control 10: per-event sum ≤ 6.8e-13, zero walls, D0 tied to Lane A to 0.0.
+- **Control 4 does not pass, narrowly, at all four cells, with identical numbers:**
+  - ptp_W N[ln μ_D1 − ln μ_spec] = 0.0101 nat against ≤ 0.01;
+  - max |N_eff,D1/N_eff,spec − 1| = 3.0e-4 against ≤ 1e-4.
+
+  It is the same at every cell, as expected of the dV_c/dz interpolation on two grids. As declared (B2.4), D1's
+  consistency and every variance reading are **marked**, not withheld. Not a reading: a relative N_eff difference of
+  3e-4 moves V_sel,D1 by about 2e-4, against a ≥ 0.10 at every cell.
+- Control 9: the noise source is marked at the two sigma_kde 1e-3 cells (12AJ ran at 3e-3 only).
+
+**The catalog-added selection variance a (reading 2's base).** It is at least 0.02 at every cell, so reading 2
+applies everywhere:
+- 0.100 at (64, 3e-3);
+- 0.196 at (64, 1e-3);
+- 0.192 at (128, 3e-3);
+- 0.446 at (128, 1e-3).
+
+**Per cell and variant.**
+- φ is the fraction of a removed.
+- S_inj is the injection-mode shape variance of 12AJ's replicates, in nat².
+- V_tot90 is the largest total variance over I90_D0; N1 is ≤ 1.2.
+- "vs D0" is reading 1's comparison. "vs spectral" is the context, as in 12AI.
+
+| cell | variant | φ | S_inj (D0's) | V_tot90 | H vs D0 (floor) | z_B | Delta vs D0 | reading 1 | R vs spectral | Delta vs spectral |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 64, 3e-3 | D0 | — | 0.034 | 1.02 | — | — | — | — | 1.047 | −0.00 |
+| | D1 | 1.00 | 0.0020 | 0.92 | 0.139 (0.060) | 1.03 | −0.31 | marginal (marked) | 1.016 | −0.32 |
+| | **D2** | 0.85 | 0.0023 | 0.94 | 0.052 (0.059) | 0.84 | −0.01 | consistent | 1.007 | −0.01 |
+| | D3r | 0.83 | 0.0029 | 0.94 | 0.054 (0.059) | 0.85 | +0.01 | consistent | 1.007 | +0.01 |
+| | D3a | 0.73 | 0.0084 | 0.95 | 0.045 (0.053) | 0.77 | +0.04 | consistent | 1.024 | +0.04 |
+| | D3b | 0.58 | 0.0137 | 0.96 | 0.038 (0.049) | 0.84 | +0.04 | consistent | 1.022 | +0.04 |
+| 64, 1e-3 | D0 | — | 0.080 | 1.12 | — | — | — | — | 1.030 | +0.01 |
+| | D1 | 1.00 | 0.0020 | 0.93 | 0.175 (0.097) | 1.02 | −0.34 | consistent (marked) | 1.013 | −0.32 |
+| | **D2** | 0.92 | 0.0023 | 0.94 | 0.101 (0.097) | 0.91 | −0.03 | consistent | 1.006 | −0.01 |
+| | D3r | 0.91 | 0.0034 | 0.94 | 0.103 (0.097) | 0.95 | −0.01 | consistent | 1.013 | +0.00 |
+| | D3a | 0.84 | 0.0117 | 0.96 | 0.087 (0.088) | 0.75 | +0.02 | consistent | 1.027 | +0.04 |
+| | D3b | 0.70 | 0.0236 | 0.99 | 0.080 (0.079) | 0.86 | +0.02 | consistent | 1.038 | +0.03 |
+| 128, 3e-3 | D0 | — | 0.055 | 1.13 | — | — | — | — | 1.147 | −0.07 |
+| | D1 | 1.00 | 0.0020 | 0.94 | 0.130 (0.080) | 1.00 | −0.25 | consistent (marked) | 1.013 | −0.33 |
+| | **D2** | 0.92 | 0.0022 | 0.95 | 0.073 (0.080) | 0.98 | +0.04 | consistent | 1.008 | −0.03 |
+| | D3r | 0.92 | 0.0028 | 0.95 | 0.076 (0.081) | 1.02 | +0.06 | consistent | 1.009 | −0.02 |
+| | D3a | 0.86 | 0.0083 | 0.96 | 0.073 (0.077) | 1.04 | +0.09 | consistent | 1.027 | +0.02 |
+| | D3b | 0.79 | 0.0137 | 0.98 | 0.067 (0.073) | 1.02 | +0.08 | consistent | 1.023 | +0.01 |
+| 128, 1e-3 | D0 | — | 0.146 | **1.39** | — | — | — | — | 1.156 | −0.00 |
+| | D1 | 1.00 | 0.0020 | 0.96 | 0.167 (0.136) | 0.93 | −0.31 | consistent (marked) | 1.010 | −0.31 |
+| | **D2** | 0.97 | 0.0023 | 0.97 | 0.107 (0.135) | 0.98 | −0.01 | consistent | 1.017 | −0.02 |
+| | D3r | 0.96 | 0.0033 | 0.98 | 0.110 (0.136) | 1.02 | −0.00 | consistent | 1.024 | −0.01 |
+| | D3a | 0.92 | 0.0116 | 0.99 | 0.102 (0.131) | 0.90 | +0.04 | consistent | 1.041 | +0.03 |
+| | D3b | 0.87 | 0.0236 | 1.01 | 0.094 (0.123) | 0.91 | +0.04 | consistent | 1.046 | +0.03 |
+
+Every variant "reduces variance" at every cell (marked, control 4).
+
+**Reading 3, recommendation (points only): D2.** D1 is first in simplicity, but it reads "marginal" at (64, 3e-3):
+there H(p_D1, p_D0) is 0.139, against 2 H_floor = 0.120. D2 is consistent and reduces the variance at every cell.
+The recommendation carries no control-4 mark, because D2's reading 1 does not depend on D1. Its reading 2 is marked
+through a, as is every variance reading. Adopting D2 as a core option is a core PR and the owner's call.
+
+**Reading 4, resolution: "unchanged" for every variant, at both sigma_kde.**
+
+| sigma_kde | H_D0(64,128) (injection floor of the difference) | D1 | D2 | D3r | D3a | D3b | G_D0 (nat) |
+|---|---|---|---|---|---|---|---|
+| 3e-3 | 0.053 (0.052) | 0.019 | 0.018 | 0.020 | 0.018 | 0.018 | 0.66 |
+| 1e-3 | 0.076 (0.090) | 0.028 | 0.027 | 0.030 | 0.027 | 0.026 | 1.08 |
+
+The distances fall to about a third under every variant, so the 0.75 ratio condition holds. But the drop (0.035 and
+0.049) is smaller than twice the injection floor of D0's own difference (0.10 and 0.18). So, as declared, the
+reading is "unchanged". D0's 64-against-128 distance sits at its own injection floor, in line with 12AJ's N3
+reading of "Monte-Carlo noise". The declared interpretation, an indication rather than a decomposition, is that
+what remains under D1 to D3b (0.018 at 3e-3) is the PE side's resolution effect.
+
+**Reading 5, isotropy: "no isotropy signal"** at every cell. D2 and D3r are both consistent.
+
+**Metric 7, the D1 diagnostic** at (64, 3e-3):
+- ∫n̄ / ∫dN_exp below the depth is 1.037;
+- ln(Z_f/Z_D1) is 5.8e-5;
+- ρ(z) rises from about 0.75 at z 0.005–0.01 to above 1 by z 0.02.
+
+The first bin, z < 0.005, is not finite (2.6e295), because dN_exp → 0 at z = 0. This is a defect of the diagnostic,
+not a reading, and only bin 1 is affected. The nside-16 anisotropy coefficient of variation falls from about 1 at
+z < 0.01 to 0.21 at z 0.24.
+
+**Observations (not readings; for the owner).**
+1. **Under D2 the catalog still does not narrow H0.** R against spectral only is 1.006–1.017 at all four cells, and
+   Delta −0.03 to −0.01. The nside-128 widening under D0 (R 1.15 to 1.16) is gone (1.008 and 1.017). It came from
+   the catalog-added selection noise, not from information.
+2. **The noise fix is large.** D2's injection-mode shape variance is 0.0022–0.0023 nat² at every cell, against
+   D0's 0.034–0.146: 15 to 64 times smaller, and about spectral only's floor (12AJ: 0.0020–0.0022). V_tot90 passes
+   N1 at every cell under every variant, including (128, 1e-3), where D0 does not (1.39).
+3. **D1 moves the median by −0.25 to −0.34 spectral sd at every cell.** Against spectral only it is −0.31 to −0.33.
+   D2 and D3r stay within ±0.06. D1 keeps the catalog in the numerator, but drops the catalog's sky-averaged
+   redshift structure from the denominator. Metric 7 shows that structure differs from the smooth model at low z,
+   and is 3.7% above it integrated below the depth. Reading 1 calls the shift "consistent" at three cells only
+   because H_floor there is large. It is the same size at all four cells.
+4. **What this means for 12AI and 12AJ.** At the current injection count, the D2 selection term brings the shape
+   noise down to about spectral only's. That should make C1's 0.05 resolvable. That would need a 12AJ-type bootstrap
+   under D2, which has not been run.
+
