@@ -12,6 +12,9 @@ it are:
 - file sizes and sha256;
 - the Slurm queue.
 
+**BUILT (2026-10-19, about 22:30 UTC), amendment B1 below.** The code is written and tested. The CPU controls and a
+short GPU control passed, after one declared fix (B1.6). No production job has run.
+
 **Blinding: location-free**, as in 12AG to 12AL. No H0 location appears here, in commit messages, in code comments
 or in any summary: no median, interval, MAP or shift in km/s/Mpc. The only H0 values in this record are fixed a
 priori:
@@ -656,3 +659,205 @@ Printed progress carries no likelihood value.
 - **Two events were resampled with replacement upstream** (12AJ). Their PE variance is understated by both core and
   any bootstrap.
 - **D1's shift** (12AL: −0.25 to −0.34 spectral sd) is reported as context. D1 is not a candidate here.
+
+## Amendment B1 (2026-10-19): the build, before any production job
+
+### Commits
+
+Consumer branch `phase12am/d2-ladder` in `phase12_5/repo_12AM`, local only (not pushed), from 5c2a096:
+
+| Commit | Content |
+|---|---|
+| `729d609` | the streamed D2 table, the table, cell and control-5 stages, the plan, the summary, the slurm scripts, the CPU tests |
+| `8a08ae7` | test fixes; x64 checked after core's float64 modules load (CPU controls, control 5); a probe switch for the CPU job |
+| `7a86caf` | control 5's synthetic footprint (B1.6); measured stage estimates; control 5 placed after its lane's first cell |
+| `cbb1ae9` | the production submit drops dependency jobs that have left the queue (scheduling only) |
+
+Files: `scripts/phase12am_{common,table,cell,control5,cpu,plan,summary}.py`, `slurm/phase12am_*`,
+`tests/test_phase12am.py`. Nothing in `phase12/`, `phase12t_*`, `phase12ag_*`, `phase12ah_*` or `phase12al_*`
+changed. Jobs run from `d2_ladder/worktrees/<sha>`, a detached worktree of a committed local sha, which must be
+clean. **Production runs from `cbb1ae9`.** Its Python is that of `7a86caf`; only a shell script changed.
+
+### Tests: 37 passed
+
+On HENON (job 1390535, at 7a86caf): 17 new 12AM tests and 12AL's 20, all passing. On tiny synthetic inputs they
+check:
+- the streamed table equals 12AL's single pass to 1e-12, for one-chunk, two-chunk and default blocks (padded last
+  blocks), with every block's g grid equal; the exact sum with g equals the per-row sum of core's evaluator;
+- per-row values from block sub-views equal the whole view's, also with an active kernel window (sliced
+  half-widths, the whole view's window size);
+- D2 from the streamed table equals 12AL's D2 in ln mu and N_eff; the three-density call equals single calls;
+- D2 = D0 on an identical-pixel catalog through the streamed path;
+- controls 6 and 7 through the table stage's own functions, on 24,501 and 98,001 nodes;
+- the four cases of the Monte-Carlo split, the declared change (a cell over the variance limit is never "no
+  narrowing"), 12AG's washout rule on synthetic ladders, the verdict sentence (sizes and directions; it refuses
+  "ruled out");
+- the guard terms against 12AG's own `_guard_terms`, bit for bit (B1.4);
+- the location guard, the plan, and the summary on a synthetic 20-cell root: it runs and is location-free; a ladder
+  gate withholds every reading; a cell gate withholds that cell under D2 and D0; a D2 gate withholds only that
+  cell's D2 reading; `STATUS.json` is always written.
+
+### CPU controls (HENON, job 1390535 at 7a86caf; x64, clean tree): all pass
+
+- **The streamed sum is 12AL's single pass on real rows.** At (64, 3e-3), 326 occupied rows in two blocks against
+  12AL's `build_tables` on the same rows: 2.0e-15 relative. Eight rows from one-row sub-views against 12AL's whole
+  occupied view: 7.3e-15.
+- **Control 9's premises.** The four catalogs hold 22,785,279 galaxies each, all with unit weights. f̄ is equal bit
+  for bit at nside 32, 64, 128 and 256. Core's kernel window is never active: its size equals the rows' slot count
+  at every cell (5,180, 1,719, 774 and 569 at nside 32 to 256).
+- **Block layout** (B1.2): 2, 3, 4 and 11 blocks of 4,727, 14,507, 32,274 and 43,847 rows. Kernel terms per table on
+  24,501 nodes: 9.9e11, 1.3e12, 2.3e12 and 6.6e12.
+
+### The nside-256 memory and speed probe on HENON CPU (job 1390531 at 729d609, 8 CPUs)
+
+- One full block of 43,847 rows: load, the host view, the block's kernel state and three 163-row chunks.
+- **Peak host memory 24.2 GiB** (`ru_maxrss`; 25.4 GB by `time -v`). The host view takes about 11 s, a block's
+  kernel state about 23 s.
+- 2.5e8 kernel terms per second on 8 CPUs: the whole table would take about 7.5 hours there. So the tables run on
+  the cell's card, as declared. On an A100-40 the build measured 3.6e10 to 4.3e10 terms per second (below), so about
+  3 minutes at nside 256.
+
+### The short GPU control (twig A100-40; jobs 1390529 and 1390530 at 729d609)
+
+**Table stage:**
+
+| cell | blocks | T on 24,501 nodes | control 4 (S/N_pix; f̄, dN_exp, C̄, g) | control 6 | control 7 |
+|---|---|---|---|---|---|
+| (64, 3e-3) | 3 | 36 s | 2.2e-14; the others bit for bit | 4.5e-7 | 9.9e-15 |
+| (128, 1e-3) | 4 | 53 s | 4.3e-14; the others bit for bit | 1.9e-6 | pass |
+| (32, 3e-4) | 2 | about 27 s | not a 12AL cell | 7.0e-6 | pass |
+| (32, 1e-4) | 2 | 27 s | not a 12AL cell | **1.5e-4 (fails) on 24,501 nodes; 1.1e-5 on 98,001** | 1.1e-14 |
+
+- At (32, 1e-4), 4 of the 9,952 compared pairs exceeded 1e-4, all at z 0.009 to 0.012, where the value is 0.13% to
+  0.19% of the table's maximum. There the sum is carried by few narrow spectroscopic kernels. The declared fallback
+  (B1.3) rebuilt T on 98,001 nodes in 43 s and passed. S is the same at every nside (algebra iv), so the four other
+  1e-4 cells are expected to take the fine table too.
+- Device peak of a table stage: jax 3.2 to 3.4 GB, nvidia-smi 4.7 GB. Host memory 5.6 to 8.8 GiB.
+
+**Lane A** at (64, 3e-3), on the five control points: **bit for bit** with 12AL's Lane A (ln L, ln mu, N_eff, the
+correction, every ln Ẑ_i and σ_i², every theta). It ran on an A100-40; 12AL's ran on an A100-80.
+
+**Cell stage** (control mode, the five control points):
+
+| cell | 3(d): D0 against | 3(e) | 1(a): D0, D1, D2 against 12AL | 2(c): spectral against 12AL |
+|---|---|---|---|---|
+| (64, 3e-3) | this Lane A: bit for bit | bit for bit | bit for bit (relative difference 0) | bit for bit |
+| (128, 1e-3) | 12AL's Lane A: bit for bit | bit for bit | bit for bit | bit for bit |
+| (32, 1e-4) | 12AG's coarse grid: bit for bit | bit for bit (on the 98,001-node table) | not a 12AL cell | bit for bit |
+
+- The in-lane spectral grid differs from 12AG's CPU reference by 9.1e-13 at most at these points.
+- **Control 2(a)'s fallback** (a rerun on rita when an A100-40 differs from 12AL at rounding) was not needed here.
+  Production decides it on all 641 points.
+
+**Memory of the cell stage on an A100-40, and the routing rule** (the larger of nvidia-smi's peak and 1.6 × jax's
+peak, against 34 GiB):
+
+| nside | jax peak | nvidia-smi peak | rule value | route |
+|---|---|---|---|---|
+| 32 | 13.3 GB | 18.8 GiB | 19.8 GiB | any A100 |
+| 64 | 14.1 GB | 20.8 GiB | 21.1 GiB | any A100 |
+| 128 | 13.8 GB | 24.8 GiB | 24.8 GiB | any A100 |
+
+So the routing stands as declared: nside 32 to 128 anywhere, nside 256 on rita only. No amendment of the routing is
+needed.
+
+**Speeds** (A100-40): the target build 15 to 24 s; three compiles of 83 to 103 s each (D0 single, D2 single, the
+three-density call); then 0.253 s (nside 64), 0.255 s (128) and 0.305 s (32) per point for all three densities;
+the spectral grid about 8 s.
+
+### Control 5 (twig, jobs 1390533 at 8a08ae7 and 1390534 at 7a86caf)
+
+- **As declared (1390533):** (64, 3e-3) passes (below the depth 1.1e-7, above 4.7e-13, sum 1.3e-10). (256, 3e-3) fails
+  above the depth only: 9.8e-12 against 1e-12. Below the depth it is 3.0e-8 (tolerance 1e-4), the sum 2.0e-10, and
+  no pattern mismatch.
+- **Cause.** The synthetic footprint holds the plain mean f̄ in every pixel. D2's own cell mean (12AL's `bincount`
+  over the N_pix equal values) adds them up with a rounding error of up to about N_pix × 1e-16. Above the depth that
+  enters only where core's grid bracket straddles the depth (the lower node carries 1 − f C̄). The error scales with
+  N_pix: 4.7e-13 at nside 64, 9.8e-12 at 256. It is a property of the test construction, not of the table path.
+- **After B1.6 (1390534):** both cells pass. Above the depth the difference is 0.0. Below it is 1.1e-7 (64) and 3.1e-8
+  (256). The sum is 1.3e-10 and 2.0e-10. The rounded f̄ differs from the plain mean by 3.5e-10 relative.
+- **nside 256 is affordable:** 112 s on an A100-40, jax peak 7.5 GB, nvidia-smi 8.6 GB. So control 5 runs entirely
+  in its A100-40 lane, nside 256 included.
+
+### Departures from the declaration (implementation and scheduling; written before any production job)
+
+**B1.1 The target is built once, under the scoped wrapper in identity mode.** 12AL built the stock target and then
+rebuilt it under the wrapper (its control 1(a) found them bit for bit). Here the cell stage builds only the wrapped
+target. Control 3(d) ties its D0 to Lane A (the stock target) at all 641 points. In the GPU control it was bit for
+bit at three cells.
+
+**B1.2 Blocks.** A block holds about 25 million slots (rows × the view's slot count), a whole number of 163-row
+chunks, so its arrays and kernel state stay under about 4 GB (measured device peak 3.2 to 3.4 GB). The last block is
+padded with empty rows, which add exact zeros. Core's kernel builder sees the block with core's galaxy list. The
+per-sample evaluator sees it without the list: the evaluator does not read it, and its length varies by block,
+which would recompile the evaluator.
+
+**B1.3 Control 6's fallback runs inside the table stage.** If control 6 fails on 24,501 nodes, the same stage
+rebuilds T on 98,001 nodes and repeats the control on the same 10,000 pairs. The cell stage then reads the fine
+table. The declaration said the cell stage "reruns". Since the table stage runs first, the cell stage runs once.
+The 24,501-node T is kept in the file as well, for control 4 and for control 9's table comparison.
+
+**B1.4 Penalised points and the uncapped grid** use 12AG's definitions (`_guard_terms`). Core's correction is
+called on the 641-point arrays, elementwise. A CPU test ties this to 12AG's scalar function bit for bit. The tests
+"a penalised point inside I90" and "inside the uncapped coarse grid's 99% interval" are taken over all 641 points
+(12AG had 241).
+
+**B1.5 Controls 3(b) and 3(c)** are checked on every stage that ran: table, Lane A and cell. A stage that did not
+run leaves its cell incomplete, which is a cell gate. Without this, one failed cell would have withheld every reading
+through the ladder gate.
+
+**B1.6 Control 5's synthetic footprint** holds f̄ rounded to 2^-30 in every pixel, so that D2's cell mean equals f_p
+exactly. The identical-pixel premise then holds in floating point. The catalog, the injections, the points and the
+tolerances are unchanged. The control also records that the cell mean equals f_p, and requires it.
+
+**B1.7 x64 in the CPU scripts.** Core switches x64 on when its float64 modules are imported
+(`darksirens/_jax.py`). The CPU controls and control 5 check x64 after that import, as every target process does.
+
+**B1.8 Scheduling.**
+- The planner gives the rita lanes a starting load (`RITA_OFFSET_MIN`) for their wait behind 1390498. With 15
+  minutes, 12AL's (64, 1e-3) cell goes to rita0 and the other three to the A100-40 lanes.
+- 1390499 completed at 21:46 UTC. A finished job leaves Slurm's controller after a few minutes, and a dependency on
+  an unknown id is refused. So the submit script keeps only dependency jobs still in the queue (now 1390498).
+- Control 5 is a 12-minute entry after the first cell of one A100-40 lane.
+
+Nothing here changes a density, a cell, the grids, an input, a control's tolerance, a gate or a reading rule.
+
+### The prepared production (not submitted)
+
+- **Plan:** `d2_ladder/plans/production.json` (61 entries on 5 lanes, `RITA_OFFSET_MIN=15`). The submit script
+  writes it again at submission.
+- **Submit:** `RITA_OFFSET_MIN=<minutes until 1390498 ends> slurm/phase12am_submit.sh cbb1ae9`, from
+  `phase12_5/repo_12AM`. It submits the five lanes and a HENON summary afterany on all of them, and prints a shell
+  watcher for the main session.
+
+| lane | card | cells, in order |
+|---|---|---|
+| rita0 | A100-80, after 1390498 | (64, 1e-3), (256, 3e-4), (256, 3e-3) |
+| rita1 | A100-80, after 1390498 | (256, 1e-4), (256, 1e-3), (256, 1e-2) |
+| twig0 | A100-40 | (128, 3e-3), (128, 1e-4), (64, 1e-4), (32, 3e-3), (64, 1e-2) |
+| twig1 | A100-40 | (128, 1e-3), (32, 1e-4), (128, 1e-2), (32, 1e-3), (64, 3e-4) |
+| henongpu | A100-40 | (64, 3e-3), control 5, (128, 3e-4), (32, 3e-4), (32, 1e-2) |
+
+### Compute, revised from the measurements
+
+| stage | nside 32 to 128 (A100-40) | nside 256 (A100-80) |
+|---|---|---|
+| table | 2 to 2.5 min; plus 1 to 3 min for the fine table at 1e-4 | about 5 min; plus about 13 min at 1e-4 |
+| Lane A (641 points) | about 6 to 6.5 min | about 8 min |
+| cell | about 8 to 8.5 min | about 12 min |
+| **per cell** | **about 16 to 17.5 min** | **about 25 min (38 at 1e-4)** |
+
+- **GPU total:** about 6.8 card-hours (408 card-minutes in the plan), within the declared 6 to 10.
+- **Wall time:** the longest lane is about 1.4 to 1.7 hours (rita1, with the 1e-4 cell at nside 256), counted from
+  when rita frees. The A100-40 lanes take about 1.3 to 1.5 hours from submission. Then the summary, 5 to 10 minutes.
+- **On the clock:** if submitted about 22:45 UTC and 1390498 ends near 23:00, the summary is due about 00:45 to
+  01:15 UTC on 2026-10-20. The range is 1.5 to 3 hours after submission. It is longer if 1390498 overruns, or if
+  another user's job takes the free twig or henon-gpu card first.
+
+### What could still block production
+
+- **rita.** 1390498 still runs. Another user's rita jobs are queued with qos rita-s; qos rita preempts them by the
+  cluster's policy, and nothing is cancelled by hand.
+- **The free A100-40 cards.** Two twig cards and one henon-gpu card were free at the build. If fewer are free at
+  submission, pass fewer lanes (`LANES="rita0 rita1 twig0 henongpu"`); the planner reassigns.
+- **No blocking defect is known.**
