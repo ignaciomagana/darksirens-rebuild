@@ -2,9 +2,10 @@
 
 ## Status
 
-**DECLARED (stage 1 of 4, 2026-10-19). Nothing has been trained.** This record explains the method, reports what the
-two raw injection files contain, and fixes the design and the validation gates before any training. Stage 2 trains,
-stage 3 validates (a separate workflow), stage 4 reports.
+**DECLARED (stage 1 of 4, 2026-10-19); stage 2 BUILT (amendment B1, 2026-10-19).** Stage 2 wrote the training
+sets, passed the pre-training gates, and ran a 50-epoch smoke test of each model on one rita card. The 16-member
+ensemble has **not** been submitted yet; its submit command is in B1. Stage 3 validates (a separate workflow), stage 4
+reports.
 
 **Blinding: location-free.** No H0 inference is involved. Later stages report only the H0-dependence of
 ln mu_D4(H0) − ln mu_MC(H0), never ln mu on its own, never a posterior, never an H0 value. The only H0 numbers here
@@ -316,3 +317,149 @@ None for stage 1. Stage 2 needs:
 - our GPU venv;
 - a check that core accepts a synthetic product whose ndraw = N_s / xi is not an integer (if not, N_s is chosen so
   the rounding is below 1e-9).
+
+**Stage 2 (B1):** both are resolved. The venv is built, and the pre-training gates pass, as amended for endo3's
+float32 mass density. Core floors a fractional ndraw, so synthetic products write an integer ndraw and carry the exact N_k in
+the row fractions.
+
+## Amendment B1 (stage 2: build), 2026-10-19, before any training job
+
+Stage 2 built the environment, the training sets, the training code and the tests, and ran a smoke test. Everything
+below was fixed before the ensemble was submitted. Nothing here involves H0.
+
+**Commits (local only, not pushed).**
+- Consumer branch `phase12ak/pdet-surrogate` (worktree `phase12_5/repo_12AK`):
+  - b65abca: the code (package `phase12ak/`, three scripts, four Slurm scripts, the tests);
+  - 208bc9a: the joint-weight comparison with stage 1 at 1e-5 (item 6 below);
+  - cf2a4bd: an integer ndraw for synthetic products (item 5), with its test.
+- Jobs run from detached worktrees of a committed sha under `pdet_surrogate/ours/worktrees/` (the smoke from
+  208bc9a). Their check is that the sha is on the local branch, since nothing is pushed.
+
+**Environment.** Our GPU venv is `pdet_surrogate/venv_gpu`: jax[cuda12] 0.7.2, flowjax 17.2.1, equinox 0.13.8,
+and the CPU venv's other pins.
+- The freeze is `ours/env/venv_gpu.freeze.txt` (sha256 2666568d…); the build script and requirements are beside it.
+- One change from the CPU venv: lineax is dropped. It needs jax ≥ 0.10, and nothing here requires it.
+- The gwcat chi_eff prior is imported from the pinned gwcat 8263ae9 source tree, not copied.
+- One graviflows file (`constrained_transform.py`, ba8d964) is vendored verbatim under `phase12ak/vendor/` with its
+  MIT notice. Only control P uses it. The paper's interval values are transcribed in code: they are transform
+  settings, not fitted values.
+
+**Training sets** (HENON job 1390322, code 208bc9a; summary `ours/summary/12AK_stage2_training_sets.json`, sha256
+865fedc3…):
+- `ours/data/12AK_detected_O3.h5` (sha256 f41580d8…): 81,117 rows;
+- `ours/data/12AK_detected_O4ab.h5` (sha256 9ed5dde9…): 986,829 rows.
+
+Each holds the detected rows only, with:
+- the 13 inputs and the monthly weight;
+- the split label and the raw row index;
+- both campaigns' draw densities and the joint weight u;
+- the file's stored density, m1det, dL, chi_eff, and the product's pdraw for the same row.
+
+The raw files and the product were re-hashed and match. The counts, the splits (58,404 / 14,601 / 8,112 and
+710,517 / 177,629 / 98,683) and xi equal the design.
+
+**Departures from the declared design, each with its reason.**
+1. **psi is folded modulo pi.** endo3 draws psi on [0, 2pi) and O4 on [0, pi). The signal is unchanged by
+   psi → psi + pi, so P(det) has period pi. The folded density is 1/pi in both campaigns, so the joint model sees one
+   convention.
+2. **The stored redshift densities are now identified.** Each is dVc/dz (astropy, 67.9/0.3065), linearly
+   interpolated on a uniform grid and normalised by the trapezoid rule on that grid:
+   - endo3: 1001 points on [0, 1.9]; it reproduces the stored values to 4.8e-13;
+   - O4: 3001 points on [0, 3]; it reproduces them to 8.4e-8.
+
+   Linear interpolation of a z²-like function explains the small-z excess that stage 1 found. p_inj and the
+   synthetic pdraw use these functions.
+3. **O4's distances use the same grid.** O4's dL is astropy dL linearly interpolated on the same 3001 points
+   (2.4e-8). That explains stage 1's 8e-5 at small z. endo3's dL is exact (1.6e-7, float32 storage).
+   - Synthetic rows use their campaign's own map. The joint model uses O4's map, which differs from the exact one
+     by under 8e-5 below z 0.003 and under 2e-6 above z 0.1.
+   - The Jacobian uses the exact cosmological ddL/dz. O4 stores that derivative, and it matches to 5.7e-8.
+4. **The 1e-6 gates hold except for one storage effect in endo3, which we keep.** endo3 stores its mass density
+   in float32. The m2 factor 2 m2/(m1² − 4) loses precision near m1 = 2, so the stored density departs from the exact
+   one by up to 9.2e-5 there. Our p_inj is the exact density.
+
+   | Gate | Result |
+   |---|---|
+   | G1, O4 masses, spins and angles (log) | ≤ 5e-15 |
+   | G1, O4 z (relative) | 8.4e-8 |
+   | G1, endo3 z (relative) | 4.8e-13 |
+   | G1, endo3 total, all 284,672 rows (log) | median 3.5e-7; 255 rows above 1e-6, all with m1 < 2.076; max 9.2e-5 |
+   | G2, exporter vs product pdraw, O4 synthetic path | max 8.3e-8 |
+   | G2, endo3 stored-input mode | max 3.7e-10 |
+   | G2, endo3 synthetic path | 99th percentile 6.6e-7; 44 rows above 1e-6, all with m1 < 2.062; max 9.2e-5 |
+   | G2, zero-weight rows | identical sets (1,333 endo3 and 5,129 O4) |
+   | G3, z → dL | 1.6e-7 (endo3), 2.4e-8 (O4) |
+
+   - "Stored-input mode" feeds the files' own densities, dL and m1det to the exporter. It isolates the conventions:
+     the Jacobian, T, N_k/N, the chi_eff reference swap, and the sentinel.
+   - The amended gate requires stored-input mode ≤ 1e-6 everywhere, and the synthetic path ≤ 1e-6 except on endo3
+     rows with m1 < 2.1. Its effect on mu is about 1e-4 on 44 of 81,117 rows, which is negligible.
+5. **Core does not accept a fractional ndraw.** Core e7c3007 reads ndraw with int(), in `gw/samples.py` and in the
+   store check `_positive_count`. A value of 1234567.75 becomes 1234567 with no error.
+   - Synthetic products therefore write ndraw = round(Σ_k N_s,k / xi_k). Each row carries the exact
+     N_k = N_s,k / xi_k in its Essick fraction N_k / ndraw.
+   - Core's mu then equals Σ_k (T_k / N_k) Σ_i p_pop / p_k exactly (`phase12ak/surrogate.py: synthetic_ndraw`).
+   - For the joint model, the fraction is (N_s / Z) / ndraw, which is 1 to about 1e-9 rather than exactly 1.
+6. **The joint normalisation moves slightly.** With the stored z functions, Z = 2.7022593e-3 yr. Stage 1, with exact
+   dVc/dz, had 2.7022637e-3 (−1.6e-6). The Kish sizes are 38,757 / 945,283 / 414,085 (stage 1: 38,757 / 945,289 /
+   414,083).
+7. **Implementation details of the training loop:**
+   - one epoch is a single jitted scan over its batches, with the same arithmetic as fit_to_data's per-batch loop;
+   - the validation loss is the exact weighted mean over all validation rows (fit_to_data drops the last
+     incomplete validation batch);
+   - standardisation uses each model's training rows, unweighted and without bootstrap, and is shared by its five
+     members;
+   - checkpoints are written every 25 epochs, and a resubmitted lane resumes from them.
+8. **Control P.** It uses our split (its test rows are held out), init and batch-order seed 4242, no bootstrap, and
+   unweighted training. Its xi is the weighted one, as in the student's script.
+
+**CPU tests.** `tests/test_phase12ak.py` holds 16 tests, all passing: in HENON job 1390322 (15 tests, at 208bc9a), and
+locally (16, at cf2a4bd). They check:
+- **the detection rule** against gwcat 8263ae9's own `SelectionSet.detected_mask`, on 400-row copies of both raw
+  files with edge rows: FAR exactly 1, 0.999, and +inf;
+- **the splits:** sizes, disjointness and seeding;
+- **the out-of-domain mask** and the clips for A and B;
+- **normalisation:** each draw density integrates to 1;
+- **xi with monthly weights** against a closed form, where the unweighted estimate is shown to be biased;
+- **the joint weight u** against a closed form on a two-campaign toy;
+- **the bounded transforms:** round trip, and the log-det against an autodiff Jacobian;
+- **a toy flow fit:** a weighted fit recovers a known density (KL < 0.03), and an unweighted fit does not;
+- **resume:** a run that is stopped and resumed is identical to an uninterrupted one;
+- **save → reload:** bitwise;
+- **the exporter:** the sentinel and the scaling;
+- **the plan:** 16 entries with the declared seeds;
+- **the design constants** against `config/phase12ak_design.json`;
+- **the integer ndraw**, whose rounding cancels.
+
+**Smoke test** (rita job 1390323, one A100-80, code 208bc9a, 50 epochs each, outputs `ours/runs_smoke/`; summary
+`ours/summary/12AK_stage2_smoke.json`, sha256 782485e8…):
+
+| Model | Steps/epoch | s/epoch | ms/step | Validation NLL at epochs 1 / 10 / 50 | Peak GPU memory | Reload |
+|---|---|---|---|---|---|---|
+| A_O3 | 14 | 0.107 | 7.7 | 51.52 / 22.94 / 17.81 | 0.28 GB | bitwise |
+| A_O4 | 173 | 1.292 | 7.5 | 20.66 / 17.62 / 17.59 | 0.44 GB | bitwise |
+| B_joint | 187 | 1.393 | 7.5 | 20.14 / 17.62 / 17.59 | 0.44 GB | bitwise |
+| P_control | 173 | 1.294 | 7.5 | 20.78 / 17.66 / 17.58 | 0.44 GB | bitwise |
+
+The loss falls in every model, the jax backend is the GPU, and the save → reload check is bitwise on 1e4 test rows.
+
+**Epoch budget: unchanged** (5000 epochs at most, patience 500). From the smoke timings:
+- **Worst case:** every member runs all 5000 epochs:
+  - lane 0 (A_O4 × 5, then P) takes 10.8 h;
+  - lane 1 (A_O3 × 5, then B × 5) takes 10.4 h;
+  - that is 21.2 GPU-hours in total, under the 30 ceiling.
+- **Expected:** if training stops near 2000 epochs, as the paper reports, about 8.5 GPU-hours, or about 4.5 h of wall
+  time on the two cards.
+- **The estimate for completion:** 5–11 h of wall time once both lanes start.
+
+**Prepared submission** (not yet run; from the consumer worktree):
+
+    slurm/phase12ak_submit.sh cf2a4bd
+
+It writes `ours/plans/12AK_train_plan.json` and submits two lane jobs, one per rita A100-80 card:
+- the flags are `-p RITA-GPU --qos rita -A phy220048p --gres=gpu:a100-80:1 --cpus-per-task=128 --mem=120G
+  --time=7-00:00:00`;
+- each entry writes `ours/runs/<name>/`: `ckpt/`, `model.npz`, `metrics.json`, `train.log` and `DONE`;
+- the script prints a shell watcher.
+
+A resubmission of the same command continues unfinished entries from their checkpoints.
