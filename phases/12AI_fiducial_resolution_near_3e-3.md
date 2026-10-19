@@ -180,3 +180,47 @@ The commit that runs is 9827e3c (pushed before submission).
 4. **What differs between the nsides.** nside 128 is wider (R up to 1.18 against 1.05) and sits slightly lower
    (Delta about −0.07 against 0). The per-event evidences are recorded at both nsides for every new cell, so a
    per-event attribution needs no rerun.
+
+## Amendment 1 (2026-10-19, after the results): owner guidance; plan for the ln L convergence (nothing run)
+
+**Status.** Everything in 12AG to 12AI is experimental, and is kept as a record.
+
+**The owner's guidance** (suggestions, not fixed rules):
+
+1. **The 0.5 grid is too coarse** to show the roughness, given that the posterior lies mostly in about H0 50–100.
+   Future grids add a fine window, [50, 100] at step 0.1 (501 points), next to the coarse [20, 140] grid at step 0.5
+   for the tails and normalisation. At nside 64 that is about 2.5 minutes per grid.
+2. **The ln L variance criterion (N1) decides.** Roughness (N2) is supplemental and is reported only.
+3. **Ways to improve the ln L convergence:**
+   - more injections (the simplest for the current core);
+   - surrogates for the PE samples or the injections (harder);
+   - not using p_cat(z) in the selection (denominator) term where the injections are evaluated, and using the p_vol
+     term instead.
+
+**Where the variance comes from at the production cell** (nside 64, sigma_kde 3e-3; 12AG, at the point nearest the
+median):
+- **Selection, 0.74:**
+  - 0.69 is the floor from the injections and the fixed population, the same as spectral-only;
+  - 0.05 is added by the catalog.
+- **PE, 0.21.**
+
+At finer settings the catalog's added selection part grows: about 0.2 at (128, 1e-3) and 1.5 at (128, 1e-4). The PE
+part grows to 0.3–0.5.
+
+**Facts checked for the plan:**
+- **Injections:** the selection file already holds every detected injection of the public O3 and O4 sets at the FAR
+  < 1/yr threshold: 1,067,946 found of 944,412,448 draws. The floor (0.69) means an effective number of about 1e5.
+  It falls as 1/N_inj.
+- **PE samples:** they are capped at 4096 per event.
+- **How core evaluates the selection term:** with the catalog sliced at each injection's pixel
+  (`selection/gw.py: compute_selection_term`, `em_catalog_sel`).
+- **The field weighting's normaliser:** it divides the host density by the survey-global total, which depends on
+  H0. That normaliser cancels between the event evidences and −N ln mu only because both use the same density.
+
+**Plan, in the order proposed to the owner:**
+1. Measure first.
+2. Then the selection-term variants D1–D3.
+3. Then more injections or more PE samples.
+4. Surrogates only if needed.
+
+The owner decides each step; the reply to the owner gives the details.
