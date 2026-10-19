@@ -13,7 +13,10 @@ it are:
 - the Slurm queue.
 
 **BUILT (2026-10-19, about 22:30 UTC), amendment B1 below.** The code is written and tested. The CPU controls and a
-short GPU control passed, after one declared fix (B1.6). No production job has run.
+short GPU control passed, after one declared fix (B1.6).
+
+**REVIEWED AND FIXED (2026-10-19, about 23:00 UTC), amendment B2 below,** before any production job. One blocking
+blinding defect and nine smaller ones were fixed in consumer `54d9815`; 40 CPU tests pass.
 
 **Blinding: location-free**, as in 12AG to 12AL. No H0 location appears here, in commit messages, in code comments
 or in any summary: no median, interval, MAP or shift in km/s/Mpc. The only H0 values in this record are fixed a
@@ -865,3 +868,101 @@ Nothing here changes a density, a cell, the grids, an input, a control's toleran
 - **The free A100-40 cards.** Two twig cards and one henon-gpu card were free at the build. If fewer are free at
   submission, pass fewer lanes (`LANES="rita0 rita1 twig0 henongpu"`); the planner reassigns.
 - **No blocking defect is known.**
+
+## Amendment B2 (2026-10-19, about 23:00 UTC): review fixes, before any production job
+
+An adversarial review of the build (consumer `cbb1ae9`, record `bcdb66d`) found one blocking defect and nine
+non-blocking ones. All ten are dealt with here, in consumer commit `54d9815`, before any production job. No density,
+cell, grid, input, tolerance or reading threshold changes. Two items change how a declared rule is computed (B2.2 and
+B2.5); each says why.
+
+**B2.1 Blinding (the blocking one).**
+- The summary wrote two counts: the union-grid points inside I90, and the trigger points.
+- On the window the step is 0.1. So the first count is the absolute 90% width in disguise. With the reported 90%
+  width ratio and spectral only's mass outside the window, it would give the spectral-only location, up to a
+  reflection.
+- **Fix.** Neither count is written. The trigger points become a yes/no (`any_trigger_point`).
+- The mass outside the window is no longer written for any density. Only `window_holds` (mass outside ≤ 1e-3) is.
+- The key names `n_union_points_in_I90`, `n_trigger_points`, `mass_outside_window`, `coarse_mass_outside_window` and
+  `mass_outside` join the guard's forbidden keys. A write that holds one is refused.
+- **Noted, not changed:** 12AL's location-free summary prints `coarse_mass_outside_window` per density. Together
+  with Delta and the sd ratio of several densities, such masses carry weak location information. This is flagged
+  for the owner. 12AM does not repeat it.
+
+**B2.2 The sigma_kde 1e-4 column always uses the 98,001-node table.**
+- In the build, at (32, 1e-4), 4 of 9,952 pairs failed control 6 on 24,501 nodes. S is the same at every nside, but
+  each cell draws its own seed. So another 1e-4 cell could pass on the coarse nodes by luck (about 2% each).
+- A column with mixed node counts would put the interpolation difference into N ln μ_D2. Control 9 would then very
+  likely fail and withhold D2 readings in that column.
+- **Fix.** Every 1e-4 cell builds the fine table, and control 6 gates on it. The 24,501-node result is still
+  recorded, with the reason (`fine_table_reason`).
+- The other columns keep the declared rule: the fine table only when control 6 fails. The cost is already in the
+  plan.
+
+**B2.3 nside pairs are withheld where control 9 fails.** The record says a control-9 failure withholds the
+nside-pair interpretation along that sigma_kde column. The summary now writes that column's interpretation as
+"withheld". A pair with a cell whose cell gate failed is marked under both densities. A pair with a cell whose D2
+readings are withheld is marked under D2.
+
+**B2.4 R_D2 − R_D0 uses one grid.** Before, each R against spectral only could come from a different grid (D2 on the
+window, D0 on the coarse grid if D0 leaks). Now both use the window when D2, D0 and spectral only all hold it, and the
+coarse grid otherwise. The same holds for Delta_D2 − Delta_D0. The grid used is reported. This number feeds the
+verdict sentence.
+
+**B2.5 The window rule integrates the window's own nodes.**
+- The mass outside is now 1 minus the trapezoid integral over the coarse nodes inside [50, 100].
+- The old form (12AL's) counted the half-steps [49.5, 50] and [100, 100.5] as inside. It understated the mass
+  outside by about 0.25 × (p(50) + p(100)) × 0.5, roughly 10% at the 1e-3 threshold for a Gaussian.
+- The new form is the more conservative one: a borderline density goes to the coarse grid. The threshold is
+  unchanged. A CPU test ties it to the Gaussian value within 3%.
+
+**B2.6 Commits are reported.** The summary lists the commit of every stage per cell, and every commit over the
+ladder (control 5 included). When there is more than one, the readings carry a mark. It is a mark, not a gate.
+Control 3(c) still gates a clean committed tree.
+
+**B2.7 Control 5 exits 0 once it has written its result.** It is a mark. Before, an error in one of its cells failed
+its lane, and the watcher would have ended before the summary.
+
+**B2.8 Control 5's nside-256 bookkeeping follows the record.** nside 256 counts only when it ran within 2 hours
+without an error. Otherwise it reads "not run: not affordable", and the control's pass stands on 64 and 128.
+
+**B2.9 The CUDA JIT cache** goes to the project disk (`CUDA_CACHE_PATH`), never to the home directory.
+
+**B2.10 The watcher and the job list.**
+- The printed watcher sleeps 600 s between checks. It ends on `summary/STATUS.json`, or on any job (lanes and the
+  summary) in FAILED, CANCELLED, TIMEOUT, OUT_OF_MEMORY or NODE_FAIL. It then prints sacct for every job and the
+  first 3000 bytes of `STATUS.json`.
+- `plans/jobs.json` holds each lane's job id and entries, and the summary's.
+- A cell stage that stops at control 3(d) still fails its lane, by design. The watcher then ends before the summary.
+  The summary still runs (afterany) and writes `STATUS.json`.
+
+**B2.11 Control 2(a)'s fallback, written out (no code change).** 12AL's two nside-64 cells are planned on A100-40
+cards. If Lane A there differs from 12AL's only at rounding:
+1. delete `runs/<cell>/lane_a/` and `runs/<cell>/cell/`. Lane A resumes rows from its `scan.json` when the
+   fingerprint matches, and the fingerprint has no device field, so the old rows would otherwise be kept;
+2. keep `runs/<cell>/table/` (H0-free; control 4 ties it to 12AL);
+3. resubmit those two entries in a rita lane from the same commit;
+4. rerun the summary.
+
+The gate is then read on the A100-80 run, bit for bit. They are not moved to rita now: the build found Lane A on an
+A100-40 bit for bit with 12AL's A100-80 at (64, 3e-3), and 12AG's C1 found the two card models bit for bit. Moving
+them would add about 20 minutes to a rita lane.
+
+**Not changed.** Variance values at points the posterior defines (V_PE at the point nearest the median; the maxima
+inside I90) are declared items and stay. They are variances, which the blinding allows. Read against a per-point
+variance curve printed elsewhere, they could in principle be inverted. No 12AM location-free output prints such a
+curve.
+
+**Retests.** On HENON, job 1390543 at `54d9815` (x64, clean tree): **40 passed**, 12AL's 20 and 20 of 12AM's (the
+17 of B1 and 3 new). The new tests check:
+- the summary on the synthetic root writes none of the B2.1 keys, has `any_trigger_point`, `window_holds` and the
+  grid of R_D2 − R_D0, and one commit;
+- a broken control 9 in one column withholds that column's nside-pair interpretation and only that column, and a
+  stage from another commit marks the readings;
+- the window rule's mass against the Gaussian value, and that 12AL's form reads lower;
+- the 1e-4 column's fine table, and control 5's bookkeeping in each case.
+
+The CPU controls of B1 were not rerun: no fix touches the streamed table, the target, Lane A or the cell stage's
+numbers. The GPU controls were not rerun for the same reason. B2.2 changes only which of two already-tested tables a
+1e-4 cell uses: the fine path ran and passed at (32, 1e-4) in the build (B1.3). **Every gating control of the build
+stands. Production runs from `54d9815`.**
