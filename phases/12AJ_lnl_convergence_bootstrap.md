@@ -14,6 +14,8 @@ nsides and on spectral only. The production is prepared, not submitted. Consumer
 identity control now runs in one array task, on one node) and eight cheap non-blocking fixes. Nothing in the design
 changes. Production runs from consumer commit 5f24519 (local, not pushed).
 
+**Results (2026-10-19).** All eight controls pass. The shape noise is dominated by the catalog-added selection term (80% at nside 64, 82% at 128); core's per-point variance overstates the shape noise 24× and 16×; nside 64 vs 128 at 3e-3 reads "Monte-Carlo noise", and C1's 0.05 tolerance is not resolvable with the current injections. See "Results".
+
 **Blinding: location-free**, as in 12AG to 12AI. No H0 value appears here, in commit messages or in PR text. The only
 H0 values in this record are fixed a priori:
 - the coarse grid [20, 140] at step 0.5;
@@ -714,3 +716,56 @@ Lanes, flags and outputs are as in B1, except that the spectral array is 0–29 
 spectral array job 1390328 (tasks 0–29, at most 8 at once; tasks 0 and 1 started on henon04, the rest waiting for
 HENON resources); summary job 1390329, afterany on all three. Expected `summary/STATUS.json` about 2.5–2.8 h after
 submission (the lanes run one after the other), sooner if the other rita job ends early.
+
+## Results (2026-10-19, location-free)
+
+**Runs.** rita0 1390326 (nside 64) and rita1 1390327 (nside 128) completed (1 h 12 min and 1 h 10 min). Spectral array
+1390328: tasks 0–28 completed; task 29 (`spectral_inj_b14`) failed in 2 s before any code ran (`slurmstepd: error:
+TaskProlog failed status=1` on henon04, a node set-up failure). The afterany summary 1390329 then ran on incomplete
+inputs: rc 3, readings withheld, controls 4 and 7 failing only on the missing spectral grid (kept as
+`summary/STATUS_1390329_incomplete.json`). Task 29 was resubmitted unchanged from the same clean worktree
+(`5f24519430c0`, same plan, same flags): job 1390383, completed in 6 min 34 s on henon04; summary 1390384 (afterok)
+rc 0, inputs complete, readings released.
+
+**Controls.** All eight pass (1 identity, 2 swap, 3 separability, 4 event sums, 5 files, 6 against the existing
+grids, 7 commits and x64, 8 view compilation). No guard violations.
+
+**Reading 1: what dominates the shape noise (joint S, nat², p_c-weighted).**
+
+| term | nside 64 | share | nside 128 | share |
+|---|---|---|---|---|
+| PE floor (spectral only, PE) | 0.0010 | 2% | 0.0010 | 2% |
+| selection floor (spectral only, injections) | 0.0020 | 5% | 0.0022 | 3% |
+| catalog-added PE | 0.0048 | 12% | 0.0082 | 13% |
+| catalog-added selection | 0.0317 | 80% | 0.0533 | 82% |
+| **total S** | **0.0395** | | **0.0647** | |
+
+Verdict at both nsides: **catalog-added selection dominates** (jackknife sd of its share 0.03 at 64 and 0.05 at 128;
+not marginal at one half). The per-point split at the point nearest the median is the other way round: the
+selection floor is about 0.63 nat² (bootstrap; core 0.60 after the count term), the PE floor about 0.30 (bootstrap;
+core 0.20), and the catalog-added terms near zero in the bootstrap (core: 0.08 at 64, 0.15 at 128). The floors are
+almost constant in H0, so they shift ln L as a whole and barely move the posterior; the catalog's selection noise
+varies with H0 and is what moves it.
+
+**Reading 2: core's per-point variance against the shape noise.** Q = S(joint) / V̄_core = 0.041 at nside 64 and
+0.062 at 128: **core's value overstates the shape noise by 24× and 16×** (Q_D, with D in place of S: 0.097 and
+0.154; Q from the joint replicates 0.046 and 0.069). Matches: the selection variance matches the bootstrap at both
+nsides (ratio bootstrap/core 0.93 and 0.80 at the point nearest the median; 68% intervals contain 1). The PE variance
+does not: the bootstrap's per-event estimate is 1.19–1.20 times core's (68% interval about [1.13, 1.26] at both
+nsides), so core's PE per-point variance runs about 20% low. The two upstream-resampled events contribute 0.1% of it.
+
+**Metric 3: posterior noise per replicate (joint, over k = 14).** R sd 0.099 (64) and 0.128 (128); Delta sd 0.115
+and 0.161 spectral sd; Hellinger to the nominal posterior mean 0.072 and 0.088 (spectral only: 0.014). Shift bias
+(mean_k Delta_k − Delta_nom) −0.013 and −0.029 spectral sd (injection mode −0.014 and −0.042). The H² check holds
+(mean_k H² over (S + B)/8, exact form: 1.01 and 0.99).
+
+**Reading 3: N3, nside 64 vs 128 at 3e-3 (joint decides).** H_nom 0.053 on the window, H_floor 0.055 (without the
+bootstrap bias 0.054); ρ = 0.97, z_R = 1.18, z_Δ = 0.66: **"Monte-Carlo noise"**. Replicates' 64-vs-128 distance
+0.075 ± 0.022. **C1's 0.05 tolerance is not resolvable** with these inputs (H_floor 0.055 > 0.05/3 = 0.017), and 12AI's
+C1 failure at 3e-3 (0.053) is **within noise of the tolerance**. By mode: injections ρ = 1.02 (z_R 1.51, z_Δ 0.63);
+PE ρ = 2.77 (z_R 3.28, z_Δ 2.82, H_floor 0.019). Under PE noise alone the difference would sit just below the
+"real" threshold; the injection noise is what hides it.
+
+**Reading 4 (points only):** the selection-denominator variants D1 to D3 (record 12AL), which target the
+catalog-added selection term. More injections reduce it too (variance as 1/N_inj): resolving C1's 0.05 needs H_floor
+three times smaller, about nine times less shape variance.
