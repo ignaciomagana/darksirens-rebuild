@@ -29,6 +29,27 @@ The code is not written yet. The consumer branch exists at its base commit
 (below). The commit that runs, and its CPU tests, will be recorded here in an
 amendment before any job is submitted.
 
+**Status update (amendment R1, 2026-10-19 about 08:30 UTC, before any
+production run).** No production grid of any part has run. A review of the
+three build amendments found one blocking defect and seven smaller ones.
+They are answered by amendments A2, C2, D1 and R1 below, all written before
+any production job:
+
+- **Part A and Part C are held.** Part A's consumer commits (f724d0f,
+  440ef36) are still not on origin. The session's permission system refused
+  the push a second time (about 08:30 UTC, "Out-of-Place Publication"), and
+  it then refused every further shell command of that session, including
+  read-only ones. Nothing was worked around. Part C reads only Part A's
+  per-event grids, so it waits for Part A.
+- **Part B is ready but was not submitted by that session.** Its controls
+  passed at 416f5d7, which is on origin, and no defect blocks it. The
+  submission (`slurm/phase12ah_b_submit_grids.sh 416f5d7`) needs a working
+  shell.
+- **The code for A2, C2 and the overall summary has not been committed,
+  pushed or tested.** It is a working-tree change in `phase12_5/repo_12AH`.
+  Its CPU tests must pass, and it must be committed and pushed, before any
+  Part A or Part C job. The commit that runs is recorded here at that point.
+
 **Blinding: location-free.** No H0 value is written here, in commit messages
 or in PR text: no median, interval, MAP, absolute shift in km/s/Mpc, and no
 per-event H0 location (no peak or slope position of any event's likelihood).
@@ -47,6 +68,34 @@ not read or quote. Grid rows (`scan.json`), per-event evidence files
 (`events.npz`) and stage logs carry absolute log-likelihoods and are not for
 agents to read or quote either; only the summary script reads them. Nothing
 goes to the clean-room session or to the coordinator session.
+
+**Amendment R1 (2026-10-19, before any production run): the complete list of
+files that agents do not open, read or quote.** Paths are under
+`phase12_5/no_info_diagnostics/`.
+
+- **Grid rows and per-event evidence:** `runs/<cell>/scan.json`,
+  `runs/<cell>/events.npz`, and the same files under every Part B cell
+  directory and every control directory.
+- **Branch evaluations:** `branches/<cell>/branches.npz`. Agents use only the
+  Part A summary's account of the sibling `branches.json` (identities, memory,
+  timings), not the file itself.
+- **Spectral-only reruns:** `spectral_events/spectral_h0.json` and
+  `spectral_events/events.npz`, and
+  `controls/part_a/spectral_events/spectral_h0.json` and `events.npz`. The
+  spectral stage writes its posterior into `spectral_h0.json`.
+- **Absolute summaries:** `summary/part_a/summary_a_absolute.json`,
+  `summary/part_b/summary_b_absolute.json`,
+  `summary/part_c/part_c_absolute.json` and `summary/part_c/part_c_grids.npz`.
+- **Logs:** every `stage.log`, including the 12U spectroscopic scan rerun's
+  (it prints ln L), and the Slurm `logs/*.out` lines that print a likelihood
+  or a posterior.
+
+The location-free files are `summary/part_a/summary_a.json`,
+`summary/part_b/summary_b.json`, `summary/part_c/part_c.json`,
+`summary/summary.json`, the `controls/**` json written by the control
+checkers (differences only), `coverage/` and every `STATUS*.json`. An agent
+checks a running job only through device, dtype, memory, timing and
+exit-code lines, never likelihood values.
 
 ## Why
 
@@ -452,6 +501,50 @@ build, compile and per-point times; queue wait is not included.
 
 **Controls and results.** None has run. Controls 1 to 4 must pass before any
 Part A result is read.
+
+### Amendment A2 (2026-10-19, before any Part A job): reading 4 withdrawn; status
+
+**Status.** About 08:30 UTC, the push of f724d0f and 440ef36 was refused a
+second time by the session's permission system. It was not worked around.
+**Part A is held** until the owner (or the main session with the owner's
+approval) pushes the branch. The push is a fast-forward from origin's
+38f104d, and 440ef36 adds only `phase12ah_a_*` files, so Part B's controls at
+416f5d7 stay valid. Until it is pushed, no part pushes from the shared clone.
+Any push from it publishes these commits.
+
+**Reading 4 is withdrawn as a reading.** As declared, "the selection term
+offsets the events' added curvature" (Q_ev / q_spec ≥ 0.10 while F < 0.05) is
+decided by core's normalisation of the field numerator, not by the data:
+
+- core leaves a survey-wide, H0-dependent factor g(H0) out of the numerator;
+- that factor cancels between the event evidences and −N ln mu, so q_tot, F
+  and every D_i do not depend on it;
+- but it adds 259 × curv(ln g) to Q_ev and removes the same amount from q_sel;
+- a common factor h³, for example, changes Q_ev by about 16 nats per
+  (10 km/s/Mpc)² at the window centre, several times the spectral-only
+  curvature.
+
+Two fixes were possible. Normalising each field numerator by its full-sky host
+total would make the split convention-free. The simpler one is chosen
+instead: Q_ev, q_sel, Q_ev / q_spec and the old test's outcome are
+**reported as diagnostics only**, in `curvature_budget`, with the convention
+note. No Part A statement and no overall reading uses them; the overall
+reading's rule 6 is amended below. Readings 1, 2, 3 and 5 are unchanged.
+
+**Code (working tree, not yet committed or tested):**
+
+- `scripts/phase12ah_a_summary.py`: the boolean is now
+  `curvature_budget.diagnostic_selection_offsets_events`, with
+  `diagnostic_note`. `readings` no longer has `selection_offsets_events`; its
+  `withdrawn` entry says why.
+- `tests/test_phase12ah_a_part_a.py`: the reading test checks that the key
+  is gone. The fourth-reading test becomes
+  `test_the_selection_offset_is_a_diagnostic_not_a_reading`: the diagnostic
+  is computed, and no statement uses it.
+
+The lane code is unchanged (scan, branches and spectral driver). So the
+short GPU controls test the same likelihood code as at 440ef36. The 11 CPU
+tests must pass on the new commit before any Part A job.
 
 ## Part B — the photometric redshift errors
 
@@ -937,6 +1030,102 @@ the spectral rerun> [COMMIT]`.
 - **Estimate:** about 5 minutes once Part A's production grids and the
   spectral rerun are done.
 
+### Amendment C2 (2026-10-19, before any subset grid): per-cell gating, a curvature fallback, the CPU lane
+
+**Status.** Part C is **held** with Part A, whose per-event grids it reads
+(amendment A2). No subset grid exists.
+
+**1. Each cell gates only itself.** The declared gate was global. So the
+support-only hint cell (nside 256, sigma_kde 1e-2) also gated the primary
+reading: a rita lane that stopped part way would leave a partial `scan.json`,
+and Part C would then read "not read: a control failed" even with a clean
+production cell. Fixed now:
+
+- **The spectral controls gate everything:** the spectral rerun reproduces
+  its own ln L from the per-event terms, and it equals the reference.
+- **The production cell's own controls gate the primary S reading and its
+  S′ support reading.** They are: it loads, with the PE file's event order;
+  it reproduces its own ln L; it equals 12AG's grid; its guard and H0 grid
+  equal the spectral grid's; and all events give 12AG's R.
+- **The hint cell's own controls (the same list) gate only the hint cell's
+  support readings.** A hint cell that is missing is "absent". One that is
+  partial, does not load or fails a control is "not read". Neither blocks
+  the production reading.
+- A cell that fails is not analysed at all.
+- `part_c.json` records `controls_passed` (the primary gate),
+  `controls_passed_by_cell`, `spectral_controls_passed` and
+  `all_controls_passed`.
+- The job exits 2 only when a spectral or production-cell control fails.
+
+**2. A curvature fallback when a subset grid is edge-limited.** S holds the
+45 low-redshift events, where the spectral-only likelihood has little lever
+arm. So S's 99% interval, catalog or spectral, may come within one grid step
+of 20 or 140, and the declared edge rule would then leave Part C with no
+reading. Fixed now, before any subset grid. The fallback is used **only when
+the subset grid is edge-limited**; otherwise the declared R reading stands
+unchanged.
+
+- **Statistic.** a_I is the curvature over the window W = [50, 90] (Part A's
+  window, 81 grid points, fixed a priori) of ln L_I^cat(H0) − ln L_I^spec(H0).
+  Both are core's own assembly for the subset's events, guard included.
+  a_I is twice the quadratic coefficient of the least-squares quadratic in
+  u = (H0 − 70)/10, in nats per (10 km/s/Mpc)², Part A's convention.
+  a_I < 0 means the catalog sharpens. The selection terms are those of a run
+  on I alone, so a_I is the subset's catalog-minus-spectral curvature, and
+  no H0 location enters it.
+- **Monte-Carlo condition.** The catalog subset grid has no penalised point in
+  W, and its total Monte-Carlo variance (Σ_I var_i + N_I²/N_eff) is at most 2
+  at every point of W (12AG's limit). Otherwise the reading is "limited by the
+  Monte-Carlo variance (curvature fallback)".
+- **Random control.** The same statistic on the same 1000 random subsets of
+  the same size, using the declared draws. The comparison uses the finite
+  values.
+- **Readings, for an edge-limited S:**
+  - a_S < 0 and below the random subsets' 5th percentile reads **"the catalog
+    informs the well-covered events (curvature fallback)"**. If the complement
+    reads "no narrowing", it adds **"… and the other events dilute it"**.
+  - a_S not below the 5th percentile reads **"coverage and depth do not
+    explain it (curvature fallback)"**.
+  - Anything else is "not covered by the declared rules".
+  - If the curvature cannot be evaluated (not finite over W), the reading
+    stays "edge-limited (not read)".
+  - The fallback has no "hint" level.
+- S′ and the hint cell are read the same way, as support only.
+- **Reported for every subset**, edge-limited or not: a_I, the subset's
+  catalog and spectral curvatures over W, F_I = a_I / q_I^spec (when
+  q_I^spec < 0), the window's Monte-Carlo numbers, and a_S's percentile
+  among the random subsets.
+- **Overall reading.** Reading 1 counts the fallback's "informs" the same as
+  the R reading's, and says which was used.
+
+**3. The CPU lane.** The production summary uses `CPU_LANE=henon`, the default.
+`CPU_LANE=twig` puts the 8-CPU job on the twig node. Each twig GPU lane asks
+for 32 of its 128 CPUs, so while that job runs only three GPU lanes can
+start. Twig is used only when no twig GPU lane is queued.
+
+**Code (working tree, not yet committed or tested):**
+
+- `scripts/phase12ah_c_subsets.py`: `_load_grid`, per-cell `cell_ok`,
+  `window_mask`, `window_curvatures`, `window_record`, `curvature_rank` and
+  `fallback_key`. `c_reading` takes the curvature rank. `random_control`
+  adds each random subset's a. The schema is `darksirens-phase12ah-c-subsets-2`.
+- `tests/test_phase12ah_c_subsets.py` adds the fallback rules to the
+  reading-rules test, and adds three tests:
+  - the window curvature against Part A's `curve_metrics`, and the random
+    rank;
+  - end to end, an edge-limited synthetic S reads the fallback's "informs …
+    dilute", with a_S equal to the constructed −8 × (10/18)²;
+  - a partial hint cell, and a hint cell that fails its 12AG comparison, leave
+    the production reading standing; with its true reference the hint cell is
+    read as support.
+
+  The fail-closed test now also checks the per-cell status.
+
+The reconstruction (`subset_terms`, `terms_from_sums`, `correction`) is
+unchanged, so the direct-subset controls of the first Part C amendment
+(jobs 1390251 and 1390252) still apply. The CPU tests must pass on the new
+commit before Part C's job.
+
 ## Part D — luminosity weighting: what core e7c3007 supports
 
 ### Verdict: not supported consistently. Design only; nothing is built or run.
@@ -948,7 +1137,12 @@ e7c3007c659205cf4d55279c8e016014c57aa9b3):
    `catalog/redshift.py:310-319` (`_row_kernel_state`): the weights `wgals`
    are normalised to unit total in each pixel,
    `log_w_norm = log_w - logsumexp(log_w)`. A weight changes which galaxy in a
-   pixel hosts, never how much host mass the pixel holds.
+   pixel hosts. It reaches the pixel's host mass only through an average: the
+   depth mass that scales N_obs is the weight-averaged below-depth mass of the
+   galaxies' kernels (`_renormalize_below_depth`, called from
+   `_row_kernel_state`). It never enters as an amplitude. (Corrected by
+   amendment D1. The declaration said "never how much host mass the pixel
+   holds".)
 2. **The pixel's catalog amplitude is the galaxy count.**
    `catalog/models.py:140-143` (`assemble_incomplete_catalog_prior_state`):
    `Nobs = ngals × (kernel mass below the depth)`, and the pixel normaliser is
@@ -1040,6 +1234,22 @@ per-galaxy normaliser.
 6. The consumer then writes 10^(−0.4 M̂_i) into `wgals` from M_APP, Z and the
    k-correction; the catalog file already has the column (all 1 now).
 
+**Amendment D1 (2026-10-19, design only; nothing runs).**
+
+- **Item 1 is corrected above.** The weights do shift N_obs, through the
+  weight-averaged depth mass, but never as an amplitude. The verdict, "not
+  supported consistently", is unchanged.
+- **A seventh change core would need: n0 must match the luminosity sum.**
+  In a luminosity-weighted model, the fixed n0 must match the observed
+  luminosity sum: Σ_i ℓ_i against n0 ∫ f_p C_L(z) g(z) dz over the
+  footprint. That equals the count calibration (Σ_i 1 against n0 ∫ f_p C̄ g)
+  only if the luminosity function is exact. So the count-ridge n0 is either
+  re-derived from the luminosity sum or checked against it, and the
+  difference is reported.
+- **Optional for change 2.** Core main's tabulated completeness family
+  (PR #64, opt-in `completeness="selection"` with family `tabulated`) could
+  carry C_L(z) as a table. It is not in the pinned e7c3007.
+
 **Part D stops here.**
 
 ## Controls (all must pass before any result is read)
@@ -1077,6 +1287,55 @@ A control that fails stops the part it guards. The record says so, and
 nothing of that part is read.
 
 ## Compute plan
+
+**Amendment R1 (2026-10-19): the plan below is superseded by the per-part
+submit scripts.** Stages 1 and 2 already ran as Part B's catalog builds and
+controls (B1) and Part C's coverage and controls (the first Part C amendment).
+The one-script plan and its "11:00 to 12:00 UTC" estimate no longer apply.
+From here, every job uses its partition's maximum time, and the order is:
+
+1. **Part B, now (no dependency on the push):**
+   `slurm/phase12ah_b_submit_grids.sh 416f5d7`.
+   - Lanes: rita0 and rita1 (A100-80), twig0 to twig3, and henon-gpu.
+   - Then the Part B summary on HENON (afterany), which always writes
+     `summary/part_b/STATUS_B.json`.
+   - About 20 minutes from submission if both rita cards are free.
+2. **Before Part A and Part C:**
+   - the CPU tests of A, B and C, and the new overall test, pass on the
+     working tree;
+   - one commit holds A2, C2 and the overall summary;
+   - the owner (or the main session with the owner's approval) pushes the
+     branch;
+   - that commit is recorded here.
+   About 15 minutes after a working shell is back, plus the owner's push.
+3. **Part A's short controls:** `slurm/phase12ah_a_submit_controls.sh <commit>`.
+   The nside-64 lane (twig) takes about 12 min, the nside-256 lane (rita) about
+   16 min, the spectral grid on HENON CPU about 7 min, and the checks about
+   2 min. About 25 minutes, or about 40 if Part B's rita lanes still hold both
+   rita cards.
+4. **When `controls/part_a/controls_a.json` passes:**
+   - **Part A's production:** `slurm/phase12ah_a_submit.sh <commit>`, about
+     25 minutes. The rita lane for the hint cell is the longest, about
+     17 minutes.
+   - **Part C:** `CPU_LANE=henon slurm/phase12ah_c_submit.sh production --after
+     <Part A's lane ids, the spectral one included> <commit>`, about 5 minutes
+     after them.
+   - **The overall summary:** `slurm/phase12ah_summary_henon.sbatch` on HENON,
+     with afterany on the A, B and C summary jobs. It always writes
+     `summary/STATUS.json`. About 1 minute.
+
+**Estimated time to completion:**
+
+- Part B: about 20 minutes after its submission.
+- Parts A and C and the overall summary: about 1 hour 10 minutes after the
+  push. That is about 50 minutes for A (controls, then production), 5 for C,
+  1 for the overall summary, and about 15 for tests and the commit before
+  the push.
+- All of this assumes a rita card and a twig card are free. If another user
+  holds rita, the nside-256 lanes wait for it, as on 2026-10-18 (about
+  4 hours).
+
+## Compute plan as declared (superseded; kept for the record)
 
 Every job requests its partition's maximum time (a ceiling, not the
 estimate). The miko holder, the second miko card and js2h100 are not used;
@@ -1144,6 +1403,23 @@ Every statement whose trigger holds is reported; they are not exclusive.
 7. **"Not localised"** if none of 1 to 5 holds.
 
 Part D adds no reading: it is design only.
+
+**Amendment R1 (2026-10-19, before any production run):**
+
+- **Rule 6** reports only Part A's reading 3 (structure that cancels).
+  Reading 4 was withdrawn by amendment A2; its quantities are reported as
+  Part A diagnostics.
+- **Rule 1** counts Part C's curvature-fallback "informs" (amendment C2) the
+  same as the R reading's, and says which was used.
+- **A part that was not read** (held, a primary control failed, or its summary
+  is missing) makes the overall reading **"incomplete"**, naming the part.
+  Rules 4 and 5 are then conditional on the parts read, and rule 7 ("not
+  localised") is not stated.
+- **The overall reading is computed by `scripts/phase12ah_summary.py`** from
+  the three location-free part summaries only. It writes
+  `summary/summary.json` and always `summary/STATUS.json`; the test is
+  `tests/test_phase12ah_overall.py`. These are working-tree changes, not yet
+  committed or tested.
 
 Any part limited by the Monte-Carlo variance is named with its reading. A
 "no information" reading of any part does not test what lies outside it:
