@@ -1168,8 +1168,8 @@ population free.
   separate shifts (−0.277 and −0.099) within its error.
 - **n0 centre: robust.** Up to ±1 sd, |Δ| ≤ 0.13 on B1's full set. On the
   12Y chain Part A gave −0.082 for n0_m083; here it is −0.099. The ±2 sd
-  shifts keep under 2.2% of the weight and are not read, as expected in
-  advance.
+  shifts keep 1.2% and 0.7% of the effective sample size and are not read,
+  as expected in advance.
 - **The window spread with the population free** is at least 0.28 (d200
   against d245), mild. Only the far end, d200, was run, as declared, so the
   intermediate depths are not measured with the population free.
