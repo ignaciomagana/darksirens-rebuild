@@ -2,6 +2,8 @@
 
 ## Status
 
+**DONE (2026-10-18): results below, read robust.** Dropping the 10 O1/O2 events moves H0 by +0.11 sd (γ fixed) and −0.16 sd (γ free), width ratio 1.01 and 1.00; control 9.1e-13. The text that follows is the declaration as written before any run.
+
 **DECLARED (owner, 2026-10-18), before any run.** Nothing in this record has
 been run, and the 249-event file does not exist yet. The work is
 fixed-population spectral-only grids on GPU, then a comparison on HENON CPU.
