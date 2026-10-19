@@ -708,3 +708,9 @@ readings, rules and controls stand. Tests: 22 passed on CPU (19 from B1 plus thr
 `slurm/phase12aj_submit.sh 5f24519` from `phase12_5/repo_12AJ`, from the clean worktree
 `lnl_convergence/worktrees/5f24519430c0`. The replicate manifest passes (sha256 951fc6da…), so nothing is rebuilt.
 Lanes, flags and outputs are as in B1, except that the spectral array is 0–29 (at most 8 at once).
+
+**Submitted 2026-10-19 12:56 UTC** from worktree `5f24519430c0`: rita0 (nside 64) job 1390326, running; rita1
+(nside 128) job 1390327, pending on the rita card held by `p12al-gpu-control` (another session's job, not touched);
+spectral array job 1390328 (tasks 0–29, at most 8 at once; tasks 0 and 1 started on henon04, the rest waiting for
+HENON resources); summary job 1390329, afterany on all three. Expected `summary/STATUS.json` about 2.5–2.8 h after
+submission (the lanes run one after the other), sooner if the other rita job ends early.
