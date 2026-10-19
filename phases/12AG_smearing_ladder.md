@@ -33,6 +33,26 @@ has run.**
 - **The plan is ready and not submitted:** seven GPU lanes, about 15 minutes
   of GPU time on the longest lane. See "Plan and estimate" under Results.
 
+**AMENDMENT 2 (2026-10-19, about 06:55 UTC). No ladder grid has run.**
+
+- **Reading rules:**
+  - "narrows" and "a hint" now also need the total Monte-Carlo variance (PE
+    sum + selection) ≤ 2 inside the cell's 90% interval;
+  - a penalised point inside the uncapped grid's 99% interval also reads as
+    limited by the Monte-Carlo variance.
+- **The washout rule is corrected:**
+  - the narrowing must be at finer smearing;
+  - staircase paths to the production cell count;
+  - a step may fall by 0.02 at most, and R must rise 0.10 overall (or the
+    production cell reads "no narrowing");
+  - a narrowing with no qualifying path reads "undetermined".
+- **The null reading says what it does not test:** the photometric galaxies'
+  redshift errors.
+- **Added:** a covariate of the nside axis (covered pixels with no galaxy), the
+  compact-view counts, routing on the device total, and blinding hygiene.
+- **The ladder code moves to 6337a56.** C1 and C2 were rerun there (job
+  1390227) and are bit for bit again (largest |Δ ln L| 0.0). C3 passes.
+
 **Blinding: location-free.** No H0 value is written here, in commit messages
 or in PR text: no median, interval, MAP or absolute shift in km/s/Mpc. Results
 are given as:
@@ -321,7 +341,8 @@ Where they run:
 - nside 64, 128 and 256 each run on a twig A100-40.
 
 **Routing rule:** a cell whose probe peak, at either probed sigma_kde, is above
-34 GiB goes to rita's 80 GB cards only. Probe numbers are not likelihood
+34 GiB goes to rita's 80 GB cards only. (Replaced twice before any ladder grid:
+see amendments 1 and 2.) Probe numbers are not likelihood
 results and are not read.
 
 ## Compute plan
@@ -377,6 +398,10 @@ All against the spectral-only grid, on the same 241 points:
   and build time.
 
 ## Reading rules (fixed before any grid)
+
+**Amended before any grid by amendment 2 (below):** Monte-Carlo
+reliability conditions, the uncapped-grid test and a new washout rule. The
+text here is the rule as first declared.
 
 Per cell:
 
@@ -441,6 +466,218 @@ nvidia-smi peak of 48.8 GiB. The declared rule would have sent nside 256 to a
   `phase12` package are identical at 304c8ae and 09c4b62, so C1 and C2 (run
   at 304c8ae) stand.
 
+## Amendment 2 (2026-10-19, about 06:45 UTC, before any ladder grid)
+
+A review of the prepared plan, done before submission, found two gaps:
+
+- the reading rules did not test whether a cell's grid is reliable under its
+  Monte-Carlo variance;
+- the washout rule had three logic errors.
+
+It also found smaller problems in memory routing, reporting and blinding
+hygiene. **Everything below is fixed before any ladder grid runs.**
+
+The thresholds (2 for the total variance, 0.02 per step, 0.10 rise, the 99%
+uncapped interval) were chosen by the agent after the review. The owner may
+revise them. A revision made after the grids have run will be recorded here as
+made after the grids.
+
+### Reading rules, as amended
+
+The declared rules stand, with three additions. Each cell is now read as
+follows.
+
+1. **R band:** R ≤ 0.90 reads "narrows", 0.90 < R ≤ 0.97 reads "a hint", and
+   R > 0.97 reads "no narrowing". The summary records this as `R_band`.
+2. **The cell reads "limited by the Monte-Carlo variance" instead** if any of
+   these holds:
+   - a penalised point lies inside the cell's 90% interval (as declared);
+   - **new:** a penalised point lies inside the 99% interval of the
+     **uncapped grid**. That grid is ln L minus the soft-guard penalty: core's
+     selection correction with no variance cap. A penalised band next to the
+     bulk removes that band's mass from the capped grid, so the capped interval
+     alone cannot see it. A point whose uncapped correction is not finite
+     (N_eff ≤ 5 N_obs) carries no likelihood on the uncapped grid.
+   - **new:** R reads "narrows" or "a hint" while the **total Monte-Carlo
+     variance**, the PE sum plus the selection term (N_obs²/N_eff), is above
+     **2** at any grid point inside the cell's 90% interval.
+3. **Why 2:**
+   - The production cell is the ladder cell's own scan (control C1). Its total
+     variance runs from 0.71 to 1.39 over its 12 points.
+   - The spectral-only grid's largest value inside its 90% interval is 0.91.
+   - Core's default cap of 1 (the GWTC-4.0/5.0 threshold) would flag the
+     production cell itself.
+   - A limit of 2 is an error of about 1.4 nats in ln L.
+4. "No narrowing" is not changed by the variance alone. The penalised-point
+   tests apply to every reading.
+5. **Reported per cell, in addition:**
+   - the selection and total variances: at the point nearest the median, the
+     largest inside the 90% interval and the largest over the grid;
+   - the uncapped grid's R, sd ratio and Δ;
+   - the number of penalised points, and of materially penalised points
+     (|penalty| > 0.01 nat);
+   - the reasons a cell reads "limited by the Monte-Carlo variance".
+
+### The washout rule, as amended
+
+The declared rule had three faults:
+
+- it accepted a narrowing at **coarser** smearing as a washout;
+- it skipped cells off the production cell's row and column, such as the
+  fine corner at nside 256 with sigma_kde 1e-4;
+- it had no tolerance and no minimum rise.
+
+It is replaced by this rule. **"Smearing washes out the information"** is said
+only when all of the following hold:
+
+1. **The direction is right.** A cell reads "narrows" at finer-or-equal
+   smearing on both axes than the production cell: nside ≥ 64 and
+   sigma_kde ≤ 3e-3, with at least one of the two strictly finer.
+2. **A path exists.** A staircase path joins that cell to the production cell
+   (nside 64, sigma_kde 3e-3). Each step moves one place in nside or in
+   sigma_kde, always toward the production cell. Any such path counts. There
+   are 10 from the fine corner.
+3. **R does not fall along the path.** At no step does R fall by more than
+   **0.02**.
+4. **R rises enough.** The production cell reads "no narrowing", or its R is
+   at least **0.10** above the narrowing cell's. The production cell must also
+   be read: not incomplete and not limited by the Monte-Carlo variance.
+
+The other verdicts:
+
+- **"Coarser smearing narrows (not a washout)"**: every narrowing cell is at
+  coarser smearing (nside ≤ 64 and sigma_kde ≥ 3e-3, not the production cell).
+- **"Undetermined"**: some cell narrows, but no qualifying path exists. This
+  covers a cell that is finer on one axis and coarser on the other, a
+  production cell that itself narrows, and a production cell that is
+  Monte-Carlo-limited. It never reads "not explained".
+- **"Not explained"**: no cell narrows, and every finer cell was read.
+- **"Not explained where the Monte-Carlo resolves it"**: no cell narrows, but
+  some finer cells are limited by the Monte-Carlo variance or are incomplete.
+  The summary lists them.
+
+**What a null result does not test.** A "not explained" verdict, of either
+kind, does **not** test the photometric galaxies' own redshift errors. They
+are 73% of the catalog, with ZERR median 0.032 and 5% to 95% from 0.0086 to
+0.074. Their median kernel width moves only from 0.0318 to 0.0334 across the
+whole ladder. A separate, pre-declared test of those errors is offered to the
+owner below. It is not part of this ladder.
+
+### "Same galaxy set" means the catalog files
+
+The four catalog files hold the same 22,785,279 galaxies (gate G1). The
+evaluated target keeps only the pixels that a PE sample or an injection falls
+in. Its compact view therefore holds:
+
+| nside | compact rows (pixels) | compact galaxies | share of the catalog |
+|---|---|---|---|
+| 32 | 12,288 | 22,785,279 | 100% |
+| 64 | 49,152 | 22,785,279 | 100% |
+| 128 | 196,577 | 22,782,073 | 99.99% |
+| 256 | 714,745 | 20,549,124 | 90.2% |
+
+This is exact for the Monte-Carlo estimator. A galaxy in a pixel that no
+sample or injection touches contributes nothing to any term. At nside 256,
+though, the 1,067,946 detected injections spread over 786,432 pixels, about
+1.4 per pixel. That is why the selection variance rises at fine nside. Each
+cell reports its own `n_compact_rows` and `n_compact_galaxies`.
+
+### A covariate of the nside axis: covered pixels with no galaxy
+
+The production footprint marks some pixels as covered (f_p > 0) where the
+union catalog has no galaxy. The likelihood reads such a pixel as an observed
+void (C_p = f_p C̄).
+
+These pixels sit in contiguous patches: at nside 64, the median empty-covered
+pixel has 5 of its 8 neighbours empty-covered too. About 30% of them lie at Dec
+−30° to −15° and RA 300° to 360°; the rest spread over Dec −50° to +30°. This
+looks like an imaging-based map that extends past the catalog's edge.
+
+Their share grows along the nside axis, so **the nside axis is mildly
+confounded with the area of these voids.** It is reported as a covariate and
+not corrected. `catalogs/covariates.json` (from `phase12ag_catalogs.py
+covariates`) has the full numbers, and the summary carries them.
+
+| nside | empty-covered pixels | with f_p > 0.5 | f_p sum | share of the f_p-weighted footprint | f_p-weighted area | galaxies at the mean density | share of PE samples | share of detected injections |
+|---|---|---|---|---|---|---|---|---|
+| 32 | 415 | 223 | 216.2 | 3.1% | 726 deg² | 0.72 M | 3.2% | 3.3% |
+| 64 | 1,732 | 1,301 | 1,209.7 | 4.4% | 1,015 deg² | 1.00 M | 3.4% | 3.4% |
+| 128 | 7,214 | 7,010 | 6,014.7 | 5.5% | 1,262 deg² | 1.25 M | 3.5% | 3.5% |
+| 256 | 33,568 | 32,336 | 27,748.1 | 6.3% | 1,456 deg² | 1.44 M | 4.1% | 4.1% |
+
+- At nside 256, the inheritance rule for the upgraded footprint adds 4,712
+  empty children of occupied nside-128 parents. They carry their parent's f_p
+  (median 0.84), and their parents hold a median of 19 galaxies.
+- Two events have more than half of their PE samples in empty-covered pixels,
+  at every nside but 32 (there, one).
+- **A matter for the owner, separate from this ladder:** the production
+  footprint map and the union catalog disagree over about 1,000 deg². A later
+  footprint variant, with f_p = 0 in contiguous empty-covered regions, would be
+  an owner decision for its own record. It is not a change to this ladder.
+
+### Memory routing, as amended (replaces amendment 1's rule)
+
+jax's allocator peak understates the device total. nvidia-smi read 1.5 to 2
+times jax's peak:
+
+- 24.8 against 12.7 GiB at nside 128;
+- 48.8 against 33.8 GiB at nside 256;
+- 18.8 against 10.2 GiB at nside 32.
+
+The new rule: **a cell goes to an 80 GB card when the larger of nvidia-smi's
+probe peak and 1.6 × jax's probe peak is above 34 GiB, or when its probe ran
+out of memory on a 40 GB card.**
+
+| nside | device estimate | out of memory on a 40 GB card | route |
+|---|---|---|---|
+| 32 | 18.8 GiB | no | any A100 |
+| 64 | 21.5 GiB | no | any A100 |
+| 128 | 24.8 GiB | no | any A100 |
+| 256 | 54.0 GiB | yes | rita's 80 GB cards |
+
+The routing is the same as under amendment 1. nside 32 was probed only on an
+80 GB card and has not run on a 40 GB one. Its device peak of 18.8 GiB leaves
+a wide margin. A lane carries on to its next cell after a failure, and can be
+resubmitted.
+
+### Blinding hygiene
+
+- The grid driver's progress line no longer prints ln L. It prints H0, the PE,
+  selection and total variances, whether the point is penalised and accepted,
+  the seconds, the memory and the backend.
+- **Not for agents to read or quote,** like `summary_absolute.json`:
+  - each cell's `scan.json` rows, which carry ln L by necessity;
+  - the probe's and controls' `stage.log` files written at 304c8ae, which
+    printed ln L.
+
+### Code, and the controls rerun
+
+- **The ladder moves to consumer commit 6337a56** on the same branch. It
+  changes:
+  - `phase12ag_summary.py`: the reading and washout rules above, the
+    covariates and the notes;
+  - `phase12ag_plan.py`: the routing;
+  - `phase12ag_catalogs.py`: the `covariates` command, which reads files and
+    changes nothing;
+  - `phase12ag_scan.py`: the progress line only;
+  - the submit and summary jobs;
+  - the tests: 16 CPU tests, all passing.
+- The scan driver changed (its print line), and the driver's own digest is
+  part of every grid's configuration fingerprint. So **C1 and C2 are rerun at
+  6337a56** on the henon-gpu A100-40 (job 1390227), and C3 is rechecked.
+- The 304c8ae outputs move to `controls/at_304c8ae/`.
+
+### Offered to the owner, not part of this ladder
+
+- **A split-sample repeat** of any cell that reads "narrows": two disjoint
+  halves of the injections, or of the PE samples, whose R must agree within
+  about 0.05. This would be its own declared follow-up.
+- **A test of the photometric galaxies' redshift errors** as its own record.
+  Two forms:
+  - the spectroscopic-only catalog from 12U, with its own count ridge;
+  - the union with the photometric dz scaled.
+- **The footprint and catalog disagreement** described above.
+
 ## Results
 
 ### Catalogs (HENON job 1390203, henon04, 10 min 41 s, 20 GB peak RSS)
@@ -489,6 +726,22 @@ removed by the 12I mask; **22,785,279 galaxies**.
 
 The record is `controls/controls.json`.
 
+**Rerun at 6337a56 (amendment 2).** The commit changed the scan driver's print
+line, and the driver is part of the grid fingerprint. So C1 and C2 ran again
+from the 6337a56 worktree: henon-gpu A100-40, job 1390227, about 06:47 to
+06:51 UTC.
+
+- **C1 passes again:** largest |Δ ln L| **0.0** over the 12 H0 values against
+  the ladder cell's scan. The theta vectors are identical. The run used the
+  GPU in float64. The first call took 91 s, later points 0.285 s each, and the
+  jax peak was 13.4 GiB.
+- **C2 passes again:** largest |Δ ln L| **0.0**, in the same job. The rebuilt
+  file's sha256 equals production's.
+- **C3 passes:** all ten checks, reference sha256 `db9f7b80…`.
+
+The 304c8ae outputs are kept in `controls/at_304c8ae/`. `controls/controls.json`
+is now the 6337a56 check.
+
 ### Probe
 
 Five H0 points per entry, at the ladder calibration (`probe/probe.json`).
@@ -496,17 +749,34 @@ Times are per process: load + build, the first call (with its compile), then
 the median of the later calls. The PE variance columns are the largest over
 the five points.
 
-| nside | sigma_kde | card (job) | jax peak GiB | nvidia-smi peak GiB | load + build s | first call s | s per point | PE variance sum, max | largest single event | penalised points |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 32 | 1e-4 | A100-80 (1390205) | 10.2 | 18.8 | 24 | 77 | 0.352 | 0.36 | 0.027 | 0 |
-| 32 | 1e-2 | A100-80 (1390205) | 10.2 | 18.8 | 18 | 76 | 0.350 | 0.26 | 0.021 | 0 |
-| 64 | 1e-4 | A100-40 (1390206) | 13.4 | 20.8 | 28 | 86 | 0.276 | 0.55 | 0.072 | 0 |
-| 64 | 1e-2 | A100-40 (1390206) | 13.4 | 20.8 | 25 | 87 | 0.274 | 0.28 | 0.021 | 0 |
-| 128 | 1e-4 | A100-40 (1390207) | 12.7 | 24.8 | 40 | 83 | 0.269 | 1.21 | 0.282 | 1 |
-| 128 | 1e-2 | A100-40 (1390207) | 12.7 | 24.8 | 35 | 83 | 0.267 | 0.31 | 0.029 | 0 |
-| 256 | 1e-4 | A100-40 (1390208) | out of memory | | | | | | | |
-| 256 | 1e-4 | A100-80 (1390216) | 33.8 | 48.8 | 68 | 68 | 0.358 | 2.88 | 0.556 | 0 |
-| 256 | 1e-2 | A100-80 (1390216) | 33.8 | 48.8 | 68 | 68 | 0.357 | 0.38 | 0.027 | 0 |
+| nside | sigma_kde | card (job) | jax peak GiB | nvidia-smi peak GiB | load + build s | first call s | s per point | PE variance sum, max | largest single event | selection variance, max | total variance, max | penalised points |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 32 | 1e-4 | A100-80 (1390205) | 10.2 | 18.8 | 24 | 77 | 0.352 | 0.36 | 0.027 | 1.60 | 1.95 | 0 |
+| 32 | 1e-2 | A100-80 (1390205) | 10.2 | 18.8 | 18 | 76 | 0.350 | 0.26 | 0.021 | 0.98 | 1.24 | 0 |
+| 64 | 1e-4 | A100-40 (1390206) | 13.4 | 20.8 | 28 | 86 | 0.276 | 0.55 | 0.072 | 4.45 | 5.01 | 0 |
+| 64 | 1e-2 | A100-40 (1390206) | 13.4 | 20.8 | 25 | 87 | 0.274 | 0.28 | 0.021 | 1.10 | 1.39 | 0 |
+| 128 | 1e-4 | A100-40 (1390207) | 12.7 | 24.8 | 40 | 83 | 0.269 | 1.21 | 0.282 | 24.46 | 25.67 | 1 |
+| 128 | 1e-2 | A100-40 (1390207) | 12.7 | 24.8 | 35 | 83 | 0.267 | 0.31 | 0.029 | 1.24 | 1.56 | 0 |
+| 256 | 1e-4 | A100-40 (1390208) | out of memory | | | | | | | | | |
+| 256 | 1e-4 | A100-80 (1390216) | 33.8 | 48.8 | 68 | 68 | 0.358 | 2.88 | 0.556 | 6.33 | 9.21 | 0 |
+| 256 | 1e-2 | A100-80 (1390216) | 33.8 | 48.8 | 68 | 68 | 0.357 | 0.38 | 0.027 | 1.73 | 2.11 | 0 |
+
+**The total Monte-Carlo variance (PE sum + selection) at the five probe
+points** (added with amendment 2; the selection term dominates):
+
+| nside | sigma_kde | H0 = 20 | 50 | 80 | 110 | 140 |
+|---|---|---|---|---|---|---|
+| 32 | 1e-4 | 1.95 | 1.14 | 0.88 | 0.78 | 0.72 |
+| 32 | 1e-2 | 1.24 | 1.02 | 0.83 | 0.74 | 0.71 |
+| 64 | 1e-4 | 5.01 | 1.44 | 1.02 | 0.82 | 0.74 |
+| 64 | 1e-2 | 1.39 | 1.03 | 0.85 | 0.75 | 0.71 |
+| 128 | 1e-4 | 25.67 | 2.11 | 1.26 | 0.96 | 0.83 |
+| 128 | 1e-2 | 1.56 | 1.07 | 0.86 | 0.78 | 0.71 |
+| 256 | 1e-4 | 9.21 | 5.44 | 1.91 | 1.10 | 1.29 |
+| 256 | 1e-2 | 2.11 | 1.21 | 0.94 | 0.84 | 0.73 |
+
+For comparison, the production cell's scan (control C1) runs from 0.71 to 1.39
+over its 12 points.
 
 **Memory grows with fine nside, not coarse.** The target keeps one row per
 pixel that a PE sample or an injection falls in. That is 12,288 rows at nside
@@ -515,9 +785,18 @@ per-row curves dominate the memory. The width of the most crowded pixel
 (5,180 down to 569 galaxies) matters less.
 
 **The PE variance rises as the smearing gets finer.** It peaks at the lowest
-probed H0 and stays far under the limit of 20. At sigma_kde 1e-4 the largest
-sum over the five points is 0.36, 0.55, 1.21 and 2.88 at nside 32, 64, 128
-and 256. At sigma_kde 1e-2 it is 0.26 to 0.38 at every nside.
+probed H0. At sigma_kde 1e-4 the largest sum over the five points is 0.36,
+0.55, 1.21 and 2.88 at nside 32, 64, 128 and 256. At sigma_kde 1e-2 it is 0.26
+to 0.38 at every nside.
+
+**Correction (amendment 2): the selection variance dominates the total, and
+it rises with fine smearing too.** The first version of this paragraph gave
+only the PE variance and said it stayed far under the limit of 20. The total
+variance is the PE sum plus the selection term. At sigma_kde 1e-4 its largest
+value over the five points is 1.95, 5.01, 25.67 and 9.21 at nside 32, 64, 128
+and 256. At the penalised point it is 25.7, of which 24.5 is selection. At
+nside 256 with sigma_kde 1e-4 it is 5.4 at H0 = 50 and 1.9 at H0 = 80. The
+amended reading rules test this variance inside every cell's 90% interval.
 
 **One probe point is penalised.** At nside 128 with sigma_kde 1e-4, the grid's
 lowest point, the lower edge of the H0 prior, has a selection N_eff of 2,743
