@@ -10,6 +10,10 @@ on existing grids that the fine window holds the posteriors (see "Grid"; consume
 replicate files are built and pass every file check, and the preflight identity control passed bit for bit at both
 nsides and on spectral only. The production is prepared, not submitted. Consumer commit 03a35ef (local, not pushed).
 
+**Review fixes (amendment B2, 2026-10-19, before any production job).** One blocking risk fixed (the spectral
+identity control now runs in one array task, on one node) and eight cheap non-blocking fixes. Nothing in the design
+changes. Production runs from consumer commit 5f24519 (local, not pushed).
+
 **Blinding: location-free**, as in 12AG to 12AI. No H0 value appears here, in commit messages or in PR text. The only
 H0 values in this record are fixed a priori:
 - the coarse grid [20, 140] at step 0.5;
@@ -229,7 +233,8 @@ It reads the existing 241-point grids (12AI's `absolute.npz`) and writes only lo
 
 **Estimates:**
 - Every variance is over k, with ddof 1.
-- Each comes with a 68% chi-square interval on 13 degrees of freedom (about ±40% on a single variance).
+- Each comes with a 68% chi-square interval on 13 degrees of freedom (about −27%/+59% on a single variance, that
+  is [0.73, 1.59] times the estimate; the earlier wording "about ±40%" is corrected in amendment B2).
 - **PE terms also get a more precise estimate** from the per-event evidences: Σ_i Var_k of event i's δ ln Ẑ_i. It has
   the same expectation to first order, because the events are resampled independently.
 
@@ -439,12 +444,16 @@ Under `phase12_5/lnl_convergence/`:
 
 ## Known limits
 
-- **K = 14.** A single variance from 14 replicates is uncertain by about ±40% (68%). The PE terms are much tighter,
+- **K = 14.** A single variance from 14 replicates has a 68% interval of about −27%/+59% (corrected in B2 from
+  "about ±40%"). The PE terms are much tighter,
   through the per-event estimate. The readings are about factors, not percent.
 - **What the bootstrap sees.** It measures the noise of the estimator given these 4096 rows per event and these
   injections. It does not see:
   - errors common to every replicate, such as PE prior systematics or a mismatch of the injection set;
-  - the upstream duplication of two events.
+  - the upstream duplication of two events (sizes added in B2): event indices 0 and 58 keep 2383 and 1732 unique
+    rows of 4096. Solving M(1 − e^(−4096/M)) = n_unique gives about 3400 and 1980 original samples, so their true
+    ln Z_i variance is about 2.2 and 3.1 times what the bootstrap and core see. The summary reports these two
+    events' share of the PE variance and the PE total and S(PE) with their v_i scaled by those factors.
 - **One sigma_kde.** A third cell is left to the owner.
 
 ## Amendment B1 (2026-10-19, build; before any production job): code, tests, replicate files and the preflight
@@ -638,3 +647,64 @@ are not rebuilt and nothing waits on them.
   the spectral array alongside.
 - **About 1.3 h from submission to `summary/STATUS.json`** if rita is free. It was idle at 12:40 UTC.
 
+## Amendment B2 (2026-10-19, review fixes; before any production job)
+
+A review of the build (record, code, Slurm scripts, tests) found one blocking risk and nine non-blocking points.
+Every fix below is in consumer commit **5f24519** on `phase12aj/lnl-bootstrap` (local, not pushed), on top of
+03a35ef. **The likelihood path is unchanged** (the drivers, the loop and the spectral wrapper are byte-identical to
+03a35ef), so the B1 preflight still covers production. **Nothing in the design changes**; the declared metrics,
+readings, rules and controls stand. Tests: 22 passed on CPU (19 from B1 plus three new ones), about 39 s.
+
+### The blocking risk: the spectral identity control could cross nodes (fixed)
+
+- Control 1 on spectral only requires the nominal and identity grids to match bit for bit, and a failure withholds
+  every reading.
+- In B1 they were tasks 0 and 1 of the HENON array, free to land on different nodes. HENON nodes differ in CPU model
+  (henon01 and henon02 have 256 CPUs; henon03, 04, 05 and 07 have 128; henon04 is an AMD EPYC 7542), and XLA on CPU
+  compiles for the host, so the last bit could differ for no physical reason.
+- **Fix:** array task 0 now runs `spectral_nominal` and then `spectral_identity` in the same task, on the same node,
+  through the lane runner (entry names joined by ':'). The array has 30 tasks instead of 31; every grid still runs
+  once. The summary also records whether the two grids ran on the same node and CPU model. The bit-for-bit rule
+  stays.
+- This replaces B1's "residual risk" note.
+
+### Non-blocking fixes
+
+1. **Wall time with one rita card busy.** The 1.3 h estimate holds only with both A100-80 cards free. At submission
+   another session's job (`p12al-gpu-control`, not ours, not touched) holds one card and 128 CPUs, so the two lanes
+   run one after the other: about 2.5–2.8 h from submission to `summary/STATUS.json`, longer if that job outlasts
+   our first lane and still holds its card. The submit script prints the RITA-GPU queue before submitting.
+2. **Heavy tails in the per-event PE estimate.** Some events have a prior-reweighting ESS near 10, so the Gaussian sd
+   2v_i²/(K − 1) can understate the uncertainty. The summary now gives three sds of Σ_i v_i: the Gaussian one, a
+   fourth-moment one, Σ_i (m4_i − (K − 3)/(K − 1)·v_i²)/K with each event's term clipped at zero, and a delete-one
+   jackknife over k. The ±1 sd interval and reading 2's "matches" flag use the largest of the three. (This replaces
+   B1's choice 2, third bullet.)
+3. **The two upstream-resampled events.** For each system (spectral and both cells) the summary reports these
+   events' share of Σ_i v_i (bootstrap) and of core's per-event variances, at the point nearest the median and
+   posterior-weighted; the PE total with their v_i multiplied by (1 + 4096/M_i); and the change this makes to S(PE)
+   (their per-event shape variances times (factor − 1)). The sizes are in Known limits.
+4. **Wording of the K = 14 interval.** "About ±40%" is corrected to "about −27%/+59%" in "Metrics" and "Known limits".
+   Supplementary only, with the declared rule unchanged: reading 1 also reports each fraction's jackknife sd and
+   flags the verdict as marginal when the largest fraction's ±1 sd straddles 1/2.
+5. **The H² check.** B is built from the sample mean of δ_k, so it carries about S/K of noise, and the average over k
+   of Var_p(δ_k) is exactly B + (K − 1)/K·S. The check now reports H² against (B + (K − 1)/K·S)/8 beside the B1
+   (S + B)/8, and the debiased bias B − S/K.
+6. **12AI's core values.** They are now labelled `12AI_core_values_raw_incl_count_term` (its 0.69 selection floor
+   includes the 0.0627 count term), and a count-corrected copy (0.69 − 0.0627) is written beside it, so it compares
+   directly with the bootstrap floors.
+7. **A test that the resampling reproduces core's variance.** On synthetic lognormal weights (three events of 4096
+   rows, 600 seeds of `pe_indices`), the variance over replicates of ln mean(w[idx]) matches core's
+   `log_evidence_and_mc_variance` within 15% per event and 10% in total. For injections (30,000 rows, Ndraw 900
+   times larger, 1500 seeds of `inj_indices`), N² Var of ln(Σw[idx]/Ndraw) matches core's N²/N_eff minus the count
+   term within 10%, where the count term is large enough that leaving it in would fail. Core runs with x64 on.
+8. **STATUS.json errors.** On an exception, STATUS.json now holds only the exception type, each frame's file, line
+   and function, and the message with every number replaced by '#'. No traceback text with values is written.
+9. **The watcher.** The submit script now prints two watchers: `watch`, which also ends early on any failed job so
+   the main session can act before the summary (the form the workflow asks for), and `watch-summary`, which ends
+   only on `summary/STATUS.json` or the summary job's own terminal state.
+
+### Production
+
+`slurm/phase12aj_submit.sh 5f24519` from `phase12_5/repo_12AJ`, from the clean worktree
+`lnl_convergence/worktrees/5f24519430c0`. The replicate manifest passes (sha256 951fc6da…), so nothing is rebuilt.
+Lanes, flags and outputs are as in B1, except that the spectral array is 0–29 (at most 8 at once).
