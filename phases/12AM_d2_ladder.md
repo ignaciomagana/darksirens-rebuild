@@ -814,29 +814,33 @@ tolerances are unchanged. The control also records that the cell mean equals f_p
 (`darksirens/_jax.py`). The CPU controls and control 5 check x64 after that import, as every target process does.
 
 **B1.8 Scheduling.**
-- The planner gives the rita lanes a starting load (`RITA_OFFSET_MIN`) for their wait behind 1390498. With 15
-  minutes, 12AL's (64, 1e-3) cell goes to rita0 and the other three to the A100-40 lanes.
-- 1390499 completed at 21:46 UTC. A finished job leaves Slurm's controller after a few minutes, and a dependency on
-  an unknown id is refused. So the submit script keeps only dependency jobs still in the queue (now 1390498).
+- The surrogate-training lanes ended early: 1390499 at 21:46 UTC and 1390498 at 22:16 UTC, both COMPLETED. At 22:26
+  UTC both rita cards ran another user's standby jobs (qos rita-s). Qos rita preempts them by the cluster's policy;
+  nothing is cancelled by hand.
+- A finished job leaves Slurm's controller after a few minutes, and a dependency on an unknown id is refused. So the
+  submit script keeps only dependency jobs still in the queue. Both have left it, so the rita lanes carry no
+  dependency.
+- The planner can give the rita lanes a starting load (`RITA_OFFSET_MIN`) when they must wait. It is 0 now. With 0,
+  12AL's two nside-128 cells go to the rita A100-80s (12AL's card model) and its two nside-64 cells to A100-40s.
 - Control 5 is a 12-minute entry after the first cell of one A100-40 lane.
 
 Nothing here changes a density, a cell, the grids, an input, a control's tolerance, a gate or a reading rule.
 
 ### The prepared production (not submitted)
 
-- **Plan:** `d2_ladder/plans/production.json` (61 entries on 5 lanes, `RITA_OFFSET_MIN=15`). The submit script
+- **Plan:** `d2_ladder/plans/production.json` (61 entries on 5 lanes, `RITA_OFFSET_MIN=0`). The submit script
   writes it again at submission.
-- **Submit:** `RITA_OFFSET_MIN=<minutes until 1390498 ends> slurm/phase12am_submit.sh cbb1ae9`, from
-  `phase12_5/repo_12AM`. It submits the five lanes and a HENON summary afterany on all of them, and prints a shell
-  watcher for the main session.
+- **Submit:** `slurm/phase12am_submit.sh cbb1ae9`, from `phase12_5/repo_12AM` (set `RITA_OFFSET_MIN` only if rita is
+  busy with our own jobs again). It submits the five lanes and a HENON summary afterany on all of them, and prints a
+  shell watcher for the main session.
 
-| lane | card | cells, in order |
+| lane | card | cells, in order (each: table, Lane A, cell) |
 |---|---|---|
-| rita0 | A100-80, after 1390498 | (64, 1e-3), (256, 3e-4), (256, 3e-3) |
-| rita1 | A100-80, after 1390498 | (256, 1e-4), (256, 1e-3), (256, 1e-2) |
-| twig0 | A100-40 | (128, 3e-3), (128, 1e-4), (64, 1e-4), (32, 3e-3), (64, 1e-2) |
-| twig1 | A100-40 | (128, 1e-3), (32, 1e-4), (128, 1e-2), (32, 1e-3), (64, 3e-4) |
-| henongpu | A100-40 | (64, 3e-3), control 5, (128, 3e-4), (32, 3e-4), (32, 1e-2) |
+| rita0 | A100-80 | (128, 3e-3), (256, 1e-4), (256, 3e-3) |
+| rita1 | A100-80 | (128, 1e-3), (256, 3e-4), (256, 1e-3), (256, 1e-2) |
+| twig0 | A100-40 | (64, 1e-3), (32, 1e-4), (64, 1e-4), (32, 3e-3), (64, 1e-2) |
+| twig1 | A100-40 | (128, 1e-4), (128, 3e-4), (32, 3e-4), (32, 1e-2) |
+| henongpu | A100-40 | (64, 3e-3), control 5, (128, 1e-2), (32, 1e-3), (64, 3e-4) |
 
 ### Compute, revised from the measurements
 
@@ -848,16 +852,16 @@ Nothing here changes a density, a cell, the grids, an input, a control's toleran
 | **per cell** | **about 16 to 17.5 min** | **about 25 min (38 at 1e-4)** |
 
 - **GPU total:** about 6.8 card-hours (408 card-minutes in the plan), within the declared 6 to 10.
-- **Wall time:** the longest lane is about 1.4 to 1.7 hours (rita1, with the 1e-4 cell at nside 256), counted from
-  when rita frees. The A100-40 lanes take about 1.3 to 1.5 hours from submission. Then the summary, 5 to 10 minutes.
-- **On the clock:** if submitted about 22:45 UTC and 1390498 ends near 23:00, the summary is due about 00:45 to
-  01:15 UTC on 2026-10-20. The range is 1.5 to 3 hours after submission. It is longer if 1390498 overruns, or if
+- **Wall time:** the planned lane loads are 72 to 92.5 minutes (the longest is rita1). Then the summary, 5 to 10
+  minutes.
+- **On the clock:** if submitted about 22:45 UTC, the summary is due about 00:20 to 00:45 UTC on 2026-10-20. The
+  range is 1.5 to 3 hours after submission. It is longer if the standby jobs on rita are not preempted at once, or if
   another user's job takes the free twig or henon-gpu card first.
 
 ### What could still block production
 
-- **rita.** 1390498 still runs. Another user's rita jobs are queued with qos rita-s; qos rita preempts them by the
-  cluster's policy, and nothing is cancelled by hand.
+- **rita.** Both cards run another user's standby jobs; qos rita preempts them by policy. If they are not
+  preempted, the rita lanes wait, and nside 256 cannot move to a 40 GB card.
 - **The free A100-40 cards.** Two twig cards and one henon-gpu card were free at the build. If fewer are free at
   submission, pass fewer lanes (`LANES="rita0 rita1 twig0 henongpu"`); the planner reassigns.
 - **No blocking defect is known.**
