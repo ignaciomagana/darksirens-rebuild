@@ -29,6 +29,10 @@ The code is not written yet. The consumer branch exists at its base commit
 (below). The commit that runs, and its CPU tests, will be recorded here in an
 amendment before any job is submitted.
 
+**RESULTS (2026-10-19, 09:20 UTC):** all parts read; see "Results" at the end.
+The overall reading is rule 1, qualified by the post-hoc observations there.
+Amendment A3 records a checker fix made before Part A's production run.
+
 **Status update (amendment R1, 2026-10-19 about 08:30 UTC, before any
 production run).** No production grid of any part has run. A review of the
 three build amendments found one blocking defect and seven smaller ones.
@@ -1477,7 +1481,129 @@ luminosity weighting (Part D, not run), the footprint and catalog
 disagreement noted in 12AG (about 1,000 deg² of covered pixels with no
 galaxy), the calibration held fixed, and the population held fixed.
 
-## Results
+## Results (2026-10-19, 09:20 UTC; location-free)
 
-Not run. The code commit, its CPU tests, the build records and the subset
-lists are appended here, as an amendment, before any job is submitted.
+**Runs.** No job failed. Every control passed after amendment A3.
+
+| Part | Commit | Jobs | Finished (UTC) |
+|---|---|---|---|
+| B | 416f5d7 | 1390257–1390264 (rita ×2, twig ×4, henon-gpu, HENON) | 08:53 |
+| A controls | 593221c | 1390265–1390268 | 09:03 |
+| A controls, rechecked | bf57e31 | 1390269 | 09:07 |
+| A production | bf57e31 | 1390270–1390273 (HENON, rita, twig) | 09:20 |
+| C | bf57e31 | 1390274 | 09:19 |
+| Overall | bf57e31 | 1390275 | 09:20 |
+
+The summaries read here are location-free: `summary/summary.json`,
+`summary/part_a/summary_a.json`, `summary/part_b/summary_b.json` and
+`summary/part_c/part_c.json`.
+
+### Overall reading (rules as amended by R1)
+
+**Rule 1 holds: "information exists but is diluted (Part C: the catalog
+informs the well-covered events)".** Rules 2, 3 and 6 do not hold. Rules 4
+and 5 are not stated, because rule 1 holds. All parts A to C were read; Part D
+is design only. No Monte-Carlo note applies.
+
+The scope note stands. A null here does not test:
+- luminosity weighting;
+- the empty covered pixels;
+- a different calibration or population.
+
+The post-hoc observations at the end of this section qualify how rule 1
+should be read.
+
+### Part B — the photometric redshift errors
+
+All 12 grids read "no narrowing". No point is penalised, and the per-event sum
+closes to ≤ 4.5e-13 on every grid.
+
+| Grid | ns64 sk 1e-3 | ns64 sk 3e-3 | ns256 sk 1e-3 | ns256 sk 3e-3 |
+|---|---|---|---|---|
+| dz × 0.5 | R 1.009 | 1.046 | 1.058 | 1.074 |
+| dz × 0.25 | 0.995 | 1.046 | 1.085 | 1.126 |
+| spectroscopic only (12U) | 0.992 | 1.037 | 1.047 | 1.018 |
+| unscaled (12AG) | 1.024 | 1.048 | 1.021 | 1.030 |
+
+|Delta| ≤ 0.16 everywhere (robust band).
+- **Scale axis:** "the photometric errors alone do not explain it".
+- **Spectroscopic grids:** "the spectroscopic galaxies alone carry none".
+
+### Part A — the per-event catalog share
+
+Primary cell: nside 64, sigma_kde 3e-3. The support cell (nside 256,
+sigma_kde 1e-2) is in brackets.
+
+- **Readings:** "the catalog reaches some events"; "where the catalog
+  reaches, it adds little H0 structure". "Structure that cancels" does not
+  hold: no event has S_i ≥ 0.5.
+- **N_carry** (catalog share ≥ 0.5):
+  - 55 at H0 50, 37 at 67.74, 18 at 90 [53, 36, 18];
+  - 18 at all three [16].
+  - Classes at 67.74: 37 catalog-dominated, 43 mixed, 179 completion-dominated
+    [36, 43, 180].
+- **Shares at 67.74, over the 259 events** (median; 90th percentile):
+  - catalog share: 0.009; 0.58;
+  - depth share: 0.040; 0.99;
+  - footprint share: 0.62; 0.99.
+  - The catalog share falls with H0: median 0.035 at 50, 0.0024 at 90.
+- **Per-event structure over [50, 90]** (S_i, detrended range of ln Z_i^cat −
+  ln Z_i^spec):
+  - median 0.0048 nat over all events; 90th percentile 0.050;
+  - largest 0.37 nat [0.26];
+  - median among the catalog-dominated events 0.049 nat [0.038].
+  - The ten events with the most structure carry 44% [34%] of Σ|q_i|.
+  - Spearman correlation of S_i with the catalog share: 0.81 [0.88].
+  - K = 0.064 [0.050].
+- **Curvature budget over [50, 90]:** F = −0.023 [+0.017]. The catalog adds no
+  curvature to the 259-event likelihood. Q_ev and q_sel are diagnostics only
+  (amendment A2).
+
+### Part C — the well-covered events
+
+Primary: production cell, subset S. All controls passed per cell: the
+reconstruction against the reruns, the reruns against 12AG and the spectral
+reference, and the all-event R against 12AG.
+
+| Production cell | n | R | band | sd ratio | Delta | max total MC var. in 90% | random-subset rank of R |
+|---|---|---|---|---|---|---|---|
+| S (j ≥ 0.5) | 45 | 0.813 | narrows | 0.872 | +0.06 | 0.07 | 0.1% (p5 0.920) |
+| S′ (j ≥ 0.25) | 69 | 0.830 | narrows | 0.854 | +0.08 | 0.13 | 0.0% (p5 0.933) |
+| complement of S | 214 | 0.951 | hint | 0.952 | +0.32 | 0.71 | — |
+| all | 259 | 1.048 | none | 1.024 | +0.00 | 1.02 | — |
+
+The hint cell gives the same pattern: S 0.817, S′ 0.845, complement 0.958,
+all 0.942.
+- **Reading:** "the catalog informs the well-covered events". It is supported
+  by S′ in both cells and S in the hint cell.
+- **Random subsets:** 2.6% of the random 45-event subsets reach R ≤ 0.90 by
+  chance (1.4% for the 69-event subsets).
+- No subset grid is edge-limited, and no point is penalised. The curvature
+  fallback was not used.
+
+### Post-hoc observations (not readings; for the owner)
+
+1. **Where S's narrowing sits.** Over the window [50, 90], the catalog makes
+   S's likelihood flatter, not sharper: window curvature −0.14 against −0.43
+   for spectral only, F = −0.68.
+   - Most of the posterior mass of S and S′ lies outside the window, for the
+     catalog and spectral-only alike.
+   - This is the declared caveat at work. The subsets are chosen from their
+     own PE samples, and the injections are not cut to match. So the
+     subsets' posteriors are pulled away from where the 259-event posterior
+     lies, and S's narrowing is measured there.
+2. **It does not carry into the 259 events.** ln L is additive over the
+   subsets. In the window, S's lost curvature (−0.30) and the complement's
+   gain (+0.21) sum to the all-event F of −0.02.
+   - Near the 259-event posterior, then, the catalog's effect on the
+     well-covered events is not diluted information. It sits where the other
+     events already decide H0.
+3. **This design cannot separate host information from the catalog's
+   redshift distribution and depth edge.** The mock scan's random-position
+   null showed that, at shallow depth, the depth model alone can produce
+   gain. A real-data null would test it: the catalog moved on the sky with
+   its n(z) and footprint kept.
+4. **Coverage is the main fact.**
+   - At 67.74 the median event's PE redshifts lie 96% above the depth.
+   - The catalog supplies under 1% of the median event's host probability.
+   - Where it dominates, it adds at most 0.37 nat of structure across [50, 90].
