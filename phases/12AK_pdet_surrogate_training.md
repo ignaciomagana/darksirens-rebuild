@@ -566,3 +566,16 @@ min each), so the lanes queue behind them. Job ids follow below.
 **Estimated total time to completion:** the lanes wait about 1–1.5 h for 12AJ's two rita jobs to end. Then 5–11 h with
 both cards (expected near the low end if training stops near 2000 epochs), so about 6–12.5 h from submission, and at
 most about 22.5 h if the lanes run one after the other. The 7-day limit is a ceiling, not the estimate.
+
+## Training done (2026-10-19, 22:26 UTC)
+
+All 16 entries trained, and every model reloads bit for bit: A_O3 m1 to m5, A_O4 m1 to m5, B_joint m1 to m5, and
+P_control. The run was paused once, for 12AL ("D1–D3 first"). Lanes 1390413 and 1390335 were cancelled at 19:10 UTC,
+and the work resumed from checkpoints as 1390498 (1 h 29 min) and 1390499 (59 min). Both COMPLETED, released at
+20:47 UTC.
+
+The first status job, 1390336, ran early when the lanes were cancelled; its partial file is kept as
+`summary/STATUS_1390336_paused_partial.json`. The status job 1390500 wrote `summary/STATUS.json`.
+
+Validation (V1/V2/X1/X2/U1–U3, the ensemble spread, the core-format writer, the null-surrogate check) is a separate
+step and has not started.
