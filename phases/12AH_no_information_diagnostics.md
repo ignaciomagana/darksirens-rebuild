@@ -661,6 +661,143 @@ way. Neither subset posterior is a valid H0 inference. Only the catalog
 against spectral-only comparison on the same events is read; Δ is reported
 and not read as a bias.
 
+### Part C amendment: code, subset lists and controls (2026-10-19, before any subset grid)
+
+No Part C subset grid exists yet, and none has been read. This amendment
+records Part C's code, the subset lists with their sha256, the details fixed
+before any grid, and the controls.
+
+**Code.** Consumer branch `phase12ah/no-info-diagnostics`, commits **a90e7b9**
+(the code) and **38f104d** (a CPU-lane option in the submit script). Part C's
+files use the prefix `phase12ah_c_`:
+
+- `scripts/phase12ah_c_coverage.py` builds p_i, d_i(H), j_i(H) and the subset
+  lists. This is the declared `phase12ah_coverage.py`, under Part C's prefix.
+  Each PE sample is pixelised with core's `ang2pix_ring` at nside 128, as the
+  target pixelises it. dL is inverted with core's own distance table
+  (`dL_of_z`, `z_of_dL_precomputed`), as the likelihood inverts it. The
+  script exits non-zero if any count differs from this record's table.
+  `coverage_events.csv` holds every event's p_i, d_i and j_i at 50, 67.74 and
+  90, for Part A's tables.
+- `scripts/phase12ah_c_subsets.py` builds the subset grids, runs the
+  random-subset control and applies the readings. It reads Part A's per-event
+  grids: `runs/ns64_sk3e-03/`, `runs/ns256_sk1e-02/` and `spectral_events/`,
+  each an `events.npz` beside its `scan.json` or `spectral_h0.json`. Each
+  subset grid is read with 12AG's own machinery
+  (`phase12ag_summary.cell_summary`), against the spectral-only grid on the
+  same events.
+- `scripts/phase12ah_c_controls.py` runs the direct-subset controls below.
+- `slurm/phase12ah_c_*` holds the jobs and their submit script.
+- `tests/test_phase12ah_c_subsets.py` has 12 CPU tests on tiny inputs, all
+  passing:
+  - the coverage shares equal shares built into a synthetic store;
+  - the guard terms equal 12AG's point by point, including penalised points;
+  - the reconstruction equals core run directly on a store holding only a
+    subset's events. This is checked through the control script itself, for
+    the DESI target (12AG's driver) and for the spectral-only likelihood
+    (`phase12t_stage.py spectral`);
+  - the random draws, the edge flag and every reading rule;
+  - end to end on synthetic grids, the run reads "informs … dilute" when only
+    the subset's events carry catalog curvature, and "do not explain it" when
+    none do. It fails closed when one recorded point is altered by 1e-6.
+    `part_c.json` holds no H0 location.
+
+**The subset lists.** Built 2026-10-19 at 07:58 UTC by job 1390251 from a
+worktree of a90e7b9, from the PE samples and the footprint only.
+
+- Every count equals the declared table, at all three references and all four
+  thresholds. The context counts match too: 165 events have p_i ≥ 0.5, and 72
+  have d_i(67.74) ≥ 0.5.
+- 64.46% of the nside-128 pixels have f_p > 0.
+- No PE sample lies beyond core's distance table at 50, 67.74 or 90.
+- The files are under `phase12_5/no_info_diagnostics/coverage/`:
+
+| file | events | sha256 |
+|---|---|---|
+| `subset_S.txt` (j_i ≥ 0.5) | 45 | `09835a1326c952cd75e497359b56946e5f2a08e2f57ff2f17c8091dbb3d7c2e8` |
+| `subset_S_prime.txt` (j_i ≥ 0.25) | 69 | `be00dc46075a4b6fed8fe802cf3d0c39e99ef5fa5599e2232371d4b207310cda` |
+| `subset_complement.txt` (j_i < 0.5) | 214 | `73d1c3c93ce8cc191128d186c97e9ddcb6c96f92e26adfb23a547051b593cfff` |
+| `coverage_events.csv` (p_i, d_i, j_i) | 259 | `91b80ad9c76038d374c242cbd54feee4be40945945dda5ea65ebb92522274ad0` |
+| `coverage.json` | | `16ce8683bf75ebff9021421512dbe3af94d1d1a5c673d353d467055616467f4e` |
+
+**Details fixed here, before any subset grid,** where the declaration left a
+choice:
+
+1. **The readings are applied in this order:**
+   - "incomplete";
+   - "edge-limited";
+   - "limited by the Monte-Carlo variance" (in 12AG it replaces the R bands);
+   - "the catalog informs the well-covered events (… and the other events
+     dilute it)";
+   - "a hint in the well-covered events";
+   - "coverage and depth do not explain it";
+   - otherwise "not covered by the declared rules". This is the case of
+     R_S ≤ 0.97 above the random subsets' 95th percentile. It is reported
+     with its numbers and not read.
+2. **"Below the 5th percentile"** means R_S is below the 5th percentile of the
+   finite R of the 1000 random subsets of the same size. Edge-limited random
+   subsets stay in the distribution. Their count, and the percentiles without
+   them, are reported.
+3. **The draws** come from one `default_rng(20261019)`: first the 1000 subsets
+   of 45 events, then the 1000 of 69, each `rng.choice(259, n,
+   replace=False)`. The same subsets are used at both cells.
+4. **A subset grid's Monte-Carlo condition** is 12AG's at N = N_S:
+   Σ_S var_i + N_S²/N_eff ≤ 2 inside its 90% interval. Penalised points come
+   from core's correction at N_S.
+5. **Part C fails closed.** Nothing of it is read unless all of these hold:
+   - the per-event sum reproduces every recorded ln L of the three grids, to
+     1e-9;
+   - the spectral rerun equals the reference, to 1e-9;
+   - the catalog reruns equal 12AG's grids, to 1e-10;
+   - the all-events subset reproduces 12AG's R of each cell, to 1e-6.
+
+**Controls (passed).** Core is run directly on PE stores holding only the
+events of S, S′ or the complement. Everything else is unchanged, and the run
+is compared with the reconstruction from the full run's per-event terms. Ten
+grid points were fixed a priori: 20, 30, 45, 50, 60, 67.5, 75, 90, 110 and 140.
+The outputs (`controls/c_direct_*.json`) hold differences only.
+
+- **Spectral-only, CPU (job 1390251):**
+  - The full run equals the reference grid exactly (difference 0).
+  - Its per-event sum reproduces the reference to 1.4e-12.
+  - The direct subset runs equal the reconstruction to 1.1e-13 (S), 2.3e-13
+    (S′) and 1.4e-12 (complement).
+  - Their per-event log evidences and variances, log mu and N_eff equal the
+    full run's bit for bit.
+  - The guard terms agree. No control point is penalised at the subset sizes.
+- **DESI target, production cell (nside 64, sigma_kde 3e-3), one twig A100-40 (job 1390252):**
+  - The full run equals 12AG's production grid exactly at the ten points
+    (difference 0; tolerance 1e-10).
+  - Its per-event sum reproduces it to 9.1e-13.
+  - The direct subset runs equal the reconstruction to 1.1e-13 (S), 1.1e-13
+    (S′) and 6.8e-13 (complement).
+  - Their per-event log evidences and variances, log mu and N_eff equal the
+    full run's bit for bit.
+  - The guard terms agree. No control point is penalised at the subset sizes.
+  - Each build plus ten points took about 100 s.
+  - Output sha256: `c_direct_catalog.json` `d151d5f9056ba32480ca04cfb330cd7fd5eef04d133eb807774085f9e4ef1bf6`,
+    `c_direct_spectral.json` `7bbc5b77aab318c399fddac64cfc3f5cd5178831cd8faceb1132c1c42c1f5527`.
+
+  So a run of core on a subset's events alone is reproduced by the per-event
+  reconstruction to about 1e-12, on both the catalog and the spectral-only
+  side. This is the exactness Part C relies on.
+
+**Production job, prepared and not submitted.** Part C needs no new GPU grid.
+One CPU job, `slurm/phase12ah_c_summary_henon.sbatch`, is submitted by
+`slurm/phase12ah_c_submit.sh production --after <ids of Part A's lanes and of
+the spectral rerun> [COMMIT]`.
+
+- It starts after those jobs, whatever their exit (afterany). The script
+  itself refuses to read anything when a control fails.
+- It runs on HENON (7-day maximum). With `CPU_LANE=twig` it runs on the twig
+  node without a GPU (2-day maximum). At 07:55 UTC every HENON CPU was
+  allocated, so the controls ran on twig.
+- It writes `summary/part_c/part_c.json` (location-free),
+  `part_c_absolute.json` and `part_c_grids.npz` (absolute values, not for
+  agents), and `STATUS_C.json`.
+- **Estimate:** about 5 minutes once Part A's production grids and the
+  spectral rerun are done.
+
 ## Part D — luminosity weighting: what core e7c3007 supports
 
 ### Verdict: not supported consistently. Design only; nothing is built or run.
