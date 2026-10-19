@@ -16,6 +16,23 @@ What runs first:
 The 20 ladder grids are then submitted from the prepared plan by a separate
 step. Results will be appended below.
 
+**CATALOGS, CONTROLS AND PROBE DONE (2026-10-19, 06:15 UTC). No ladder grid
+has run.**
+
+- Every catalog gate passes. The rebuilt nside 64 is the production file bit
+  for bit (same sha256).
+- **C1, C2 and C3 pass.** C1 and C2 match bit for bit: the largest |Δ ln L|
+  is 0.0.
+- **The probe moved one routing rule, before any ladder grid** (see
+  "Amendment (2026-10-19, before any ladder grid)"). nside 256 ran out of
+  memory on an A100-40. Its peak on an A100-80 is 33.8 GiB, just under the
+  declared 34 GiB limit. So the limit is now 30 GiB, and a probe that ran out
+  of memory on a 40 GB card also counts. The five nside-256 cells go to rita.
+  The ladder code moves to commit 09c4b62. Only the plan code changed, so the
+  controls stand.
+- **The plan is ready and not submitted:** seven GPU lanes, about 15 minutes
+  of GPU time on the longest lane. See "Plan and estimate" under Results.
+
 **Blinding: location-free.** No H0 value is written here, in commit messages
 or in PR text: no median, interval, MAP or absolute shift in km/s/Mpc. Results
 are given as:
@@ -400,7 +417,147 @@ Stated plainly:
   why the per-event variance and the guard are reported per cell, and why a
   penalised point inside the 90% interval changes the reading.
 
+## Amendment (2026-10-19, before any ladder grid)
+
+**The routing rule changes. Nothing else in the record changes.**
+
+- **As declared:** a cell went to an 80 GB card when its probe peak was above
+  34 GiB.
+- **Now:** a cell goes to an 80 GB card when its probe peak is above
+  **30 GiB**, or when its probe **ran out of memory on a 40 GB card**.
+
+The reason: the nside-256 probe failed on a twig A100-40 (job 1390208). It
+asked for a single 24.3 GiB allocation and was refused. On a rita A100-80
+(job 1390216) the same entries ran with a jax peak of 33.8 GiB and an
+nvidia-smi peak of 48.8 GiB. The declared rule would have sent nside 256 to a
+40 GB card, where it does not fit.
+
+- **The code** for this is consumer commit **09c4b62**, on the same branch.
+  It changes `scripts/phase12ag_plan.py` (the limit, and out-of-memory
+  attempts recorded per card in the probe report), the test of the plan, and
+  `slurm/phase12ag_submit_ladder.sh` (which rewrites the probe report with
+  this code and refuses a failed probe entry).
+- **The ladder runs from 09c4b62.** The scan driver, the catalog code and the
+  `phase12` package are identical at 304c8ae and 09c4b62, so C1 and C2 (run
+  at 304c8ae) stand.
+
 ## Results
 
-*(Appended after the runs: the catalog gates with the new sha256 values, the
-controls, the probe, the plan with its estimate, then the ladder.)*
+### Catalogs (HENON job 1390203, henon04, 10 min 41 s, 20 GB peak RSS)
+
+The native table's sha256 matched the declared value. Every nside has the
+same row counts: 22,787,835 rows; 22,787,566 after the M_APP cut; 2,287
+removed by the 12I mask; **22,785,279 galaxies**.
+
+| nside | occupied pixels | galaxies per occupied pixel: median, 99%, max | sum of f_p | file sha256 |
+|---|---|---|---|---|
+| 32 | 7,834 | 3,024; 4,370; 5,180 | 6,865.3 | `59c95d89f6f29308871f3e1125b68dd292895ccf4f3ccd91fdb198ae249a3196` |
+| 64 | 30,411 | 752; 1,239; 1,719 | 27,461.2 | `c2d1ff36567419e42386f07daf30bd0af2e2da714c16f066ecde4eb94d9084e2` (= production) |
+| 128 | 119,524 | 185; 361; 774 | 109,844.7 | `f26a20f0f3f8ca5a9bc0aee0681cd0eba6f1a7b693055839cba83d6189cdb62c` |
+| 256 | 473,384 | 45; 110; 569 | 439,378.6 | `66c50dc4ac1ea3ffc593f8e19cc2baf3f0dd18c8a4953c77b10f262153a684d3` |
+
+- At every nside, no occupied pixel has f_p = 0.
+- **The upgraded nside-256 footprint** is
+  `catalogs/footprint/mth_map_nside256_from128.h5`, sha256
+  `c20e58e3b3570a5e131b3754002ea26024c43e647d3541ae9e1786fcdb181a67`. Every
+  child's f_p equals its parent's exactly. Degrading the copy back to 128
+  gives the native f_p with a largest difference of 0.0.
+
+**Gates (`catalogs/gates.json`):**
+
+- **G1 passes.** Every nside holds exactly the native rows after the cuts.
+- **G2 passes.** For 32 and 64, 64 and 128, and 128 and 256, every galaxy
+  sits in a child of its coarse pixel, and the children's counts sum to their
+  parent's.
+- **G3 passes bit for bit.** The rebuilt nside 64 has the production file's
+  sha256.
+
+### Controls
+
+- **C1 passes.** henon-gpu A100-40, job 1390204, commit 304c8ae. At all 12
+  H0 values the largest |Δ ln L| is **0.0**: bit for bit equal to the ladder
+  cell's scan, which ran on a rita A100-80. The theta vectors are identical
+  too. The first call took 90 s; later points took 0.285 s each; the jax peak
+  was 13.4 GiB.
+- **C2 passes.** It ran in the same job, on the rebuilt nside-64 file, at 3 H0
+  values: largest |Δ ln L| **0.0**. The file is the production file byte for
+  byte.
+- **C3 passes.** All ten checks hold: the 241 points as equal floats, both GW
+  sha256 values, the population equal to the ladder cell's, gamma 2.5439, the
+  cosmology, the soft guard at 20, core e7c3007 with core defaults, every
+  point accepted and unpenalised, and the grid accepted.
+
+The record is `controls/controls.json`.
+
+### Probe
+
+Five H0 points per entry, at the ladder calibration (`probe/probe.json`).
+Times are per process: load + build, the first call (with its compile), then
+the median of the later calls. The PE variance columns are the largest over
+the five points.
+
+| nside | sigma_kde | card (job) | jax peak GiB | nvidia-smi peak GiB | load + build s | first call s | s per point | PE variance sum, max | largest single event | penalised points |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 32 | 1e-4 | A100-80 (1390205) | 10.2 | 18.8 | 24 | 77 | 0.352 | 0.36 | 0.027 | 0 |
+| 32 | 1e-2 | A100-80 (1390205) | 10.2 | 18.8 | 18 | 76 | 0.350 | 0.26 | 0.021 | 0 |
+| 64 | 1e-4 | A100-40 (1390206) | 13.4 | 20.8 | 28 | 86 | 0.276 | 0.55 | 0.072 | 0 |
+| 64 | 1e-2 | A100-40 (1390206) | 13.4 | 20.8 | 25 | 87 | 0.274 | 0.28 | 0.021 | 0 |
+| 128 | 1e-4 | A100-40 (1390207) | 12.7 | 24.8 | 40 | 83 | 0.269 | 1.21 | 0.282 | 1 |
+| 128 | 1e-2 | A100-40 (1390207) | 12.7 | 24.8 | 35 | 83 | 0.267 | 0.31 | 0.029 | 0 |
+| 256 | 1e-4 | A100-40 (1390208) | out of memory | | | | | | | |
+| 256 | 1e-4 | A100-80 (1390216) | 33.8 | 48.8 | 68 | 68 | 0.358 | 2.88 | 0.556 | 0 |
+| 256 | 1e-2 | A100-80 (1390216) | 33.8 | 48.8 | 68 | 68 | 0.357 | 0.38 | 0.027 | 0 |
+
+**Memory grows with fine nside, not coarse.** The target keeps one row per
+pixel that a PE sample or an injection falls in. That is 12,288 rows at nside
+32 (all of them), 49,152 at 64, 196,577 at 128 and 714,745 at 256. The
+per-row curves dominate the memory. The width of the most crowded pixel
+(5,180 down to 569 galaxies) matters less.
+
+**The PE variance rises as the smearing gets finer.** It peaks at the lowest
+probed H0 and stays far under the limit of 20. At sigma_kde 1e-4 the largest
+sum over the five points is 0.36, 0.55, 1.21 and 2.88 at nside 32, 64, 128
+and 256. At sigma_kde 1e-2 it is 0.26 to 0.38 at every nside.
+
+**One probe point is penalised.** At nside 128 with sigma_kde 1e-4, the grid's
+lowest point, the lower edge of the H0 prior, has a selection N_eff of 2,743
+against the guard threshold of 3,570. The soft guard lowers its ln L by about
+6,000. The other four points of that entry have N_eff of 40,000 or more. The
+ladder's reading rule handles such points: a penalised point counts only if it
+lies inside the cell's 90% interval. Probe numbers are not likelihood results
+and are not read.
+
+### Plan and estimate (prepared, not submitted)
+
+`slurm/phase12ag_submit_ladder.sh` at commit 09c4b62 does the following:
+
+- writes `plans/plan.json` from the probe;
+- submits seven lane jobs, each at its partition's maximum time;
+- submits the HENON summary job with `--dependency=afterany` on all of them.
+
+A dry run gives these lanes:
+
+| lane | card | cells, in order | estimated GPU time |
+|---|---|---|---|
+| rita0 | A100-80 | nside 256 at sigma_kde 1e-4, 1e-3, 1e-2 | 14 min |
+| rita1 | A100-80 | nside 256 at 3e-4 and 3e-3; nside 64 at 3e-3 | 13 min |
+| twig0 | A100-40 | nside 128 at 1e-4 and 1e-2; nside 64 at 1e-3 | 12 min |
+| twig1 | A100-40 | nside 128 at 3e-4; nside 32 at 1e-4 and 1e-2 | 12 min |
+| twig2 | A100-40 | nside 128 at 1e-3; nside 32 at 3e-4; nside 64 at 1e-4 | 12 min |
+| twig3 | A100-40 | nside 128 at 3e-3; nside 32 at 1e-3; nside 64 at 3e-4 | 12 min |
+| henon-gpu | A100-40 | the spectral-only rerun; nside 32 at 3e-3; nside 64 at 1e-2 | 15 min |
+
+**How each cell is estimated:** load + build + first call + 240 × seconds per
+point + 60 s of start-up. That is 4.0 to 4.7 minutes per cell. The spectral
+rerun is budgeted at about 7 minutes.
+
+**Estimated time to completion:** about 20 to 30 minutes from submission when
+the cards are free, as rita, twig and the free henon-gpu card were at
+06:10 UTC. That allows 15 minutes for the longest lane, a few minutes of
+start-up and queue, and about 2 minutes for the summary.
+
+- If another user holds a rita card, the nside-256 cells wait for it. Their
+  jobs on rita ran about 4 hours on 2026-10-18, so the worst case is about
+  4.5 hours.
+- The partitions' maximum times (7 days, and 2 days on twig) are ceilings,
+  not estimates.
