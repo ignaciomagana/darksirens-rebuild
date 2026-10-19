@@ -2,6 +2,8 @@
 
 ## Status
 
+**DONE (2026-10-19, 07:02 UTC): no cell narrows H0; the smearing scales tested do not explain the missing information where the Monte-Carlo resolves them (results at the end). Photometric redshift errors not tested.**
+
 **DECLARED (owner approval, 2026-10-19 about 05:30 UTC), before any ladder
 grid.** No ladder grid has run. This record fixes, before anything runs: the
 ladder and its fixed values, the inputs (with sha256), the code commit, the
@@ -878,3 +880,57 @@ and HENON, 2 days on twig.
 about 15 minutes, plus start-up and about 2 minutes for the summary. The
 partitions' maximum times are ceilings, not estimates. Results will be
 appended here from `summary/summary.json`, which is location-free.
+
+### The ladder (2026-10-19, 06:51 to 07:02 UTC)
+
+All seven lanes and the summary job completed (exit 0): henon-gpu 1390228 (8 min), rita 1390229 and 1390230
+(about 10 to 11 min, the nside-256 cells), twig 1390231 to 1390234 (about 10 min each), HENON summary 1390235
+(19 s). All 20 cells ran the full 241-point grid in float64 on the GPU. The spectral-only rerun on a GPU equals
+the CPU reference to 9.1e-13 in ln L. Output: `phase12_5/smearing_ladder/summary/summary.json` (location-free)
+and `R_plane.svg`/`.png`.
+
+R is the 68% half-width ratio against spectral-only, Delta the median shift in spectral sd. "MC within limit" is
+amendment 2's condition (total Monte-Carlo variance, PE plus selection, at most 2 at every point inside the cell's
+90% interval); the spectral-only grid reaches 0.91 there.
+
+| nside | sigma_kde | R | sd ratio | Delta | total MC variance, max inside 90% | MC within limit | reading |
+|---|---|---|---|---|---|---|---|
+| 32 | 1e-4 | 1.086 | 1.048 | -0.041 | 1.22 | yes | no narrowing |
+| 32 | 3e-4 | 1.069 | 1.035 | -0.037 | 1.10 | yes | no narrowing |
+| 32 | 1e-3 | 1.071 | 1.035 | -0.015 | 1.03 | yes | no narrowing |
+| 32 | 3e-3 | 1.058 | 1.031 | +0.018 | 0.98 | yes | no narrowing |
+| 32 | 1e-2 | 0.988 | 0.990 | +0.093 | 0.95 | yes | no narrowing |
+| 64 | 1e-4 | 1.054 | 0.996 | +0.012 | 2.11 | no | no narrowing |
+| 64 | 3e-4 | 0.994 | 0.980 | +0.024 | 1.36 | yes | no narrowing |
+| 64 | 1e-3 | 1.024 | 0.996 | +0.017 | 1.12 | yes | no narrowing |
+| **64** | **3e-3 (production)** | **1.048** | **1.024** | **+0.003** | 1.02 | yes | no narrowing |
+| 64 | 1e-2 | 0.990 | 0.991 | +0.079 | 0.96 | yes | no narrowing |
+| 128 | 1e-4 | 1.167 | 1.067 | -0.026 | 7.65 | no | no narrowing |
+| 128 | 3e-4 | 1.140 | 1.057 | +0.008 | 2.60 | no | no narrowing |
+| 128 | 1e-3 | 1.153 | 1.072 | -0.001 | 1.38 | yes | no narrowing |
+| 128 | 3e-3 | 1.147 | 1.078 | -0.069 | 1.13 | yes | no narrowing |
+| 128 | 1e-2 | 0.992 | 0.998 | +0.032 | 1.00 | yes | no narrowing |
+| 256 | 1e-4 | 1.190 | 1.122 | -0.439 | 13.97 | no | limited by the Monte-Carlo variance |
+| 256 | 3e-4 | 1.165 | 1.102 | +0.039 | 4.18 | no | no narrowing |
+| 256 | 1e-3 | 1.021 | 1.015 | +0.186 | 2.20 | no | no narrowing |
+| 256 | 3e-3 | 1.030 | 1.014 | +0.058 | 1.48 | yes | no narrowing |
+| 256 | 1e-2 | 0.942 | 0.962 | +0.058 | 1.12 | yes | a hint |
+
+Counts: 0 narrows, 1 hint, 18 no narrowing, 1 limited by the Monte-Carlo variance. Every shift is robust except
+nside 256 at 1e-4 (-0.44, mild, MC-limited). The fixed-calibration production cell gives R 1.048 (sd ratio 1.024),
+beside the marginalised ladder-cell chain's sd ratio 1.01.
+
+**Reading (as declared, amendment 2):** no cell narrows H0, so the washout rule finds no narrowing cell and no path.
+Verdict: **"the smearing scales tested here do not explain the missing information wherever the Monte-Carlo
+resolves them"** (one finer cell, nside 256 at 1e-4, is MC-limited). **This does not test the photometric galaxies'
+own redshift errors (73% of the catalog).**
+
+Reported as they are, without a declared reading:
+- The only cell below 0.97 is the most radially smeared column's finest pixel (nside 256 at 1e-2, R 0.942). At
+  sigma_kde 1e-2, R is 0.99 at nside 32 to 128. Less radial smearing of the spectroscopic galaxies does not narrow
+  H0; at sigma_kde <= 3e-3 the catalog widens it (R 1.02 to 1.19).
+- Finer pixels widen it further (nside 128: R 1.14 to 1.17 at sigma_kde <= 3e-3) while the selection Monte-Carlo
+  variance rises (the compact view keeps one row per pixel an injection touches: 196,577 rows at nside 128,
+  714,745 at 256).
+- The four nside-128/256 cells and the nside-64 1e-4 cell whose MC variance exceeds 2 read "no narrowing" because
+  the MC condition gates only "narrows" and "hint"; their R values carry that variance.
