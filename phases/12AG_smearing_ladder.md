@@ -840,3 +840,41 @@ start-up and queue, and about 2 minutes for the summary.
   4.5 hours.
 - The partitions' maximum times (7 days, and 2 days on twig) are ceilings,
   not estimates.
+
+### Submission (2026-10-19, 06:51 UTC)
+
+The ladder was submitted after amendment 2 had been pushed (record commit
+55fd3bf) and after the controls had passed at 6337a56. The submit command was
+`slurm/phase12ag_submit_ladder.sh 6337a56`, run from the worktree
+`smearing_ladder/worktrees/6337a562262e`. The job ids are in
+`plans/ladder_jobs.json`.
+
+| lane | job | card | cells, in order |
+|---|---|---|---|
+| henon-gpu | 1390228 | A100-40 | the spectral-only rerun; nside 32 at 3e-3; nside 64 at 1e-2 |
+| rita0 | 1390229 | A100-80 | nside 256 at sigma_kde 1e-4, 1e-3, 1e-2 |
+| rita1 | 1390230 | A100-80 | nside 256 at 3e-4 and 3e-3; nside 64 at 3e-3 |
+| twig0 | 1390231 | A100-40 | nside 128 at 1e-4 and 1e-2; nside 64 at 1e-3 |
+| twig1 | 1390232 | A100-40 | nside 128 at 3e-4; nside 32 at 1e-4 and 1e-2 |
+| twig2 | 1390233 | A100-40 | nside 128 at 1e-3; nside 32 at 3e-4; nside 64 at 1e-4 |
+| twig3 | 1390234 | A100-40 | nside 128 at 3e-3; nside 32 at 1e-3; nside 64 at 3e-4 |
+| summary | 1390235 | HENON CPU | after all lanes (`--dependency=afterany`) |
+
+Each job requested its partition's maximum time: 7 days on rita, henon-gpu
+and HENON, 2 days on twig.
+
+**First points, checked at 06:55 UTC.**
+
+- All seven lanes started at once.
+- The first cell of every GPU lane writes float64 rows on the GPU (`gpu`,
+  x64 true, `cuda:0`) from commit 6337a56 with a clean tree.
+- Memory matches the probe. nside 256 on rita shows a jax peak of 33.8 GiB and
+  nvidia-smi 48.8 GiB of 80. nside 128 on twig shows 12.7 GiB and 24.8 GiB of
+  40.
+- The spectral-only rerun finished on the henon-gpu card. On the same 241
+  points it differs from the CPU reference by at most 9.1e-13 in ln L.
+
+**Expected finish:** about 07:10 UTC. That is the longest lane's estimate of
+about 15 minutes, plus start-up and about 2 minutes for the summary. The
+partitions' maximum times are ceilings, not estimates. Results will be
+appended here from `summary/summary.json`, which is location-free.
