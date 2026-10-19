@@ -314,6 +314,145 @@ The readings are not exclusive; every one that holds is reported.
 The hint cell is reported the same way and read only as support of the
 production cell.
 
+### Amendment A1 (2026-10-19, before any Part A job): code, CPU tests, three clarifications, jobs
+
+**Status.** The code is written and passes its CPU tests. **No Part A job has
+been submitted and no Part A likelihood has been evaluated on the real data.**
+Two steps were refused by the session's permission system, and neither was
+worked around:
+
+- the push of the two consumer commits below;
+- the submission of the short GPU controls from the unpushed commit.
+
+Both are left to the owner. The next step is to push the two commits, then run
+`slurm/phase12ah_a_submit_controls.sh <commit>`.
+
+**Code.** Consumer `ignaciomagana/desi_darksirens_selection`, branch
+`phase12ah/no-info-diagnostics`, two local commits, **not yet on origin**:
+
+- **f724d0f:** the code, tests and jobs;
+- **440ef36:** a smaller HENON CPU request.
+
+They sit on top of Part B's 416f5d7 and Part C's a90e7b9 and 38f104d. Several
+parts work on the branch in parallel, so the files carry the part's prefix.
+The declared names map as follows:
+
+| declared | Part A file |
+|---|---|
+| `scripts/phase12ah_scan.py` | `scripts/phase12ah_a_scan.py` |
+| `scripts/phase12ah_branches.py` | `scripts/phase12ah_a_branches.py`, with `scripts/phase12ah_a_common.py` |
+| `scripts/phase12ah_spectral_events.py` | `scripts/phase12ah_a_spectral_events.py` |
+| Part A of `scripts/phase12ah_summary.py` | `scripts/phase12ah_a_summary.py` (controls 1 to 4 on the outputs, then the readings) |
+| plans, lanes, jobs | `scripts/phase12ah_a_plan.py`, `slurm/phase12ah_a_*` |
+| tests | `tests/test_phase12ah_a_part_a.py` |
+
+**Clarification 1: where the density branch lives.** The declaration put it as
+an option of `phase12/desi_selection.py`. It is in Part A's own module instead:
+
+- Core's `host_density_log_likelihood` is wrapped only while one branch
+  target is built, and restored on exit. The builder imports it inside the
+  function, so only that target's jit sees the wrapper.
+- `phase12/desi_selection.py` is not changed, nor is any production program.
+- The wrapper replaces the PE-side state and density only. The injections are
+  evaluated by the production model, so ln mu and N_eff are the production
+  ones in every branch.
+- `full` is core's field evaluator itself. `catalog` and `completion` mirror
+  core's `eval_incomplete_catalog_prior_state` term by term, with the same row
+  normaliser and row host mass.
+
+**Clarification 2: the curvature budget.** As declared, "Q = Σ_i q_i (the
+events)" takes q_i from D_i. Each D_i already subtracts ln mu, so Q would
+already hold the selection terms, and q_tot = Q + q_sel would count them
+twice. Fixed now, before any number exists:
+
+- q_i comes from D_i, as declared, and **q_tot = Σ_i q_i**;
+- **Q_ev** is the curvature over W of Σ_i (ln Z_i − ln Z_i^spec), the events
+  alone;
+- q_sel is as declared, and Q_ev + q_sel = q_tot exactly, since the fits are
+  linear;
+- F = q_tot / q_spec, K and the concentration use the q_i, as declared;
+- reading 4 reads Q_ev / q_spec ≥ 0.10 while F < 0.05.
+
+This caveat is stated with the result. Core's field numerator leaves out a
+survey-wide normalisation, which cancels between the event evidences and
+−N ln mu. So Q_ev and q_sel each depend on that convention, while q_tot, F and
+every D_i do not. Reading 4 is evaluated in core's convention and says so.
+
+**Clarification 3: control 4 pass lines** for two checks the declaration did
+not list:
+
+- the full density through the wrapper (`full_wrapped`, control runs only)
+  against the production target: within 1e-12 per event;
+- ln mu and N_eff of every branch against the full branch: within 1e-12.
+
+Bit-for-bit equality is recorded for both. The 1e-12 line allows a different
+XLA fusion of a different program.
+
+**Per-event evidence files** (Part C's input):
+
+- `runs/<cell>/events.npz` and `spectral_events/events.npz`;
+- keys: `H0` (241), `event_log_evidence` and `event_mc_variance`
+  (241 × 259), `log_mu`, `n_eff`, `log_likelihood`, `selection_log_correction`
+  (241), `event_names` (259);
+- absolute values: not for agents to read.
+
+**CPU tests.** `tests/test_phase12ah_a_part_a.py` has 11 tests on tiny
+synthetic inputs. All pass at 440ef36, in about 60 s on CPU:
+
+1. **Per PE sample, inside the target's own jit:** `full` and `full_wrapped`
+   equal the production density bit for bit, and logaddexp(catalog,
+   completion) equals it to within 1e-12. The below-depth and in-footprint
+   branches are the production density, masked. On the selection state, the
+   branch model gives the production density bit for bit.
+2. **The patch is scoped:** a nested install is refused, and the original is
+   restored afterwards. A fresh production build then equals the first, bit
+   for bit. Per event, catalog plus completion equals full to within 1e-12,
+   and ln mu and N_eff are bit for bit the same in every branch.
+3. **The scan driver** equals the 12AG driver bit for bit (ln L, theta, PE
+   variances) and records every event. Σ ln Z_i plus core's correction equals
+   ln L to within 1e-9, and the check fails with a wrong N.
+4. **The branch job end to end:** the identities pass, and the full branch
+   equals the scan's per-event evidence at 50 and 90.
+5. **The spectral-only grid** records the per-event evidence in grid order and
+   prints no posterior.
+6. **Metrics and readings:** spread and curvature on curves with known
+   answers; shares, classes and bands; readings 1 to 4 on synthetic per-event
+   data; no location key in the summary record (it refuses to write one).
+7. **Plans:** memory routing (nside 256 is refused on a 40 GB lane) and each
+   partition's maximum time.
+8. **Coverage:** the PE-only fractions p_i, d_i and j_i on a case built by
+   hand.
+
+**Jobs (prepared, not submitted).** Every job uses its partition's maximum
+time. The times below are estimates once a job runs, from 12AG's measured
+build, compile and per-point times; queue wait is not included.
+
+- **Short controls**, `slurm/phase12ah_a_submit_controls.sh <commit>`:
+  - **nside-64 lane** (A100-40, twig): the production cell at H0 25, 50, 66,
+    90 and 139, with the per-event evidence; then its branches at 50, 67.74
+    and 90, `full_wrapped` included. About 12 min.
+  - **nside-256 lane** (rita, A100-80): the hint cell at 50, 90 and 139; then
+    its branches. About 16 min.
+  - **HENON CPU** (8 CPUs, 64 GB): the spectral-only grid with the per-event
+    evidence. About 7 min.
+  - **HENON CPU, after the three:** controls 1 to 4, written to
+    `controls/part_a/controls_a.json`. About 2 min.
+- **Production**, `slurm/phase12ah_a_submit.sh <commit>`, which refuses to
+  run unless the controls passed:
+  - **nside-64 lane:** the 241-point grid plus the branches. About 13 min.
+  - **nside-256 lane (rita):** the same for the hint cell. About 17 min, the
+    longest.
+  - **HENON CPU:** the spectral-only grid. About 7 min.
+  - **HENON summary, after all three:** controls 1 to 4 on these outputs,
+    then the readings, in `summary/part_a/summary_a.json` (location-free).
+    About 3 min.
+- **Time to completion:** about 1 hour from the push, if a rita card and a
+  twig card are free (controls about 25 min, production about 25 min). HENON
+  was nearly full at 08:00 UTC, which is why the CPU request is small.
+
+**Controls and results.** None has run. Controls 1 to 4 must pass before any
+Part A result is read.
+
 ## Part B — the photometric redshift errors
 
 ### The scaled union catalogs (a diagnostic, not a physical model)
