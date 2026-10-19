@@ -2,7 +2,7 @@
 
 ## Status
 
-**DECLARED (owner approval, 2026-10-19 about 11:00 UTC), before any 12AI grid.** No 12AI likelihood has been
+**RESULTS (2026-10-19, 11:02 UTC):** see "Results" at the end: fiducial candidate sigma_kde 3.5e-3 by the declared rule, with observations. **DECLARED (owner approval, 2026-10-19 about 11:00 UTC), before any 12AI grid.** No 12AI likelihood has been
 evaluated. This record fixes the cells, the inputs, the criteria and the readings before anything runs.
 
 **Blinding: location-free**, as in 12AG and 12AH. No H0 value appears here, in commit messages or in PR text. The
@@ -138,6 +138,45 @@ The commit that runs is 9827e3c (pushed before submission).
 - `summary/summary.json` (location-free);
 - `summary/absolute.npz` (not for agents).
 
-## Results
+## Results (2026-10-19, 11:02 UTC; location-free)
 
-Not run.
+**Runs.** Jobs 1390279–1390286 from 9827e3c all COMPLETED, in 7–8 minutes per lane. The per-event sum passes on all
+14 new cells.
+
+| sigma_kde | R (64) | R (128) | Delta (64) | Delta (128) | MC90 (64 / 128) | roughness (64 / 128) | Hellinger from spectral (64 / 128) | Hellinger 64 vs 128 |
+|---|---|---|---|---|---|---|---|---|
+| 1e-3 (context) | 1.024 | 1.153 | +0.02 | −0.00 | 1.12 / 1.38 | 0.17 / 0.24 | 0.122 / 0.139 | — |
+| 1.5e-3 | 1.042 | 1.171 | +0.01 | −0.02 | 1.07 / 1.26 | 0.10 / 0.13 | 0.105 / 0.129 | 0.065 (not compared) |
+| 2e-3 | 1.050 | 1.179 | +0.01 | −0.04 | 1.05 / 1.19 | 0.07 / 0.09 | 0.090 / 0.121 | 0.061 ✗ |
+| 2.5e-3 | 1.051 | 1.169 | +0.00 | −0.06 | 1.03 / 1.16 | 0.06 / 0.07 | 0.077 / 0.110 | 0.057 ✗ |
+| 3e-3 | 1.048 | 1.147 | +0.00 | −0.07 | 1.02 / 1.13 | 0.05 / 0.06 | 0.064 / 0.098 | 0.053 ✗ |
+| **3.5e-3** | 1.044 | 1.120 | +0.01 | −0.07 | 1.01 / 1.11 | 0.05 / 0.06 | 0.054 / 0.085 | **0.049 ✓** |
+| 4e-3 | 1.039 | 1.095 | +0.01 | −0.07 | 1.00 / 1.09 | 0.05 / 0.05 | 0.045 / 0.073 | 0.046 ✓ |
+| 5e-3 | 1.029 | 1.056 | +0.03 | −0.06 | 0.99 / 1.06 | 0.05 / 0.05 | 0.034 / 0.052 | 0.039 ✓ |
+| 7e-3 | 1.010 | 1.016 | +0.06 | −0.01 | 0.97 / 1.03 | 0.05 / 0.05 | 0.025 / 0.027 | 0.028 ✓ |
+| 1e-2 | 0.990 | 0.992 | +0.08 | +0.03 | 0.96 / 1.00 | 0.05 / 0.05 | 0.029 / 0.020 | 0.017 ✓ |
+
+**N1 and N2.** Every chain cell passes N1 and N2 except sigma_kde 1.5e-3:
+- nside 64 fails N2 (roughness 0.101);
+- nside 128 fails N1 (1.26) and N2 (0.134).
+
+**C1 along the chain.** At both nsides every consecutive pair of passing cells passes, with Hellinger 0.010–0.028.
+
+**Reading: fiducial candidate sigma_kde 3.5e-3**, by the declared rule:
+- nside 64 vs 128 gives Hellinger 0.049, within 0.05;
+- the step to 4e-3 gives 0.010 (64) and 0.013 (128).
+
+### Observations (not readings; for the owner)
+
+1. **A tolerance crossing, not a plateau.** The nside 64 vs 128 distance falls steadily as sigma_kde grows:
+   0.061 → 0.017. The catalog's own effect, its Hellinger distance from spectral only, falls with it: 0.090 → 0.029
+   at nside 64. At 3.5e-3 the 64 vs 128 difference (0.049) is still about as large as the catalog effect at nside 64
+   (0.054). No sigma_kde on the chain leaves the catalog effect stable while nside stops mattering.
+2. **C1 along the chain depends on the step size.** With fine steps the neighbouring distances stay small even
+   while the result drifts from 2e-3 to 1e-2. The informative test is nside 64 vs 128.
+3. **The chain is smooth above 2e-3.** Roughness reaches its plateau (about 0.05) by 2.5e-3. The 64 vs 128
+   difference changes smoothly with sigma_kde. Both point to a systematic resolution effect rather than Monte-Carlo
+   noise, but only N3 can decide that.
+4. **What differs between the nsides.** nside 128 is wider (R up to 1.18 against 1.05) and sits slightly lower
+   (Delta about −0.07 against 0). The per-event evidences are recorded at both nsides for every new cell, so a
+   per-event attribution needs no rerun.
