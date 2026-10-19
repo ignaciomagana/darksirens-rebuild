@@ -1604,6 +1604,7 @@ all 0.942.
    gain. A real-data null would test it: the catalog moved on the sky with
    its n(z) and footprint kept.
 4. **Coverage is the main fact.**
-   - At 67.74 the median event's PE redshifts lie 96% above the depth.
+   - At 67.74 the median event has 96% of its host probability above the
+     depth (depth share 0.040), and 92% of its PE samples.
    - The catalog supplies under 1% of the median event's host probability.
    - Where it dominates, it adds at most 0.37 nat of structure across [50, 90].
