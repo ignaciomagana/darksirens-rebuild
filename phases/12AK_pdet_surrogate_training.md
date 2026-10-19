@@ -2,10 +2,11 @@
 
 ## Status
 
-**DECLARED (stage 1 of 4, 2026-10-19); stage 2 BUILT (amendment B1, 2026-10-19).** Stage 2 wrote the training
-sets, passed the pre-training gates, and ran a 50-epoch smoke test of each model on one rita card. The 16-member
-ensemble has **not** been submitted yet; its submit command is in B1. Stage 3 validates (a separate workflow), stage 4
-reports.
+**DECLARED (stage 1 of 4, 2026-10-19); stage 2 BUILT (amendment B1, 2026-10-19); review fixes and SUBMITTED
+(amendment B2, 2026-10-19).** Stage 2 wrote the training sets, passed the pre-training gates, and ran a 50-epoch smoke
+test of each model on one rita card. A review found no blocking defect and eleven non-blocking ones; B2 fixes or
+records each before any training job, and then the 16-member ensemble was submitted (job ids in B2). Validation
+(gates V1–U3) follows in a separate workflow.
 
 **Blinding: location-free.** No H0 inference is involved. Later stages report only the H0-dependence of
 ln mu_D4(H0) − ln mu_MC(H0), never ln mu on its own, never a posterior, never an H0 value. The only H0 numbers here
@@ -131,7 +132,7 @@ Both raw files are byte-identical (sha256) to the files gwcat used for our produ
 
 | Campaign | Rows in file | Detected | Drawn | T (yr) | xi |
 |---|---|---|---|---|---|
-| O1+O2+O3 BBH (endo3) | 284,672 | **81,117** | 73,957,576 | 0.91102 | 1.09680e-3 |
+| O3 BBH (endo3, LIGO-T2100113-v12) | 284,672 | **81,117** | 73,957,576 | 0.91102 | 1.09680e-3 |
 | O4a+O4b | 2,959,534 | **986,829** | 870,454,872 | 1.67829 | 1.14802e-3 weighted (1.13369e-3 unweighted) |
 | **Sum** | | **1,067,946** | 944,412,448 | 2.58931 | |
 
@@ -295,7 +296,7 @@ synthetic row carries:
 
 | Id | Metric | Gate |
 |---|---|---|
-| V1 | **Two-sample tests** of flow samples against the held-out test rows (O4 and B rows thinned by weight / max weight): KS and AD per marginal (13 inputs plus chi_eff, q and chirp mass), PQMass, classifier AUC, and the Cauchy-combined p | diagnostic |
+| V1 | **Two-sample tests** of flow samples against the held-out test rows, as weighted statistics with each row's loss weight (w for A_O4, u for B; amended in B2, which replaces thinning by weight / max weight): KS and AD per marginal (13 inputs plus chi_eff, q and chirp mass), PQMass, classifier AUC, and the Cauchy-combined p | diagnostic |
 | V2 | **Per-bin ratios** of detected marginals in z, m1, q, chi_eff, sin dec and RA: flow fraction ÷ weighted test fraction. Bins straddle O3's m1 = 100 and z = 1.9. The same ratios are computed on the training rows to check overfitting | flag \|r−1\| > max(3%, 3σ); diagnostic |
 | X1 | **Own xi parity**: xi_emu / xi = E_flow[min(1, 1/p_det) · 1_support], the mass kept after masking and clipping | ≥ 0.995 |
 | X2 | **Cross parity**: mu_flow against mu_MC for p_O3, p_O4, q_mix, and the spectral-only population at the generation cosmology | within 1% or 2σ_MC |
@@ -450,7 +451,8 @@ The loss falls in every model, the jax backend is the GPU, and the save → relo
   - that is 21.2 GPU-hours in total, under the 30 ceiling.
 - **Expected:** if training stops near 2000 epochs, as the paper reports, about 8.5 GPU-hours, or about 4.5 h of wall
   time on the two cards.
-- **The estimate for completion:** 5–11 h of wall time once both lanes start.
+- **The estimate for completion:** 5–11 h of wall time with both cards; up to about 21 h if the two lanes run one
+  after the other (record 12AJ also queues on rita; corrected in B2).
 
 **Prepared submission** (not yet run; from the consumer worktree):
 
@@ -463,3 +465,91 @@ It writes `ours/plans/12AK_train_plan.json` and submits two lane jobs, one per r
 - the script prints a shell watcher.
 
 A resubmission of the same command continues unfinished entries from their checkpoints.
+
+## Amendment B2 (stage 4: review fixes), 2026-10-19, before any training job
+
+A review of stage 2 (code, data, jobs, provenance, licence) found **no blocking defect**. It confirmed the detection
+rule against gwcat 8263ae9 (`np.any(fars < 1, axis=1)`, the single-campaign branch, each campaign's own search columns;
+986,829 O4 detections re-counted), the coordinates and Jacobians, xi with the monthly weights, the joint mixture, the
+splits (no leakage), the masks, the Slurm flags and the licence. It found eleven non-blocking defects. Each is fixed
+or recorded below, before any training job. Nothing here involves H0.
+
+**Commits (local only, not pushed).**
+- Consumer branch `phase12ak/pdet-surrogate`:
+  - f5c33cd: the fixes and their tests;
+  - 2b31955: the status job's job-id list is passed joined by ':' (a comma splits `sbatch --export`; caught in a dry
+    run of the submit script).
+- The ensemble runs from the detached worktree `pdet_surrogate/ours/worktrees/2b31955040f1`.
+
+**The eleven items.**
+1. **endo3 is O3 only, not O1+O2+O3.** Its GPS span is 1238166018–1269561618 (O3a start to O3b end), its analysis
+   time (28,749,576 s = 0.911 yr) is O3's alone, and it has no semianalytic SNR column. Relabelled "O3 BBH (endo3,
+   LIGO-T2100113-v12)" in the inspection table and the builder's docstring. The task brief carried the same mislabel.
+   Every number is unchanged; only the name was wrong.
+2. **Shared random streams between models (fixed; it could not be fixed after training).** Before B2, B_joint's
+   training rows (O3 rows, then O4 rows) received the same Poisson bootstrap factors as A_O3 on all 58,404 O3 training
+   rows, and A_O4 and B_joint shared initialisation and batch order. Now every stream derives from
+   SeedSequence([declared seed, model index]), with model index A_O3 0, A_O4 1, B_joint 2, P_control 3:
+   - init: `flow_key_seed` = the first uint32 of that sequence (stored in each model's config);
+   - batch order: the same derivation from the batch seed;
+   - bootstrap: `default_rng(SeedSequence([boot seed, model index]))`.
+   The declared seeds (1001–1005, 3001–3005, 2001–2005, 4242) are unchanged. The separate-vs-joint comparison is
+   therefore unpaired, and the five members of each model are independent of the other models' members.
+3. **Model files carry provenance.** `model.npz` now also holds the jax, jaxlib, flowjax, equinox and paramax versions,
+   the skeleton's treedef string and every leaf's shape and dtype. `load_model` refuses a file without provenance, with
+   any version mismatch, or with a different tree structure or leaf layout. This closes the flowjax-19 silent
+   mis-load trap for every later reader. The 50-epoch smoke models (no provenance) are not loadable any more, by
+   design; they are not used.
+4. **A run's identity.** Each checkpoint and each `metrics.json` carries (code sha, code dirty flag, sha256 of the
+   canonical plan entry). A checkpoint of another identity is refused (never resumed), and a DONE run of another
+   identity is refused (exit 3, never skipped). A rerun of the same commit and plan resumes as before.
+5. **Training sets are checked.** Each plan entry carries the gated sha256 of the files it reads (O3 f41580d8…, O4ab
+   9ed5dde9…); training refuses (exit 4) on any mismatch.
+6. **V1 for the joint model uses weighted statistics.** Thinning by u / max u would keep about 3,300 B test rows (2.8%
+   of O4's, 6.7% of O3's), far below PQMass's 30,000. V1 instead uses each row's loss weight as a sample weight:
+   weighted KS and AD, weighted PQMass region counts, and classifier sample weights. The same applies to A_O4 (weights
+   w). The V1 row of the validation table and the design JSON are amended.
+7. **The joint model's exporter.** `injections.export_pdraw_joint` is added: q_mix does not factor into a
+   mass-redshift part times a spin part, so ln q_mix − LN_ANGLES goes through the mass-redshift slot, the spin slot is
+   0, T = 1 and the fraction is (N_s / Z) / ndraw; dL and the Jacobian follow O4's maps (B1 item 3). A closed-form test
+   checks it against the O4 exporter times q_mix / p_4. **Still open, required before the use-case gates (U1–U3):** a
+   core-format writer for synthetic products and a **null-surrogate gate**: the real detected rows run through the
+   synthetic writer (with `synthetic_ndraw` and N_s,k = n_det,k) must reproduce the H0-shape of the product's ln mu over
+   the 241-point grid to ≤ 1e-6 in core. That checks the plumbing independently of any flow. It needs no retraining.
+8. **Control P's normalisation.** P is trained unweighted but its xi is the weighted one (1.148022e-3, as the student's
+   script); the self-consistent value for an unweighted flow is 1.133693e-3, 1.26% lower. Its config now records both.
+   P's X1 and X2 are reported under both values; with the weighted xi they are not comparable to A and B. The offset
+   is constant in H0, so U1–U3 are unaffected.
+9. **Design JSON wording.** It now says that no constraint JSON is read or used as fitted values, and that the paper's
+   `pdet_13d.json` interval values are transcribed as transform settings for control P only (as B1 said).
+10. **The watcher.** The old `until ! squeue … | grep -q .` loop ends early on a transient `squeue` failure. The new
+    watcher polls `sacct` states and the STATUS.json file; a failing `sacct` keeps it waiting.
+11. **The time estimate** assumed both rita cards free. Corrected in B1: 5–11 h with both cards, up to about 21 h if
+    the lanes run one after the other.
+
+**Added for stage 4.** A HENON CPU job (`slurm/phase12ak_status_henon.sbatch`, `--dependency=afterany` on both lanes)
+runs `scripts/phase12ak_status.py` and writes `pdet_surrogate/ours/summary/STATUS.json`: for each of the 16 entries,
+whether it trained, stopped part-way or never started; epochs, best epoch, stop reason; final train and validation
+losses and the best validation loss; the theta-space train/val/test NLL; the reload check; the run identity and
+derived seeds; and the paths (model.npz with its sha256, metrics.json, train.log). It also records the lanes' sacct
+states. An earlier STATUS.json is moved aside at submission.
+
+**Tests.** `tests/test_phase12ak.py` now holds 22 tests; all pass on CPU at 2b31955 (from its worktree; log
+`ours/logs/12AK_stage4_tests_2b31955.txt`) and at f5c33cd. The six new ones check:
+- that equal declared seeds give different bootstrap factors (A_O3 against B_joint's leading O3 rows), different
+  derived seeds and different initial flows across models, and that the streams stay seeded;
+- that `load_model` refuses a file without provenance, with a flowjax version of 19.0.0, or with a changed treedef;
+- that a checkpoint of another identity is refused and the same identity resumes;
+- that the train script refuses an ungated training set (exit 4) and a DONE run of another identity (exit 3);
+- `export_pdraw_joint` in closed form (ratio to the O4 exporter = q_mix / p_4; = N_4/N outside O3's support) and its
+  refusal outside both supports;
+- that the status script reports a trained, a partial and a missing entry correctly.
+
+A CPU dry run of one real entry (A_O3, 2 epochs, scratch directory, then discarded) passed the data-hash check,
+derived its seeds, saved with provenance, reloaded bitwise, skipped itself on rerun with the same identity, and was
+summarised correctly by the status script.
+
+**Submission.** `slurm/phase12ak_submit.sh 2b31955` from repo_12AK, plan `ours/plans/12AK_train_plan.json` (16
+entries; up to 5000 epochs, patience 500, unchanged). Lane 0 (rita card 1 of 2): A_O4 ×5, then P. Lane 1 (card 2):
+A_O3 ×5, then B_joint ×5. At submission both rita cards were running record 12AJ's GPU jobs (declared at about 75–78
+min each), so the lanes queue behind them. Job ids follow below.
