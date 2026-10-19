@@ -942,8 +942,9 @@ Every variant "reduces variance" at every cell (marked, control 4).
 
 **Reading 3, recommendation (points only): D2.** D1 is first in simplicity, but it reads "marginal" at (64, 3e-3):
 there H(p_D1, p_D0) is 0.139, against 2 H_floor = 0.120. D2 is consistent and reduces the variance at every cell.
-The recommendation carries no control-4 mark, because D2's reading 1 does not depend on D1. Its reading 2 is marked
-through a, as is every variance reading. Adopting D2 as a core option is a core PR and the owner's call.
+D2's reading 1 does not depend on D1. Its reading 2 is marked through a, like every variance reading. B2.4 says a
+mark on the recommended variant is repeated in the recommendation. The summary's recommendation entry does not
+repeat it, so it is repeated here: **D2 (variance reading marked, control 4).** Adopting D2 as a core option is a core PR and the owner's call.
 
 **Reading 4, resolution: "unchanged" for every variant, at both sigma_kde.**
 
