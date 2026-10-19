@@ -6,6 +6,10 @@
 grid, the metrics, the readings and the controls before anything runs. Only one thing has run: a location-free check
 on existing grids that the fine window holds the posteriors (see "Grid"; consumer commit ac2b5a4).
 
+**Build (amendment B1, 2026-10-19, before any production job).** The code is written and tested, the 30
+replicate files are built and pass every file check, and the preflight identity control passed bit for bit at both
+nsides and on spectral only. The production is prepared, not submitted. Consumer commit 03a35ef (local, not pushed).
+
 **Blinding: location-free**, as in 12AG to 12AI. No H0 value appears here, in commit messages or in PR text. The only
 H0 values in this record are fixed a priori:
 - the coarse grid [20, 140] at step 0.5;
@@ -442,3 +446,195 @@ Under `phase12_5/lnl_convergence/`:
   - errors common to every replicate, such as PE prior systematics or a mismatch of the injection set;
   - the upstream duplication of two events.
 - **One sigma_kde.** A third cell is left to the owner.
+
+## Amendment B1 (2026-10-19, build; before any production job): code, tests, replicate files and the preflight
+
+**Nothing in the design changes.** Every item below is either the declared design, built, or an addition that does
+not change what is computed. Nothing in this amendment carries an H0 value beyond the a-priori points.
+
+### Code
+
+Consumer branch `phase12aj/lnl-bootstrap` (worktree `phase12_5/repo_12AJ`), local commits, not pushed:
+- **044d02c**: the build:
+  - `scripts/phase12aj_replicates.py` (the writer and the file checks);
+  - `scripts/phase12aj_boot_scan.py` (one process per cell: the stock build once, then the swap);
+  - `scripts/phase12aj_spectral.py` (12AH's spectral-only script with the window as the evaluation grid);
+  - `scripts/phase12aj_plan.py`, `scripts/phase12aj_summary.py`;
+  - `slurm/phase12aj_*` (worktree, lane, array, summary and submit scripts);
+  - `tests/test_phase12aj.py`.
+- **28ae66b**: the spectral half of the preflight (plan entries, its check and its submit script).
+- **03a35ef**: every curve against H0 into `summary/bootstrap_absolute.npz`, as declared (summary code only).
+
+The likelihood path (`phase12aj_boot_scan.py`, `phase12aj_spectral.py`, the 12AG/12AH drivers and the `phase12`
+package) is the same in all three commits, so the preflight below, run from 044d02c (rita) and 28ae66b (HENON),
+covers the production code. The production runs from **03a35ef**, every job from the worktree
+`lnl_convergence/worktrees/03a35efd0c3a` (clean, at that commit).
+
+### Tests
+
+`JAX_PLATFORMS=cpu DARKSIRENS_ZMAX=6.0 <consumer python> -m pytest -q tests/test_phase12aj.py`: **19 passed** (about
+36 s). They cover:
+- **the plan:**
+  - the window and control-point floats;
+  - the 101 points shared with the coarse grid;
+  - the lanes (rita0 and rita1 only), each partition's maximum time, and no MIKO, js2h100, twig or henon-gpu;
+- **the writer:**
+  - seeds and indices: per-event blocks, sorted, reproducible;
+  - every attr copied with its HDF5 type, vlen and empty string arrays included;
+  - the layout and the provenance attrs, and the identity files bit for bit;
+  - a corrupted or misplaced replicate fails the checks;
+- **the swap, on the synthetic P12.4 fixture:**
+  - the replicate's operands swapped into the nominal target's jit equal a stock build on the replicate stores;
+  - bit for bit when the pixel union equals the view, to 1e-9 when it is a strict subset;
+  - with no trace and no compile;
+- **the metrics, on curves with known noise:**
+  - per-point variance, difference variance and the shape variance (constant offsets carry none);
+  - H² ≈ Var_p(ε)/8, the Hellinger closed form, R and Delta, the floor and the count term;
+  - the vectorised per-event-sum control against core's eager correction;
+- **the readings and the location guards** (key names and values);
+- **the whole summary on a synthetic run tree:**
+  - controls 1–5, 7 and 8 pass;
+  - the four shape terms add up to S(PE) + S(injections);
+  - the injected noise is recovered;
+  - the readings are withheld when control 1 fails.
+
+### Replicate files (control 5)
+
+Job 1390290 (HENON, henon04, 16 CPUs, 69 s), from 044d02c. `replicates/manifest.json`: **pass**. Its sha256 is
+951fc6dab5dc62c44bf472e4ec34ef584178d6b39353a4274cb6a803e17fe2e2, with numpy 1.26.4 and h5py 3.12.1.
+
+**Sources:** PE c61507251609cb69 and injections 56e51af209c99905, as declared.
+
+**Every one of the 30 files passes:**
+- re-read, it equals original[idx] bit for bit, dataset by dataset;
+- same dtype, chunks, gzip level, filters, fill value and maxshape, in the same order;
+- every original attr unchanged, with its HDF5 type;
+- the provenance attrs added;
+- PE rows stay in their event block;
+- the identity files equal the originals bit for bit;
+- core's loader (with the target's fit columns) reports 259 × 4096 PE rows, or 1,067,946 injections with ndraw
+  944,412,448.
+
+| PE file | seed | sha256 (prefix) | unique rows per event (min / median / max) | injection file | seed | sha256 (prefix) | unique rows |
+|---|---|---|---|---|---|---|---|
+| pe_identity.h5 | none | e82c2d2f42fda36b | 4096 / 4096 / 4096 | inj_identity.h5 | none | 8a3a1fdbae863d1c | 1,067,946 |
+| pe_b01.h5 | 1201 | f8220bae708975b4 | 2540 / 2588 / 2642 | inj_b01.h5 | 2201 | 2d1ea5e0c518d133 | 675,165 |
+| pe_b02.h5 | 1202 | d0607ba074d110f8 | 2542 / 2589 / 2636 | inj_b02.h5 | 2202 | a013462be663933d | 675,166 |
+| pe_b03.h5 | 1203 | 341780adb7d56f99 | 2531 / 2591 / 2646 | inj_b03.h5 | 2203 | 459d3f72fde592f5 | 674,746 |
+| pe_b04.h5 | 1204 | e87e24fc2e6e8e93 | 2529 / 2590 / 2652 | inj_b04.h5 | 2204 | 4667dafda8c8439b | 674,731 |
+| pe_b05.h5 | 1205 | 4ecc5b031c8f3d1a | 2527 / 2589 / 2639 | inj_b05.h5 | 2205 | 69d7a8aa285b6532 | 675,454 |
+| pe_b06.h5 | 1206 | b716a51369648f09 | 2549 / 2586 / 2657 | inj_b06.h5 | 2206 | 6138b353bceee6f7 | 674,669 |
+| pe_b07.h5 | 1207 | 63a31eaa45dd7893 | 2530 / 2588 / 2661 | inj_b07.h5 | 2207 | 2012bfad82ab784e | 675,557 |
+| pe_b08.h5 | 1208 | 5a312987cb0888a4 | 2518 / 2590 / 2656 | inj_b08.h5 | 2208 | f069640b0878bffd | 675,320 |
+| pe_b09.h5 | 1209 | 55437cdc33beb38a | 2529 / 2586 / 2659 | inj_b09.h5 | 2209 | e39ceb3a352defbc | 674,816 |
+| pe_b10.h5 | 1210 | 85d7e458870a5540 | 2525 / 2588 / 2639 | inj_b10.h5 | 2210 | ab1e823db8f1fe07 | 674,873 |
+| pe_b11.h5 | 1211 | 47524e7baa764873 | 2530 / 2592 / 2640 | inj_b11.h5 | 2211 | 804242ea6ce51ecc | 674,812 |
+| pe_b12.h5 | 1212 | 398211e91bfa7531 | 2535 / 2590 / 2651 | inj_b12.h5 | 2212 | 0b2d3f47e0087cf1 | 675,206 |
+| pe_b13.h5 | 1213 | 587f57da53cb71d1 | 2545 / 2588 / 2638 | inj_b13.h5 | 2213 | 6c4e0d62082182d7 | 675,109 |
+| pe_b14.h5 | 1214 | 5683fcdcb590f51a | 2542 / 2589 / 2634 | inj_b14.h5 | 2214 | 7d31268b3c5b7668 | 675,047 |
+
+The unique fractions are about 0.632, as a bootstrap gives (1 − 1/e).
+
+### Preflight: the identity control before production (location-free)
+
+Outputs under `lnl_convergence/preflight/`, check `preflight/controls_preflight.json`; the production summary does
+not use them.
+
+**On ONE rita card:** rita0, job 1390291, from 044d02c, 9 min 40 s.
+- Per nside, the stock driver on pe_identity + inj_identity and on pe_b01 + inj_b01, at the five control points.
+- Then the loop at the five control points: nominal, swap_identity, swap_pair01, pe_b01 and inj_b01.
+- Check: job 1390292 (HENON).
+
+**Its spectral half on HENON:** array 1390295, from 28ae66b. The nominal and the identity spectral-only grids, at
+all 501 points. Check: job 1390296.
+
+| Check | nside 64 | nside 128 | spectral only |
+|---|---|---|---|
+| 1. stock identity vs the loop's nominal | bit for bit (ln L, ln μ, N_eff, every ln Z_i and variance) | bit for bit | — |
+| 1. the loop's swap of the identity files vs nominal | bit for bit | bit for bit | — |
+| 1. identity grid vs nominal grid (501 points) | — | — | bit for bit |
+| 2. stock pair 01 vs the loop's swap of pair 01 | bit for bit | **bit for bit** (718 view rows unused) | — |
+| 3. separability at the five points | 0.0 | 0.0 | — |
+| 4. per-event sum, every grid | ≤ 9.1e-13 | ≤ 3.4e-13 | ≤ 6.8e-13 |
+| 6. against 12AG at the control points / the reference at the 101 shared points | 0.0 | 0.0 | 0.0 |
+| 7. x64 on, clean committed tree | yes (044d02c) | yes | yes (28ae66b) |
+| 8. view | equal (49,152 rows) for every grid | within the view; unused rows: pe_b01 77, inj_b01 269, pair 01 718 | — |
+| 8. first point of a swapped grid; compilations | 0.26 s; 0 | 0.26 s; 0 | — |
+
+More from the preflight:
+- No point is penalised or unaccepted in any preflight grid.
+- The configured H0 range of every spectral run stays [20, 140].
+- Replicate loads take 0.7 to 1.7 s, against the 10 s assumed.
+- The nominal grid's first point compiles in 72 s (nside 64) and 64 s (nside 128).
+- Points take 0.256 to 0.268 s on rita.
+- A spectral-only grid takes 441 s on 8 HENON CPUs.
+
+**On the nside-128 prediction:** a replicate evaluated on the nominal view gives exactly the stock result, as expected.
+- The kernel window is 774, from the nominal view.
+- The 1e-9 tolerance of control 2 was not needed at pair 01.
+
+### Additions that do not change the design
+
+1. **The preflight above.**
+2. **The loop's self-check.** Before any grid, the swap path applied to the original files must rebuild the target's
+   own PE and injection operands, leaf by leaf and bit for bit. Otherwise the process exits with code 4. It passed at
+   both nsides.
+3. **Diagnostics in the loop.**
+   - Each replicate's sha256 is checked against the manifest before use.
+   - Each grid records its XLA compilations and traces, beside the declared first-point time.
+4. **The per-event-sum control (4) is vectorised.**
+   - Core's `selection_log_correction` is evaluated for all points at once, as a jit of a vmap in float64.
+   - It is cross-checked against the eager per-point evaluation (12AH's checker) at the control points, to 1e-12.
+     The difference was 0 to 4.5e-13.
+   - Reason: the eager call takes about 24 ms per point, and there are about 45,000 points.
+5. **The location guard.**
+   - `summary.json` and `controls.json` are checked for forbidden key names (median, mean, map, interval, H0, …).
+   - They are also checked for any float equal to an absolute posterior location the summary computed (medians,
+     means, MAPs and interval ends of every nominal and replicate posterior), with the a-priori points excepted.
+   - On a violation the file is not written, and `STATUS.json` names the paths only.
+6. **`scan.json` is rewritten every 50 points, not every point.** This only changes the resume granularity.
+
+### Choices where the declaration is silent
+
+1. **The joint S of readings 1 and 2** is S(PE) + S(injections), the sum of the modes, which is what splits exactly
+   into the four terms. The S of the joint replicates, and the Q from it, are reported alongside.
+2. **Intervals.**
+   - Single variances and the two floor terms: the 68% chi-square interval on 13 degrees of freedom.
+   - The catalog-added terms and Q: ± one delete-one jackknife sd over k.
+   - The per-event PE estimate: ± one sd, from 2v_i²/(K − 1) per event.
+3. **Reading 2's "match" test.**
+   - PE uses the per-event estimate; selection uses the bootstrap after the count term.
+   - Each is reported at the point nearest the median and as the p_c-weighted mean, with a verdict for each.
+4. **Metric 3's "own spectral grid"** is the spectral replicate of the same mode and k. For the joint mode it is
+   spectral PE k + spectral injection k − spectral nominal.
+5. **Penalised points.** They are counted per replicate. If there are any, every metric is also computed without
+   those k (the joint drops both modes' k). The readings are shown for both; the primary set uses all replicates.
+6. **The count term** comes from each run's own N, N_det and N_draw: 259² (1/1,067,946 − 1/944,412,448) = 0.0627.
+
+**Not built as declared:** nothing.
+
+**A residual risk (not a change).**
+- The spectral identity control is bit for bit across two tasks. In the preflight both ran on henon04 (AMD EPYC
+  7542).
+- In production the array may place the nominal and identity tasks on different HENON nodes.
+- The evidence suggests HENON's CPU numerics are deterministic across nodes:
+  - the nominal reproduced the earlier reference exactly at the 101 shared points;
+  - 12AH's spectral rerun also matched it exactly.
+- Each run records its node and CPU model, so a failure there can be traced.
+
+### Production (prepared, not submitted)
+
+`slurm/phase12aj_submit.sh 03a35ef`, from `phase12_5/repo_12AJ`. The replicate manifest passes, so the replicates
+are not rebuilt and nothing waits on them.
+- **Lanes:** rita0 (nside 64) and rita1 (nside 128), each with the two stock controls and the loop (nominal on 501
+  points, the two control swaps on five, and the 28 replicates on 501).
+- **Spectral only:** HENON array 0–30, at most 8 at once.
+- **Summary:** HENON, afterany on everything; it always writes `summary/STATUS.json`.
+
+**Estimate:**
+- **This record's declared speeds:** rita0 75 min and rita1 78 min (2.6 card-hours); spectral 28 min; the summary
+  about 10 min.
+- **The preflight's measured speeds** (faster replicate loads): about 70 to 72 min per lane, and about 30 min for
+  the spectral array alongside.
+- **About 1.3 h from submission to `summary/STATUS.json`** if rita is free. It was idle at 12:40 UTC.
+
