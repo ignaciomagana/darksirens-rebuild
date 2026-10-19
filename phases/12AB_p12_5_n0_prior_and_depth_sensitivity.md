@@ -51,6 +51,16 @@ evaluated draws, through B1's own target.
 See "Part C (2026-10-18): fitted to B1, tested, submitted" under Results,
 and Compute.
 
+**PART C DONE (2026-10-19, 00:48 UTC): the depth reads mild with the
+population free.** d200 against d245: Δ = −0.277 ± 0.039 (resolved), R =
+1.014. At a fixed population (Part B) the same depth read −0.155, robust.
+With the n0 centre at −0.83 sd as well: Δ = −0.365 ± 0.078, mild. The n0
+centre shifts on B1's full set are robust up to ±1 sd (|Δ| ≤ 0.13); ±2 sd
+are not determined. Control 5 passed (1.3e-10). Per the declared bands, the
+depth goes into the robustness matrix as a systematic; the baseline is
+unchanged. Task 8 was rerun after a node fault (job 1389729). See "Part C
+(2026-10-19)" at the end of Results.
+
 **Blinding.** No H0 value from real data (median, interval or shift) is
 written here. Results will be appended location-free: shifts in units of the
 baseline posterior sd, width ratios, effective sample sizes. The absolute
@@ -1092,3 +1102,82 @@ written to `n0_depth/smoke/C/`).
   `n0_depth/C/summary.json` (location-free) and `C/summary_absolute.json`
   (blinded).
 - The analysis exits 3 if control 5 fails or any draw is missing.
+
+### Part C (2026-10-19): the depth reads mild with the population free
+
+**Jobs.** HENON array 1389692: tasks 0 to 7 finished in 0.4 to 1.5 hours
+each. Task 8 failed at node start-up ("TaskProlog failed", 0 s, henon06),
+the same node fault as Part B's task 65. It was rerun unchanged as job
+1389729 (henon05, 1.5 h), excluding henon06 and henon08, and the analysis
+1389693 was re-chained onto it. The analysis ran on 2026-10-19 at 00:46 UTC
+at the committed code 794cfde, clean, and wrote `n0_depth/C/summary.json`
+(location-free) and `C/summary_absolute.json` (blinded). In all: 1,056
+calls, about 12.5 task-hours, under the 100 task-hour stop.
+
+**Control 5: PASS.** At the first 32 baseline draws, Part C's baseline
+equals B1's stored ln L_DESI to 1.3e-10 (tolerance 1e-6). No draw is
+missing.
+
+**The baseline.** On its 1024 draws (37 in the lower H0 part, 987 in the
+upper, by A1's part weights), Part C's baseline has an effective sample
+size of 639. Against B1's full set (ESS 11,850) it gives Δ = −0.059, R =
+0.946 and a 68%-width ratio of 0.927. That is the subsampling noise of 1024
+draws. The variants below are read against this baseline: the same draws,
+weights and random numbers (common random numbers), so their errors are
+paired.
+
+**The variants** (Δ in the sd of Part C's baseline; errors from 1000 paired
+bootstrap resamples):
+
+| variant | ESS (of 1024) | Δ | R | 68%-width ratio | reading | Part B at a fixed population |
+|---|---|---|---|---|---|---|
+| d200 | 658 | **−0.277 ± 0.039** | 1.014 ± 0.009 | 1.016 ± 0.030 | **mild**, resolved | Δ −0.155, R 1.018: robust |
+| d200 with n0_m083 | 306 | **−0.365 ± 0.078** | 0.982 ± 0.026 | 0.946 ± 0.037 | **mild**, resolved | Δ −0.156, R 1.023: robust |
+
+**Centre shifts on B1's full set** (no new calls; Δ in the sd of B1's full
+set; ESS limit 500):
+
+| variant | n0 centre shift | ESS (of 11,850) | Δ | R | reading |
+|---|---|---|---|---|---|
+| n0_m083 | −0.83 sd | 4,605 | −0.099 ± 0.014 | 0.970 | robust |
+| n0_p1 | +1 sd | 4,755 | +0.129 ± 0.014 | 1.031 | robust |
+| n0_m1 | −1 sd | 3,283 | −0.123 ± 0.018 | 0.964 | robust |
+| n0_p2 | +2 sd | 391 | (+0.26 ± 0.05) | (1.013) | not determined (ESS below 500); not read |
+| n0_m2 | −2 sd | 244 | (−0.28 ± 0.07) | (0.941) | not determined (ESS below 500); not read |
+
+**The n0 posterior** (not blinded): log10 n0 = −1.803 ± 0.034 at d200 and
+−1.834 ± 0.036 at d200 with n0_m083. The prior is −1.8105 ± 0.036 and
+−1.840 respectively, so the events still do not constrain n0 with the
+population free.
+
+**Reading, as declared.**
+
+- **Depth: mild.** Moving the depth from 0.245 to 0.200 with the population
+  free shifts the H0 median by −0.28 baseline sd, seven times its bootstrap
+  error, and leaves the width unchanged (R 1.01). Under the declared bands
+  this is listed as a systematic in the robustness matrix. It does not
+  change the baseline, and it does not go to the owner as a revision
+  decision, which only "material" would.
+- **The population roughly doubles the depth effect.** At a fixed
+  population, Part B gave −0.155 for the same depth (robust). With the
+  population free the shift is −0.277 and has the same sign. Part B's map
+  therefore understates the depth sensitivity of the population-free result
+  by about a factor of 1.8.
+- **Interaction: mild.** With the depth at 0.200 and the n0 centre at
+  −0.83 sd together, Δ is −0.365 ± 0.078. That is the sum of the two
+  separate shifts (−0.277 and −0.099) within its error.
+- **n0 centre: robust.** Up to ±1 sd, |Δ| ≤ 0.13 on B1's full set. On the
+  12Y chain Part A gave −0.082 for n0_m083; here it is −0.099. The ±2 sd
+  shifts keep under 2.2% of the weight and are not read, as expected in
+  advance.
+- **The window spread with the population free** is at least 0.28 (d200
+  against d245), mild. Only the far end, d200, was run, as declared, so the
+  intermediate depths are not measured with the population free.
+
+**Limits of this reading.**
+
+- One depth only.
+- The 1024-draw baseline sits 0.06 sd from B1's full set. The variants are
+  paired to it, so the shifts are not affected at their quoted errors.
+- The lower H0 part carries 37 draws. Its share of the shift is inside the
+  bootstrap error but is not separated here.
