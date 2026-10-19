@@ -767,3 +767,38 @@ step exited 0. 13:42–15:03 UTC; all pass:
 **Lanes.** Both started on rita: rita0 1390346 at 15:10 UTC and rita1 1390347 at 15:17 UTC. Each start
 preempted a standby (`rita-s`) job by the cluster's QOS policy; no job was cancelled by hand. Summary 1390348
 (HENON) follows. **Expected summary about 17:35 UTC** (B2.8's 2.3 h per card; range 17:15 to 18:45).
+
+## Amendment B3 (2026-10-19): the nside-128 cells ran out of GPU memory; one-line fix, rerun of those two cells
+
+**What failed.** Both nside-128 cells stopped at the same place, right after their tables were built: rita0's
+`al_cell_ns128_sk1e-03` (job 1390346) and rita1's `al_cell_ns128_sk3e-03` (job 1390347). In both, controls 1(a),
+1(b) and 10 had already passed bit for bit. The error was `RESOURCE_EXHAUSTED: Out of memory while trying to
+allocate 23427856200 bytes`, in `build_tables` at `native = native.at[n_rows].set(0.0)`. That eager scatter copies
+the whole per-row native table, (n_rows + 1) × n_z in float64, about 23 GB at nside 128. Both nside-64 cells
+completed (`al_cell_ns64_sk3e-03` on rita0, `al_cell_ns64_sk1e-03` on rita1), as did all four Lane A grids.
+
+**Fix (departure: implementation only).** Consumer commit 2de1cc3 does the same set inside a jit whose argument is
+donated, so XLA writes the row in place. The values are bit for bit the same: the last row only ever receives
+`where(valid, vals, 0.0)` = 0.0, and is then set to 0.0. The 20 12AL CPU tests pass at 2de1cc3. Nothing in the
+variants, cells, grid, metrics, readings, controls or tolerances changes.
+
+**Rerun.** Only the two nside-128 cell stages are rerun, from the clean worktree `2de1cc311911`, on the same plan
+(`plans/production.json`); their Lane A grids are complete and are not rerun:
+- `al_cell_ns128_sk1e-03`: job 1390414 (rita, one A100-80);
+- `al_cell_ns128_sk3e-03`: job 1390415 (rita, one A100-80);
+- summary: job 1390416 (HENON, afterany on both).
+
+Each cell's control 10 records its own commit: 198046c for the nside-64 cells, 2de1cc3 for the nside-128 cells. The
+summary has no rule tying cells to one commit.
+
+**The partial summary.** The first summary job (1390348, afterany on both lanes) ran at 16:23 UTC on the two
+nside-64 cells only. Its files are kept as `summary/*_1390348_partial.*` and are not this record's reading.
+
+**Queue (owner: "D1–D3 first").** The shell watcher released 12AK's lanes when 12AL's first lanes ended. 12AK lane 0
+(job 1390334) started and was cancelled about one minute in, before it wrote any output; Slurm refuses requeue for
+it. It was resubmitted unchanged and held, as job 1390413, from the same worktree `2b31955040f1`, plan and names.
+12AK's status job 1390336 now waits on 1390413 and 1390335. Both 12AK lanes are released by a shell watcher once
+both nside-128 cells complete; if either fails, they stay held.
+
+**Expected:** about 70 min per nside-128 cell with both cards in parallel (B2.8), so the summary at about 17:45 UTC
+once both cards are ours (range 17:30 to 18:30).
