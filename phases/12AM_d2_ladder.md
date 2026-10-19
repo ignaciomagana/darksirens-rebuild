@@ -966,3 +966,30 @@ The CPU controls of B1 were not rerun: no fix touches the streamed table, the ta
 numbers. The GPU controls were not rerun for the same reason. B2.2 changes only which of two already-tested tables a
 1e-4 cell uses: the fine path ran and passed at (32, 1e-4) in the build (B1.3). **Every gating control of the build
 stands. Production runs from `54d9815`.**
+
+## Production (submitted 2026-10-19, 22:55 UTC)
+
+- **Code:** consumer `54d9815`, from the clean worktree `d2_ladder/worktrees/54d9815b2e46`. The record holds
+  amendments B1 and B2 (record commit `2fa05ad`), both written before this submission.
+- **Plan:** `d2_ladder/plans/production.json`, 61 entries on 5 lanes, the same assignment as in B1. Job ids are in
+  `d2_ladder/plans/jobs.json`.
+
+| lane | job | card | cells, in order |
+|---|---|---|---|
+| rita0 | 1390545 | A100-80 | (128, 3e-3), (256, 1e-4), (256, 3e-3) |
+| rita1 | 1390546 | A100-80 | (128, 1e-3), (256, 3e-4), (256, 1e-3), (256, 1e-2) |
+| twig0 | 1390547 | A100-40 | (64, 1e-3), (32, 1e-4), (64, 1e-4), (32, 3e-3), (64, 1e-2) |
+| twig1 | 1390548 | A100-40 | (128, 1e-4), (128, 3e-4), (32, 3e-4), (32, 1e-2) |
+| henongpu | 1390549 | A100-40 | (64, 3e-3), control 5, (128, 1e-2), (32, 1e-3), (64, 3e-4) |
+| summary | 1390550 | HENON CPU | afterany on all five lanes; always writes `summary/STATUS.json` |
+
+- **rita dependency.** The surrogate lanes 1390498 and 1390499 had already completed and left the queue (B1.8). So
+  the rita lanes carry no dependency. Both rita lanes started at once; qos rita preempted another user's standby
+  jobs by policy. Nothing was cancelled by hand.
+- **All five lanes were running by 22:56 UTC**, each on its declared card, at `54d9815` with a clean tree and jax on
+  the GPU.
+- **Watcher:** a shell until-loop for the main session (in `jobs.json`). It checks every 600 s and ends on
+  `summary/STATUS.json` or on the first job in a failure state.
+- **Estimated finish:** the longest lane is about 92 minutes (rita1), then the summary takes 5 to 10 minutes. So
+  the summary is due about **00:30 to 00:45 UTC on 2026-10-20**. The range is 1.5 to 3 hours after submission
+  (00:25 to 01:55 UTC). The 7-day and 2-day limits are ceilings, not the estimate.
