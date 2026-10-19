@@ -747,3 +747,23 @@ D3a and D3b, so the cell maps and the large D3 tables (about 600 MB at nside 16)
   12AL's lanes.
 - **Total from submission to the summary:** about 8.5–14.5 h, and up to about 25 h if 12AK's lanes run one after the
   other. The 7-day limit is a ceiling, not the estimate.
+
+## Production (2026-10-19, location-free)
+
+**Order (owner, 2026-10-19: "D1–D3 first").** 12AL's lanes run on rita before 12AK's: 12AK's two lanes (1390334,
+1390335) are held and are released by a shell watcher once both 12AL lanes have left the queue.
+
+**CPU controls in the miko holder (departure: scheduling only).** HENON was full, so the HENON controls job 1390345
+was cancelled before it started. The same script (`slurm/phase12al_cpu_controls.sbatch`, clean worktree
+`198046cae2f8`, x64, `JAX_PLATFORMS=cpu`) ran as a 32-CPU step of the miko holder job (step 1388940.48, reniced to
+19; peak RSS about 9 GB). The lanes' `afterok` dependency on 1390345 was replaced by a hold, released only when the
+step exited 0. 13:42–15:03 UTC; all pass:
+- **1(c):** pass.
+- **5:** pass at all four cells (relative deviations ≤ 7e-15; tolerance 1e-10).
+- **8:** pass at all four cells (relative deviations ≤ 1.1e-14; tolerance 1e-10).
+- **2:** pass for D2, D3a, D3b and D3r. Worst deviation below the depth 2.2e-6 (tolerance 1e-4), above 4.7e-13
+  (tolerance 1e-12), log-sum 2.0e-10 (tolerance 1e-4), no finite-pattern mismatch. 2,258 s.
+
+**Lanes.** Both started on rita: rita0 1390346 at 15:10 UTC and rita1 1390347 at 15:17 UTC. Each start
+preempted a standby (`rita-s`) job by the cluster's QOS policy; no job was cancelled by hand. Summary 1390348
+(HENON) follows. **Expected summary about 17:35 UTC** (B2.8's 2.3 h per card; range 17:15 to 18:45).
