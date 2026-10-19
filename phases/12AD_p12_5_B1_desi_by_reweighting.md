@@ -2,6 +2,8 @@
 
 ## Status
 
+**DONE (2026-10-18): results below, read robust.** The population-free DESI H0 by reweighting moves by +0.08 sd from the spectral value, width ratio 1.04; control passed. The text that follows is the declaration as written before any run.
+
 **DECLARED (owner, 2026-10-18) before any run. Low priority.** Nothing in
 this record has been run. The method, the control, what is reported and how
 it is read are fixed here, before any weight is computed. The code it needs
