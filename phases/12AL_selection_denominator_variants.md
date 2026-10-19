@@ -6,6 +6,9 @@
 metrics, readings, controls and compute before anything runs. Nothing has run. The only things read for it are
 core's source, the consumer code, and catalog metadata: shapes, occupied-row counts and galaxy weights.
 
+**BUILT (2026-10-19), amendment B1 below.** The code is written and tested, and two short GPU controls passed. No
+production job has run.
+
 **Blinding: location-free**, as in 12AG to 12AJ. No H0 location appears here, in commit messages or in any summary.
 The only H0 values in this record are fixed a priori:
 - the coarse grid [20, 140] at step 0.5;
@@ -516,3 +519,147 @@ Under `phase12_5/selection_denominators/`:
   argument for D2 and D3 still holds then, but D1's ratio would not be constant.
 - **Table interpolation.** It is a small systematic, bounded by controls 3 and 7 at ≤ 1e-4 per injection and ≤ 1e-3
   nat in N ln μ.
+
+## Amendment B1 (2026-10-19): the build (stage 2), before any production job
+
+### Commits
+
+Consumer branch `phase12al/selection-denominators`, local only (not pushed), from 9827e3c:
+
+| Commit | Content |
+|---|---|
+| `2f849d9` | the wrapper, the tables, the cell process, the plan, the lanes, the CPU tests |
+| `4823cbf` | the multi-density call (B1.1), control 1(d), the CPU controls script, the summary |
+| `447a072` | the CPU-control, summary and production submit scripts; the lanes' jax memory fraction; tests |
+| `ecbcd83` | CPU tests of the cell's controls 7 and 8 and of the replicate operand |
+
+Files: `scripts/phase12al_common.py`, `phase12al_cell.py`, `phase12al_cpu_controls.py`, `phase12al_plan.py`,
+`phase12al_summary.py`; `slurm/phase12al_{worktree.sh,lane.sbatch,cpu_controls.sbatch,summary.sbatch,
+submit.sh,submit_control.sh}`; `tests/test_phase12al.py`. The grid-driver option is `phase12al_cell.py
+--selection-variant` (repeatable; default all of D1 to D3b). Jobs run from `selection_denominators/worktrees/<sha>`,
+a detached worktree of a committed local sha, which must be clean.
+
+### CPU tests: 15 passed
+
+On tiny synthetic inputs (an nside-8 catalog, 12 events, 4,096 injections):
+- **control 1(c):** a nested install raises; the attribute is restored on a normal exit and after an exception;
+  the wrapped function carries `selection_variant`;
+- **identity:** the target built under the wrapper equals the stock target bit for bit (ln L, ln mu, N_eff, the
+  correction, every event's evidence and variance), and the selection-only path (PE stub) reproduces ln mu and
+  N_eff;
+- **D3 at the native nside and the native table equal D0** per injection (≤ 1e-4 below the depth, ≤ 1e-12 above)
+  and in N ln mu (≤ 1e-3);
+- **D2, D3r, D3a and D3b equal D0 on an identical-pixel catalog** (algebra (ii)); D1 does not;
+- **the PE side is bit-identical** across all five variants;
+- **normalisation:** every cell variant keeps Σ_p of the catalog term at every table node (relative 1e-12) and
+  Σ_c m_c fbar_c = Σ_p f_p (algebra (i));
+- **the multi-density call equals the single calls** (B1.1);
+- **controls 7 and 8** through the cell's own functions; the replicate operand equals the target's map of the
+  resampled rows;
+- **the metrics on known curves** (a line has B = 0 and q = 0; a quadratic gives its q and B), the shape variance and
+  Hellinger floor, every reading rule, the recommendation, the location-key and location-value guard, the grids
+  (641 points, 101 shared floats), the sky cells, the plan;
+- **the summary on synthetic cells:** it runs, is location-free, falls back without replicates, withholds every
+  reading when a gating control fails, and always writes STATUS.json.
+
+### Short GPU controls (rita, one A100-80; jobs 1390324 and 1390325)
+
+Production cell (nside 64, sigma_kde 3e-3), at H0 = 50, 75 and 100 of 12AG's grid:
+- **identity mode against 12AG's own grid** (`smearing_ladder/runs/ns64_sk3e-03/scan.json`): **bit for bit** in
+  ln L, ln mu, N_eff, the correction and all 259 PE variances; theta identical;
+- **D0 through the selection-only path** equals it bit for bit (control 1(b) needs no rounding allowance here);
+- **the multi-density call** (D0 and D1 to D3b in one jit) equals the single calls for D0, D1 and D2 bit for bit;
+- **D2** is finite and repeats bit for bit.
+
+**Measured speeds** (these replace the assumed ones):
+
+| Step | Measured |
+|---|---|
+| a selection-only point, D0 alone | 0.25 s |
+| a selection-only point, one variant alone | 0.22 s |
+| a selection-only point, all six densities together | 0.25 s |
+| first call of each new trace (compile) | 72 to 82 s |
+| the D2 table at nside 64 (1.3e12 kernel terms) | 9 s |
+| all four cell tables at nside 64 | 8 s |
+| the occupied view and its kernel state | 12 s |
+| device peak (jax / nvidia-smi) | 18.5 GB / 21.3 GB |
+
+The variant's own density lookup is cheap, but the density-free part of each injection weight (population, z(dL),
+Jacobian over 1.07M injections) is not: 0.22 s, not the 0.05 s assumed.
+
+### B1.1: one call per point for every density (departure: implementation and compute)
+
+At 0.22 s per variant point, the declared plan of one call per density costs about 3.3 h per cell, most of it in
+the replicates (14 × 501 × 6 calls). Instead, one jitted call traces one core `host_density_log_likelihood` per
+density (D0, D1, D2, D3r, D3a, D3b), each with its own selection state. The density-free work is the same
+expression on the same operands, and XLA computes it once: 0.25 s for all six.
+
+Each density is still core's own reduction, unchanged. **Control 1(d)** is added to every cell: at the five control
+points, the multi-density values equal single calls for D0, D1 and D2 to 1e-12 (bit for bit in the GPU control). A
+failure of 1(d) withholds every reading, as a failure of control 1 does.
+
+### B1.2: the table interpolant is log-linear (departure: implementation)
+
+Between two table nodes the catalog term is read **log-linearly** where both nodes are positive, and linearly
+otherwise (zeros). Reasons:
+- core's own g(z) is log-linear between its grid nodes (`log_interp_zgrid`);
+- a Gaussian tail is log-quadratic, so the log-linear error is about (h/σ)²/8 relative everywhere, tails included.
+  A linear interpolant's relative error grows like u²(h/σ)²/8 into the tails.
+
+**Below core's first grid node** (z ≈ 1.8e-3), core's g is the z² law. No two-point interpolant follows z² to 1e-4
+for z below about 5e-4, because the error is about (h/z)²/4. So:
+- **control 7** gates on z ≥ 1e-3 (`Z_GATE_LOW`); the pairs below are reported, not gated;
+- **injections:** the smallest injection distance is 8.2 Mpc, so z ≥ 1.4e-3 at H0 = 50 (controls 2 and 3 are
+  unaffected). At H0 = 20 a handful of injections reach z ≈ 5.5e-4, where the error is ≤ 1e-4 on their density.
+  Their weight in mu is negligible.
+
+### B1.3: smaller precisions of the controls (departure: tolerances and rules)
+
+- **"Exactly 0 above the depth"** (controls 2 and 3) becomes **≤ 1e-12**. Core's field value is
+  (x − log Z) + log Z, which rounds differently from x by an ulp.
+- **Control 7** draws its cells among those holding at least one occupied pixel. An empty cell's exact value is 0
+  at every z and would fall under the floor anyway.
+- **Control 2**'s ln mu check uses the population-free sum Σ_i n_D / Σ_i n_f over the first 100,000 injections. The
+  per-injection bound (≤ 1e-4) already bounds any positively weighted sum to the same 1e-4, so this adds nothing.
+- **Control 9's file check** builds the operand from 12AJ's file (sha256 checked against 12AJ's manifest) and
+  compares it with the in-memory resample, leaf by leaf, bit for bit. This is stronger than a dataset sha256. 12AJ's
+  manifest already records each file's datasets equal to the original's at its indices.
+
+### B1.4: the tables use every occupied pixel of the global catalog (as declared; one fact recorded)
+
+At nside 128, 19 occupied pixels (3,206 galaxies) lie outside the target's compact view, because no PE sample or
+injection falls in them. At nside 64 none do. The tables are therefore built from a separate view: core's compact
+builder over all occupied pixels, with the target's own evaluation settings. These are the galaxy list and the
+kernel window; at nside 64 the window holds all 1,719 slots of a row. This is the declared "every occupied row of the
+global catalog".
+
+### B1.5: jobs and memory (departure: scheduling only)
+
+- **CPU controls before the GPU lanes:** the lanes are submitted `--dependency=afterok` on the CPU-controls job,
+  instead of an agent waiting on it. If a CPU control fails, the lanes never start and are cancelled. Control 5
+  failing still means amending the normalisation section first.
+- **Memory:** the lanes set `XLA_PYTHON_CLIENT_MEM_FRACTION=0.92`, up from jax's default of 0.75, which caps it at
+  about 60 GB on an A100-80. This makes room for the native table of control 3 (about 23 GB at nside 128). It changes
+  no number.
+- **Lane A** is `phase12ah_a_scan.py` unchanged, given the 641 union points with `--h0`.
+
+### B1.6: compute (re-estimated from the measured speeds)
+
+| Step | nside 64 | nside 128 |
+|---|---|---|
+| Lane A (start, 641 points at 0.265 s, scan.json rewrites) | about 9 min | about 10 min |
+| cell: two builds, five compiles, controls 1, 1(d), 3, 7, 8 | about 13 min | about 15 min |
+| spectral grid, 641 points | about 3 min | about 3 min |
+| nominal, 641 points × 6 densities at 0.25 s | about 3 min | about 3 min |
+| replicates, 14 × 501 points × 6 densities at 0.25 s | about 30 min | about 30 min |
+| **total per cell** | **about 60 min** | **about 65 min** |
+
+- **Per card:** two cells, about 2.1 h.
+- **CPU controls before:** controls 2, 5 and 8 at full size on HENON (32 CPUs), estimated 20 to 60 min. These are
+  CPU kernel sums: about 9e11 terms for control 2's synthetic tables, and 12 global kernel builds for control 5.
+- **Summary after:** about 5 min.
+- **Total to the summary:** about 3 hours once the CPU controls start and both rita cards are free (range 2.5 to 4
+  h), plus queueing behind 12AK on rita and on a busy HENON.
+
+**Readings and metrics are unchanged.** Nothing here changes a variant, a cell, the grid, a metric, a reading or a
+tolerance, except B1.2's control-7 gate and B1.3.
