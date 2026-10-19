@@ -663,3 +663,87 @@ global catalog".
 
 **Readings and metrics are unchanged.** Nothing here changes a variant, a cell, the grid, a metric, a reading or a
 tolerance, except B1.2's control-7 gate and B1.3.
+
+## Amendment B2 (2026-10-19): review fixes, before any production job
+
+An adversarial review of this record (at b8af8f8) and its build (consumer ecbcd83) found one blocking defect and six
+non-blocking ones. The physics of D1, D2 and D3 and the normaliser held up. All are fixed in consumer commit
+`198046c` (from ecbcd83), before any production job. Variants, cells, grid, metrics and reading rules are unchanged;
+B2.2 and B2.3 change a control's tolerance or rule.
+
+### B2.1: controls 1(c) and 1(d) gate every reading (blocking defect)
+
+- **Problem:** the summary gated only on CPU controls 5 and 8 and on the per-cell controls 1(a), 1(b), 3, 7, 8 and
+  10. Control 1(d) (B1.1) was not copied into `controls.json`, and CPU control 1(c) was not gated, although
+  "a failure of control 1 withholds every reading".
+- **Fix:** CPU controls 1(c), 5 and 8 and per-cell controls 1(a), 1(b), 1(d), 3, 7, 8 and 10 now gate. Control 1(d)
+  is copied into `controls.json`. A test fails only 1(d), and one fails only 1(c); each withholds every reading.
+
+### B2.2: control 10's guard-penalty gate is a tolerance (departure: tolerance)
+
+- **Problem:** control 10 required the guard penalty (the "wall") to be exactly 0 at all 641 points. Core's soft gate
+  is exactly 0 only when N_eff exceeds about 4.7 times its threshold, that is V_sel ≲ 4.2 here. 12AG already shows a
+  selection variance of 3.67 at the (128, 1e-3) cell, so a slightly noisier density at a coarse-grid end could
+  carry a wall of about 1e-300 nat and withhold every reading.
+- **Fix:** the gate is |wall| ≤ 1e-9 nat on the fine window [50, 100] and V_tot ≤ 20 at all 641 points. The
+  maximum |wall| over the full grid and an exact-zero flag are reported beside it.
+
+### B2.3: D0's ln L uses the variants' path, and its tie to Lane A gates (departure: rule)
+
+- **Problem:** D0's ln L was Lane A's, while every variant and every replicate used the selection-only path's
+  correction. Any difference between the two D0s would enter ℓ_D and its replicate errors as a fixed curve and
+  inflate the Hellinger floor. The tie was computed but not gated (the GPU controls found it bit for bit, but only
+  at three points).
+- **Fix:** D0's ln L for every difference is Σ ln Ẑ_i + core's correction at D0's selection-only ln μ and N_eff.
+  Control 10 now also requires D0's selection-only ln μ and N_eff to equal Lane A's to 1e-12 (absolute in ln μ,
+  relative in N_eff) at all 641 points. Control 10's per-event sum check stays on Lane A.
+
+### B2.4: controls 2, 4, 6 and 9 mark their readings (as declared; the code did not)
+
+The record says a failure of 2, 4, 6 or 9 marks the affected readings, and that a control-6 failure withholds
+reading 4's interpretation. The summary computed controls 4 and 6 but used neither. Now:
+- control 6 not passing → `readings.resolution[sigma_kde]` is "withheld (control 6)";
+- control 4 not passing → D1's consistency and every variance reading (D1 is the floor) are marked;
+- control 2 not passing → D2, D3r, D3a and D3b are marked;
+- control 9 failing, or 12AJ's grids not being there → `noise_source` is marked;
+- a mark on the recommended variant is repeated in the recommendation. A test covers controls 2, 4 and 6.
+
+The GPU lanes still start only after every CPU control passes, control 2 included (B1.5). That is stricter than
+"marked", and it is kept.
+
+### B2.5: control 1(d) covers every density
+
+Control 1(d) compared the all-densities call with single calls for D0, D1 and D2 only. It now covers D0, D1, D2, D3r,
+D3a and D3b, so the cell maps and the large D3 tables (about 600 MB at nside 16) are checked too. This adds about
+5 min per cell: three more compiles and their control points.
+
+### B2.6: jobs (scheduling only)
+
+- **Failed CPU controls:** the lanes are now submitted with `--kill-on-invalid-dep=yes`. If a CPU control fails,
+  Slurm cancels both lanes, and the summary (`afterany` on the lanes) still runs and writes `STATUS.json` with the
+  gating failure. Before this, the lanes and the summary would have stayed pending forever.
+- **The watcher** ends on `STATUS.json` or on the first job in a failure state (FAILED, CANCELLED, TIMEOUT,
+  OUT_OF_MEMORY, PREEMPTED). If it ends on a failed lane, the summary still runs afterwards.
+
+### B2.7: text corrections
+
+- **Control 6's premises** were called "checked", but no code checked them. The review measured them:
+  - the nside-64 footprint equals the mean of its nside-128 children exactly;
+  - the cell f̄ values of D2, D3a and D3b agree between nside 64 and 128 to 4e-15;
+  - the two catalogs hold the same galaxies in every nside-16 cell (equal counts, and z sums equal to 2e-11).
+
+  Galaxy weights are checked per cell in the production run (`unit_galaxy_weights`).
+- **Implementation section:**
+  - the completion part uses core's gathered row-fraction form (`GatheredCompletionCurves`,
+    `gathered_missing_density`) with f̄ per cell. Its arithmetic is the same as
+    `selection_completion_curves_with_row_fraction`;
+  - the table interpolant is B1.2's log-linear one, not a linear one.
+
+### B2.8: tests and compute
+
+- **Tests:** 20 12AL CPU tests pass (15 from B1 plus 5 new ones for B2.1 to B2.4). The 3 12AI tests also pass.
+- **Compute:** about 65 min per cell at nside 64 and 70 min at nside 128, so about 2.3 h per card.
+- **Queue:** rita runs 12AJ's two jobs first (about 1 h left), then 12AK's two lanes (5–11 h with both cards), then
+  12AL's lanes.
+- **Total from submission to the summary:** about 8.5–14.5 h, and up to about 25 h if 12AK's lanes run one after the
+  other. The 7-day limit is a ceiling, not the estimate.
