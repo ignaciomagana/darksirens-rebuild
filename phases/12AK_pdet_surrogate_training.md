@@ -553,3 +553,16 @@ summarised correctly by the status script.
 entries; up to 5000 epochs, patience 500, unchanged). Lane 0 (rita card 1 of 2): A_O4 ×5, then P. Lane 1 (card 2):
 A_O3 ×5, then B_joint ×5. At submission both rita cards were running record 12AJ's GPU jobs (declared at about 75–78
 min each), so the lanes queue behind them. Job ids follow below.
+
+**Submitted 2026-10-19T13:07Z** (code 2b31955, worktree `ours/worktrees/2b31955040f1`, plan sha256 480ce7ec…, job list
+`ours/plans/12AK_train_jobs.json`):
+
+| Job | Lane | Entries | Resources |
+|---|---|---|---|
+| 1390334 | rita lane 0 | A_O4_m1–m5, then P_control | RITA-GPU, one A100-80 |
+| 1390335 | rita lane 1 | A_O3_m1–m5, then B_joint_m1–m5 | RITA-GPU, one A100-80 |
+| 1390336 | HENON status | writes `ours/summary/STATUS.json` | afterany:1390334:1390335 |
+
+**Estimated total time to completion:** the lanes wait about 1–1.5 h for 12AJ's two rita jobs to end. Then 5–11 h with
+both cards (expected near the low end if training stops near 2000 epochs), so about 6–12.5 h from submission, and at
+most about 22.5 h if the lanes run one after the other. The 7-day limit is a ceiling, not the estimate.
