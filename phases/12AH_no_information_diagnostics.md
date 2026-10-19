@@ -576,6 +576,145 @@ the path s = 0.25 → 0.5 → 1):
   effective area, so this null does not show that photometric errors are
   harmless; it is read together with the scaled grids.
 
+### Amendment B1 (2026-10-19, before any Part B grid): code, catalogs, controls, prepared jobs
+
+**Status.** The code is written and pushed, and its CPU tests pass. The
+catalogs are built and gated, and the short GPU controls ran and passed.
+**No Part B production grid has been submitted.** The twelve declared grids
+are prepared (below). The controls compare likelihoods only as differences, so
+nothing below carries an H0 value. The only H0 values named are the a priori
+grid and the probe points (20, 50, 80, 110 and 140, 12AG's probe points).
+
+**Code.** Consumer `ignaciomagana/desi_darksirens_selection`, branch
+`phase12ah/no-info-diagnostics`, commit **416f5d7** (pushed), directly on
+6337a56. Parts work on the branch in parallel, so the files carry the part's
+prefix:
+
+| declared | Part B file |
+|---|---|
+| `scripts/phase12ah_catalogs.py` (the scaled and spectroscopic catalogs, gates) | `scripts/phase12ah_b_catalogs.py` |
+| `scripts/phase12ah_scan.py` (grid driver with per-event evidence) | `scripts/phase12ah_b_scan.py`: `phase12ag_scan.py` imported unchanged, plus `events.npz` and the per-event sum check (control 2) at every point of every Part B grid |
+| plans, lanes, control checks | `scripts/phase12ah_b_plan.py` |
+| Part B of `scripts/phase12ah_summary.py` | `scripts/phase12ah_b_summary.py` (12AG's per-cell summary and bands, imported; the scale-axis and spectroscopic readings above) |
+| `slurm/phase12ah_*` | `slurm/phase12ah_b_*` |
+| `tests/test_phase12ah_*.py` | `tests/test_phase12ah_b.py`: 12 CPU tests pass (the dz-scaling gates on a synthetic table, the spectroscopic build against 12U's builder byte for byte, the driver against `phase12ag_scan.py` bit for bit with the per-event sum, resume, the spectroscopic preset, the plans and the readings) |
+
+**Two clarifications (no number changes):**
+
+1. The preset `count_ridge_spec_delta0` is passed as a `--set` override
+   (`phase12ah_b_plan.SPEC_SET`). It is not written into the shared
+   `config/desi.fixed_population.json`, so that file stays untouched while the
+   parts work in parallel. The resolved configuration is the same either way,
+   and control 6 checks it.
+2. The scaled catalogs come from the 12AG builder run on a small HDF5 table.
+   Its columns are external links to the native table (sha256 checked),
+   except ZERR, which holds the scaled values. This avoids copying the
+   1.4 GB table. The same path at s = 1 is a control: it must write 12AG's
+   files byte for byte.
+
+**Catalogs** (HENON CPU, jobs 1390239 to 1390242, about 7 minutes each, peak
+16 GB). Paths are under `phase12_5/no_info_diagnostics/catalogs/`.
+
+| family | nside 64 sha256 | nside 256 sha256 | gates |
+|---|---|---|---|
+| s = 1 (control) | `c2d1ff36567419e42386f07daf30bd0af2e2da714c16f066ecde4eb94d9084e2`, the production and 12AG file | `66c50dc4ac1ea3ffc593f8e19cc2baf3f0dd18c8a4953c77b10f262153a684d3`, the 12AG file | pass; byte for byte |
+| s = 0.5 | `b921dc354986ed3b2e42f09919c7db840ad922acb77cb16f178d1b58ed86eccd` | `a9046679ef5bdb290e509ad5e1daabcd4796be0a42dae38949a78945eacac344` | pass |
+| s = 0.25 | `35fae5542d00ee281e61e8134fe52c7ad86edebceb30b6513be9cc0ac531b83b` | `f54b430180c59be385408940af9a33c069c30a1da1f2432a338a55902244241e` | pass |
+| spectroscopic | `2879a5e299e8de7f58e10d8eb9e50fc662ab72d06fd1ca3faa2b80a3a9be797d`, 12U's file | `729ce2c28f829173ddfd5987c901c9cf139163569857a3d9c2f580f419fb10f2` | pass |
+
+- **Scaled tables:** s = 0.5 `a24572878fcb2921cd431752d48c9e5cfb27352844045b90c960097db4a73cb8`;
+  s = 0.25 `fbfeba921ddd143ae5b487567d70d77ff4e68fe3006d9f547f02d148632afec0`;
+  s = 1 `66354de1d6ab5c3b0a45cc9e6c016148d0ab0412eebc746dee720922c2f70c4f`.
+- **Scaled gates, at both nsides:**
+  - 22,785,279 galaxies after the cuts: 16,628,106 photometric (code 1, none
+    with dz = 0) and 6,157,173 spectroscopic (codes 0 and 2);
+  - `ngals`, `zgals`, `wgals` and `gal_app_mag` equal 12AG's slot by slot,
+    padding included;
+  - in `dzgals`, exactly 16,628,106 real slots differ, each by the factor s
+    exactly, and no padding slot differs;
+  - the multiset of (z, dz, weight, apparent magnitude) equals the native rows
+    after the cuts with the scaled dz;
+  - at s = 1, no dz slot differs and both files are 12AG's byte for byte.
+- **Spectroscopic gates:**
+  - 4,909,210 rows; the M_APP ≤ 21 cut removes none and the 12I mask removes
+    33, leaving 4,909,177 galaxies, one multiset at both nsides;
+  - nesting from 64 to 256 passes, and the nside-64 file is 12U's byte for
+    byte;
+  - the upgraded footprint
+    (`spec_only/footprint/mth_map_nside256_from128.h5`, sha256
+    `ddc87f4a96fe28428b046b68ba7a7928fd07654c858bb1c9aff1a86a04c74683`) gives
+    every child its parent's f_p exactly and degrades back to the native f_p
+    with difference 0;
+  - no occupied pixel has f_p = 0;
+  - the f_p-weighted area is 7,872 deg² at both nsides; galaxies per occupied
+    pixel, median 289 at nside 64 and 18 at nside 256.
+
+**Controls: all pass** (`controls/part_b/controls.json`, location-free).
+
+- **The unscaled catalog through the Part B path** (s = 1, the production
+  cell, 241 points; twig, job 1390243) equals 12AG's production-cell grid
+  (`ce3be7a9…`) at every point:
+  - max |Δ ln L| = 0, bit for bit (tolerance 1e-10);
+  - theta, the selection variance and the PE variance are equal;
+  - per-event sum (control 2): 259 events at all 241 points, max |residual|
+    4.5e-13.
+- **Control 6, 12U's spectroscopic scan:** rerun from 416f5d7 with its
+  recorded arguments (twig, job 1390244). Against 12U's scan (`2abadd4b…`)
+  at all 12 points, max |Δ ln L| = 0 (tolerance 1e-6), and theta is
+  identical.
+- **Control 6, configuration:** the spectroscopic cells' resolved
+  configuration differs from 12U's chain configuration (`073243be…`) only in
+  the declared keys:
+  - the calibration preset, plus 12AG's union preset, which is present in the
+    shared configuration and unused here;
+  - delta, log10 n0, sigma_kde (in the 1e-3 cells) and the population's spin
+    pair.
+
+  The selection block (m_lim 19.5 and 12U's luminosity priors), numerics and
+  sampler block are identical. The M0hat and sigma_M medians of 12U's chain
+  (`2eb34e1b…`) round at 4 decimals to the declared −20.1870 and 0.8160.
+- **Control 5:** every catalog gate above passes.
+- **Control 2** also passes on the three probes (max |residual| ≤ 2.3e-13).
+
+**Probes** (5 H0 points each, for memory and time):
+
+| probe | card | jax peak (GiB) | nvidia-smi (MiB) | s per point | first point (s) | route |
+|---|---|---|---|---|---|---|
+| s = 0.25, nside 64, sigma_kde 1e-3 | twig A100-40 | 13.4 | 21,290 | 0.28 | 87 | any A100 |
+| s = 0.25, nside 256, sigma_kde 1e-3 | rita A100-80 | 33.8 | 49,921 | 0.36 | 69 | rita (80 GB) |
+| spectroscopic, nside 64, sigma_kde 1e-3 | twig A100-40 | 2.1 | 4,756 | 0.07 | 84 | any A100 |
+
+- Memory and time equal 12AG's at the same nside. The compact view and the
+  kernel window (1,719 slots at nside 64, 569 at 256) are set by the pixel
+  slots, not by dz.
+- The narrowest scaled kernel at nside 256 reaches a total Monte-Carlo
+  variance of 7.2 at one of its five probe points. Under the reading rules
+  this matters only inside a grid's 90% interval, and the summary checks it
+  there.
+
+**Prepared, not submitted:** `slurm/phase12ah_b_submit_grids.sh 416f5d7`. It
+refuses to run unless `controls/part_b/controls.json` passes. It writes
+`plans/part_b_grids.json`, then submits these lanes, each at its partition's
+maximum time:
+
+- **rita0** (A100-80): s = 0.5 and 0.25 at nside 256 and sigma_kde 3e-3, then
+  the spectroscopic grid at nside 256 and 3e-3. About 15 minutes.
+- **rita1** (A100-80): the same three at sigma_kde 1e-3. About 15 minutes.
+- **twig0 to twig3 and henon-gpu** (A100-40): the six nside-64 grids, about
+  4 minutes each. henon-gpu holds two, about 8 minutes.
+- **HENON CPU summary**, `--dependency=afterany` on every lane: writes
+  `summary/part_b/summary_b.json` (location-free), `summary_b_absolute.json`
+  (not for agents) and always `STATUS_B.json`.
+
+The spectroscopic grids at nside 256 stay on rita as declared, although their
+memory is likely far under 40 GB. Part A also has a rita lane (the hint cell).
+If both are submitted together, the rita lanes run one after the other.
+
+**Estimated time to completion of Part B:** about 20 minutes from submission
+with both rita cards free (rita lanes about 15 minutes, summary about 2). It is
+about 35 to 40 minutes if Part A's rita lane runs first, and hours if another
+user holds rita.
+
 ## Part C — the well-covered events
 
 ### The subset rule (fixed before the count, from PE and footprint only)
