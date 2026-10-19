@@ -546,6 +546,56 @@ The lane code is unchanged (scan, branches and spectral driver). So the
 short GPU controls test the same likelihood code as at 440ef36. The 11 CPU
 tests must pass on the new commit before any Part A job.
 
+### Amendment A3 (2026-10-19, after Part A's short controls, before any Part A production job): the control-2 checker ran in float32
+
+**Status.** The main session pushed the consumer branch at 593221c and the
+record at 33ddc7d (about 08:50 UTC), so the hold in A2 is lifted.
+
+- **Part B:** the twelve grids were submitted from 416f5d7 (jobs 1390257 to
+  1390264) and finished at 08:53 UTC. Its results go in a later amendment.
+- **Part A:** the short GPU controls ran from 593221c (jobs 1390265 to
+  1390268).
+
+**What failed.** Every control passed except control 2, the per-event sum.
+
+**Passed:**
+- grid reproduction: |d ln L| = 0 at both cells;
+- spectral rerun against the reference: |d ln L| = 0;
+- branches: identities within 2.7e-15, the full branch against the grid 0,
+  the selection side bit for bit.
+
+**Failed:** control 2, with max |Sum_i ln Z_i + correction − ln L| of
+1.2e-4 (nside 64), 5.0e-5 (nside 256) and 1.8e-4 (spectral), against a
+tolerance of 1e-9.
+
+**Cause: the checker, not the recorded data.** The check recomputes core's
+`selection_log_correction` (a jnp function) in the checker process. That
+process did not enable 64-bit JAX, so the correction was evaluated in
+float32. With N ln mu of order 1e3, that loses about 5e-5 nats.
+
+Using the correction the runs themselves recorded, which they evaluated in
+x64, the per-event sums close to:
+- 2.3e-13 (nside 64);
+- 0 (nside 256);
+- 9.1e-13 (spectral).
+
+The checker recomputed in x64 gives the same numbers. Part C's reconstruction
+already enables x64 (`phase12ah_c_subsets.py`), and its controls closed to
+1e-12.
+
+**Fix.** These are code changes only. No measured quantity changes, and no
+GPU control is rerun.
+
+- `scripts/phase12ah_a_common.py`: `recomputed_log_likelihood` enables x64
+  before calling core.
+- `scripts/phase12ah_a_summary.py`: the summary process enables x64 before
+  importing core, as Part C's scripts do. This also makes its PE coverage
+  shares use the same precision as Part C's coverage.
+
+The 13 Part A and overall CPU tests pass. The control checker
+(`phase12ah_a_plan.py check-controls`) is rerun on the same control
+outputs from the fixed commit before Part A's production jobs.
+
 ## Part B — the photometric redshift errors
 
 ### The scaled union catalogs (a diagnostic, not a physical model)
