@@ -875,3 +875,27 @@ session's node, `controls/cpu_final/STATUS.json`): the consumer's 24 tests (`tes
 `test_phase12an_d4.py`, `test_phase12an_pool.py`, `test_phase12an_summary.py`), 12AK's 38 tests (12AK venv) and its 3
 core-load tests (consumer env): all pass. The smoke job also ran the D0 to D3, D4 and 12AK tests at cabb3b6: all
 pass. The submit script refuses unless this file records every test passing at exactly the submitted shas.
+
+## Production (submitted 2026-10-20 03:42 UTC)
+
+- **Shas.** Consumer cb7c638 (worktree `d1_d4_fine/worktrees/cb7c6386afc9`); repo_12AK ad0c0b9 (worktree
+  `pdet_surrogate/ours/worktrees/ad0c0b970d95`). Every entry runs from one of these two clean worktrees.
+- **Plan.** `d1_d4_fine/plans/pool.json`: 47 entries (13 D0 to D3, 8 of 12AK's validation chain, 25 D4, the summary),
+  358 card-minutes of GPU work (184 of them on 80 GB cards only) and 51 CPU minutes on lanes' nodes. Written from
+  the production sha with `plans/d03_entries.json` and `plans/d4_entries.json`.
+- **Jobs** (`d1_d4_fine/plans/jobs.json`): lanes rita0 1390631, rita1 1390632, twig0 1390633, twig1 1390634,
+  twig2 1390635, twig3 1390636, henongpu0 1390637, henongpu1 1390638; the HENON fallback summary 1390639
+  (afterany on every lane). No MIKO job, no js2h100 job, no other user's job touched.
+- **At submission** five lanes started at once: rita0, rita1, twig0, twig1 and henongpu0. Another user holds two twig
+  cards (12-hour and 2-day jobs) and the second henon-gpu card, so twig2, twig3 and henongpu1 wait; the lane that ends
+  the pool cancels them if they are still pending. The first claims: twig0 12AK's sampling (the critical path), rita0
+  the (256, 1e-4) table, rita1 the (256, 1e-4) Lane A, henongpu0 the (128, 1e-4) table, twig1 the (128, 1e-4) Lane A.
+- **Estimate** (five cards). The 12AK chain to the D4 choice: about 50 minutes (sampling 15, writing 20, core
+  checks 12, choice 1). Rita's 80-GB-only work: about 97 card-minutes of D0 to D3 in the first 50 minutes on its two
+  cards, then about 87 card-minutes of nside-256 D4 work after the choice, about 45 minutes. The summary entry about 10
+  minutes. **So the summary is due about 05:45 to 06:30 UTC on 2026-10-20**, later (to about 08:00 UTC) if an entry
+  needs its retry on rita or the D3 work runs long. The 7-day and 2-day limits are ceilings, not the estimate.
+- **The watcher** (for the main session; sleep 600):
+  `until bash d1_d4_fine/worktrees/cb7c6386afc9/slurm/phase12an_watch_check.sh; do sleep 600; done` followed by
+  sacct for every job and the first 3000 bytes of `d1_d4_fine/summary/STATUS.json`.
+- Nothing pushed. No absolute file was opened.
