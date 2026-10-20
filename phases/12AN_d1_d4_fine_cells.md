@@ -899,3 +899,140 @@ pass. The submit script refuses unless this file records every test passing at e
   `until bash d1_d4_fine/worktrees/cb7c6386afc9/slurm/phase12an_watch_check.sh; do sleep 600; done` followed by
   sacct for every job and the first 3000 bytes of `d1_d4_fine/summary/STATUS.json`.
 - Nothing pushed. No absolute file was opened.
+
+## Results (summary 2026-10-20 05:17 UTC; location-free; numbers only under the owner's reporting rule)
+
+- **Run.** Summary entry on lane rita0 (job 1390631), rc 0; record gate failures none; guard violations none; R2 failures none. All 47 pool entries done; the three pending lanes (twig2, twig3, henongpu1) and the HENON fallback summary were cancelled by the pool when it ended. Outputs: `d1_d4_fine/summary/{summary.json, matrices.txt, controls.json, STATUS.json}`. The absolute file was not opened.
+- **D4.** Model A chosen by U3 (A has the smaller ensemble S_W[50, 90]; S_W A 9.28e-04, B 1.49e-03). Label **systematic**, because not every numerical check passes: X1 smallest xi_emu/xi 0.9450 (fail); X2 ratio − 1 p_O3 -0.0074, p_O4 -0.0132, q_mix -0.0126, spectral_population_gen_cosmology -0.0027 against 0.01 (fail); U2 max member sd on [50, 90] 0.0028 against 0.0015 (fail); U1 S_W[50, 90] 9.28e-04 against 0.003 (pass); plumbing gate pass (shape max |Δ| 3.9e-09). Pooled rows 10,634,443; pooled draws 9,335,484,607.
+- **Spectral-only through D4's selection** against the stock spectral-only (reference cell 128/1e-3, window grid): R 0.9921, hellinger 0.00446, sd_ratio 0.9919, shift_in_spectral_sd 0.00493.
+- **Withheld:** D4/D0 at (256, 1e-4), by C3(f): effective-sample walls outside the window, total variance 71.2 against the limit 20. D0's walls are reported, not gating: (128, 1e-4) total variance 25.7, walls outside the window; (256, 1e-4) total variance 74.4, walls inside it.
+- **Marks:** D1 at every cell (C8: D1 is spectral-only up to a constant, so its shares removed are 1 by construction); D4/D0 and D4/D2 at both sigma_kde 1e-4 cells (the synthetic-path null D4-N′ does not pass there).
+- **C9** (nside independence of the D2, D3a, D3b and D4/D2 tables, 128 against 256): pass at both sigma_kde.
+- **Hellinger, nside 128 against 256** (window grid; D0 at 1e-4 on the coarse grid): sigma_kde 1e-03: D0 0.145, D1 0.068, D2 0.067, D3a 0.065, D3b 0.066, D3r 0.067, D4/D0 0.069, D4/D2 0.067; sigma_kde 1e-04: D0 0.284, D1 0.185, D2 0.187, D3a 0.189, D3b 0.187, D3r 0.189, D4/D0 withheld, D4/D2 0.186.
+
+Columns are the cells (nside / sigma_kde). Spectral-only reference: Var sel 0.69, total 0.91.
+
+### D0
+
+| metric | 128 / 1e-3 | 128 / 1e-4 | 256 / 1e-3 | 256 / 1e-4 |
+|---|---|---|---|---|
+| Var ln L, selection (max in I90) | 1.141 | 7.330 | 1.935 | 16.766 |
+| Var ln L, PE | 0.263 | 0.399 | 0.297 | 0.714 |
+| Var ln L, total | 1.387 | 7.650 | 2.229 | 17.360 |
+| share of catalog-added selection variance removed (D1 = 1) | 0.000 | 0.000 | 0.000 | 0.000 |
+| width R vs spectral-only | 1.156 | 1.237 | 1.022 | 1.190 |
+| sd ratio vs spectral-only | 1.070 | 1.077 | 1.013 | 1.122 |
+| median shift vs spectral-only (spectral sd) | -0.0042 | -0.093 | 0.184 | -0.439 |
+| median shift vs D0 (spectral sd) | 0.000 | 0.000 | 0.000 | 0.000 |
+| Hellinger vs spectral-only | 0.138 | 0.252 | 0.196 | 0.349 |
+| roughness (window) | 0.028 | 0.790 | 0.033 | 537 |
+
+### D1
+
+| metric | 128 / 1e-3 | 128 / 1e-4 | 256 / 1e-3 | 256 / 1e-4 |
+|---|---|---|---|---|
+| Var ln L, selection (max in I90) | 0.700 | 0.700 | 0.700 | 0.699 |
+| Var ln L, PE | 0.266 | 0.402 | 0.311 | 0.714 |
+| Var ln L, total | 0.964 | 1.100 | 1.011 | 1.386 |
+| share of catalog-added selection variance removed (D1 = 1) | 1.000 | 1.000 | 1.000 | 1.000 |
+| width R vs spectral-only | 1.010 | 1.000 | 0.968 | 1.008 |
+| sd ratio vs spectral-only | 1.006 | 1.006 | 0.979 | 0.977 |
+| median shift vs spectral-only (spectral sd) | -0.314 | -0.290 | -0.408 | -0.388 |
+| median shift vs D0 (spectral sd) | -0.309 | -0.197 | -0.592 | 0.230 |
+| Hellinger vs spectral-only | 0.143 | 0.169 | 0.151 | 0.242 |
+| roughness (window) | 0.012 | 0.282 | 0.014 | 0.573 |
+
+### D2
+
+| metric | 128 / 1e-3 | 128 / 1e-4 | 256 / 1e-3 | 256 / 1e-4 |
+|---|---|---|---|---|
+| Var ln L, selection (max in I90) | 0.710 | 0.710 | 0.709 | 0.710 |
+| Var ln L, PE | 0.266 | 0.399 | 0.304 | 0.714 |
+| Var ln L, total | 0.976 | 1.109 | 1.013 | 1.394 |
+| share of catalog-added selection variance removed (D1 = 1) | 0.966 | 0.998 | 0.988 | 0.999 |
+| width R vs spectral-only | 1.017 | 1.024 | 1.003 | 1.012 |
+| sd ratio vs spectral-only | 1.012 | 1.009 | 1.008 | 1.004 |
+| median shift vs spectral-only (spectral sd) | -0.015 | 0.018 | -0.141 | -0.093 |
+| median shift vs D0 (spectral sd) | -0.011 | 0.111 | -0.325 | 0.452 |
+| Hellinger vs spectral-only | 0.061 | 0.113 | 0.063 | 0.202 |
+| roughness (window) | 0.020 | 0.282 | 0.022 | 0.574 |
+
+### D3a
+
+| metric | 128 / 1e-3 | 128 / 1e-4 | 256 / 1e-3 | 256 / 1e-4 |
+|---|---|---|---|---|
+| Var ln L, selection (max in I90) | 0.729 | 0.732 | 0.726 | 0.732 |
+| Var ln L, PE | 0.265 | 0.373 | 0.302 | 0.714 |
+| Var ln L, total | 0.994 | 1.105 | 1.028 | 1.421 |
+| share of catalog-added selection variance removed (D1 = 1) | 0.925 | 0.993 | 0.975 | 0.997 |
+| width R vs spectral-only | 1.041 | 1.049 | 1.029 | 1.037 |
+| sd ratio vs spectral-only | 1.016 | 1.011 | 1.015 | 1.006 |
+| median shift vs spectral-only (spectral sd) | 0.033 | 0.074 | -0.076 | -0.069 |
+| median shift vs D0 (spectral sd) | 0.037 | 0.168 | -0.260 | 0.482 |
+| Hellinger vs spectral-only | 0.072 | 0.123 | 0.060 | 0.207 |
+| roughness (window) | 0.025 | 0.289 | 0.026 | 0.579 |
+
+### D3b
+
+| metric | 128 / 1e-3 | 128 / 1e-4 | 256 / 1e-3 | 256 / 1e-4 |
+|---|---|---|---|---|
+| Var ln L, selection (max in I90) | 0.752 | 0.781 | 0.752 | 0.781 |
+| Var ln L, PE | 0.257 | 0.350 | 0.299 | 0.714 |
+| Var ln L, total | 1.009 | 1.129 | 1.052 | 1.447 |
+| share of catalog-added selection variance removed (D1 = 1) | 0.871 | 0.987 | 0.952 | 0.994 |
+| width R vs spectral-only | 1.046 | 1.056 | 1.037 | 1.052 |
+| sd ratio vs spectral-only | 1.012 | 1.007 | 1.014 | 1.008 |
+| median shift vs spectral-only (spectral sd) | 0.032 | 0.077 | -0.077 | -0.067 |
+| median shift vs D0 (spectral sd) | 0.036 | 0.170 | -0.261 | 0.478 |
+| Hellinger vs spectral-only | 0.071 | 0.124 | 0.066 | 0.206 |
+| roughness (window) | 0.024 | 0.308 | 0.026 | 0.600 |
+
+### D3r
+
+| metric | 128 / 1e-3 | 128 / 1e-4 | 256 / 1e-3 | 256 / 1e-4 |
+|---|---|---|---|---|
+| Var ln L, selection (max in I90) | 0.713 | 0.715 | 0.713 | 0.718 |
+| Var ln L, PE | 0.266 | 0.399 | 0.304 | 0.714 |
+| Var ln L, total | 0.978 | 1.112 | 1.017 | 1.393 |
+| share of catalog-added selection variance removed (D1 = 1) | 0.961 | 0.996 | 0.987 | 0.998 |
+| width R vs spectral-only | 1.024 | 1.033 | 1.006 | 1.006 |
+| sd ratio vs spectral-only | 1.012 | 1.010 | 1.007 | 1.002 |
+| median shift vs spectral-only (spectral sd) | -0.00685 | 0.021 | -0.127 | -0.089 |
+| median shift vs D0 (spectral sd) | -0.00264 | 0.114 | -0.311 | 0.456 |
+| Hellinger vs spectral-only | 0.061 | 0.113 | 0.060 | 0.202 |
+| roughness (window) | 0.020 | 0.286 | 0.022 | 0.574 |
+
+### D4/D0 (label: systematic)
+
+| metric | 128 / 1e-3 | 128 / 1e-4 | 256 / 1e-3 | 256 / 1e-4 |
+|---|---|---|---|---|
+| Var ln L, selection (max in I90) | 0.117 | 0.285 | 0.171 | withheld: C3(f) |
+| Var ln L, PE | 0.251 | 0.350 | 0.299 | withheld: C3(f) |
+| Var ln L, total | 0.368 | 0.614 | 0.467 | withheld: C3(f) |
+| share of catalog-added selection variance removed (D1 = 1) | 2.287 | 1.062 | 1.419 | withheld: C3(f) |
+| width R vs spectral-only | 0.927 | 0.939 | 0.935 | withheld: C3(f) |
+| sd ratio vs spectral-only | 0.962 | 0.961 | 0.968 | withheld: C3(f) |
+| median shift vs spectral-only (spectral sd) | 0.068 | 0.104 | -0.056 | withheld: C3(f) |
+| median shift vs D0 (spectral sd) | 0.072 | 0.198 | -0.240 | withheld: C3(f) |
+| Hellinger vs spectral-only | 0.073 | 0.147 | 0.068 | withheld: C3(f) |
+| roughness (window) | 0.015 | 0.417 | 0.018 | withheld: C3(f) |
+
+### D4/D2 (label: systematic)
+
+| metric | 128 / 1e-3 | 128 / 1e-4 | 256 / 1e-3 | 256 / 1e-4 |
+|---|---|---|---|---|
+| Var ln L, selection (max in I90) | 0.073 | 0.073 | 0.073 | 0.073 |
+| Var ln L, PE | 0.265 | 0.399 | 0.304 | 0.714 |
+| Var ln L, total | 0.338 | 0.472 | 0.377 | 0.784 |
+| share of catalog-added selection variance removed (D1 = 1) | 2.393 | 1.094 | 1.498 | 1.039 |
+| width R vs spectral-only | 1.011 | 1.018 | 0.999 | 1.008 |
+| sd ratio vs spectral-only | 1.006 | 1.003 | 1.002 | 0.998 |
+| median shift vs spectral-only (spectral sd) | -0.016 | 0.018 | -0.146 | -0.094 |
+| median shift vs D0 (spectral sd) | -0.011 | 0.111 | -0.330 | 0.451 |
+| Hellinger vs spectral-only | 0.059 | 0.112 | 0.063 | 0.201 |
+| roughness (window) | 0.013 | 0.283 | 0.015 | 0.574 |
+
+### Decision after the results (owner, 2026-10-20)
+
+- The sky-averaged selection density (D2) had been proposed as part of the fiducial. It is **withdrawn**: the owner asked why DESI would be sky-averaged. D2 stays a diagnostic that separates selection noise from physics; a production estimator must keep DESI's sky structure. The fiducial (nside 128, sigma_kde 1e-3, density) is open.
+
