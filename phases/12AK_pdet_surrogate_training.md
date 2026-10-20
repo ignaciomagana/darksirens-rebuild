@@ -801,3 +801,30 @@ short GPU control (12AN).
 product kind; the null products equal the real product where they should; pooling five members equals one file of
 their rows; X1 against a closed form; U1 and U2 on known curves; U3's rule in each case; V1's distances against
 closed forms (two equal samples give 0); the seeds and chunking (a chunk is the same whatever else is drawn).
+
+### B3.8 Build notes (record 12AN amendment B1), 2026-10-20, before any validation job
+
+- **Code.** The validation runs from branch `phase12ak/validation` of `phase12_5/repo_12AK` (from 2b31955): ec2e3eb,
+  9173947, 170fae2, a136a28, 00eb483, c8d29e4, ad0c0b9. The production sha is stated in record 12AN's Production
+  section; every validation step runs from a clean worktree of it.
+- **The sample chunks** are written to `validation/samples/<model>/<member>/chunk_<j>.npz`, as B3.3 declares. The build
+  code had doubled the directory (`validation/validation/samples/`). Fixed in ad0c0b9.
+- **`D4_CHOICE.json` names the null products by explicit keys,** `null_S` (12AN's D4-N, stored inputs) and `null_P`
+  (D4-N′, the synthetic path).
+- **V1 and V2 for P_control use its loss weight, 1.** P_control was trained unweighted. B3.6's "w for O4" applies to
+  A_O4, and u to B.
+- **V1's classifier scale** weights the validation subset instead of resampling it (c8d29e4). Resampling a weighted
+  set repeats rows, and the classifier memorised them.
+- **Order (12AN's pool).** `core: P` is a soft prerequisite of `choose`: the choice waits for it while it may finish,
+  and its failure never blocks the choice. V1/V2 runs below every GPU entry (nothing waits for it). A failed step on a
+  40 GB card is retried on an 80 GB card. The choice's exit 3 (plumbing gate failed) blocks every D4 entry at once.
+- **The validation summary (step 7)** runs in 12AN's summary entry, the pool's last entry, on a lane's node CPUs, before
+  12AN's summary. The HENON summary job stays as the fallback.
+- **The plumbing gate's coverage, stated as a limit.** null_P sets each campaign's fraction directly as N_draw,k/ndraw.
+  The gate does not exercise `synthetic_ndraw`'s per-campaign ξ normalisation, nor model B's `export_pdraw_joint`
+  path. Those rest on the build stage's CPU closed-form tests.
+- **Writer details:** ra modulo 2π; `spin_reference_excluded_rows` the product's own count; `T_obs_yr` and
+  `campaign_ndraws` per product. Core reads none of these attributes.
+- **Build-stage indication, not the validation:** X1 on one full-size chunk was 0.9495 for A_O3 member 1 and 0.9943
+  to 0.9958 for B's members (A_O4 member 1: 0.9993). If production confirms this, no model passes X1 and every D4
+  number is labelled "systematic". The production numbers are recorded here after the run.
