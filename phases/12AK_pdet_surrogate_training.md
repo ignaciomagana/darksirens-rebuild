@@ -6,7 +6,10 @@
 (amendment B2, 2026-10-19).** Stage 2 wrote the training sets, passed the pre-training gates, and ran a 50-epoch smoke
 test of each model on one rita card. A review found no blocking defect and eleven non-blocking ones; B2 fixes or
 records each before any training job, and then the 16-member ensemble was submitted (job ids in B2). Validation
-(gates V1–U3) follows in a separate workflow.
+(gates V1–U3) follows in a separate workflow. **Training DONE (2026-10-19, 22:26 UTC): 16/16. VALIDATION DECLARED
+(amendment B3, 2026-10-20), before any validation job:** V1 as distances, the core-format writer, the null products
+and the plumbing gate, X1, X2, U1 and U2 as numerical gates, U3's choice, and the synthetic product for record 12AN's
+D4.
 
 **Blinding: location-free.** No H0 inference is involved. Later stages report only the H0-dependence of
 ln mu_D4(H0) − ln mu_MC(H0), never ln mu on its own, never a posterior, never an H0 value. The only H0 numbers here
@@ -579,3 +582,222 @@ The first status job, 1390336, ran early when the lanes were cancelled; its part
 
 Validation (V1/V2/X1/X2/U1–U3, the ensemble spread, the core-format writer, the null-surrogate check) is a separate
 step and has not started.
+
+## Amendment B3 (validation, declared 2026-10-20 about 01:30 UTC, before any validation job)
+
+This amendment fixes the validation (V1, V2, X1, X2, U0 to U3), the two pieces that B2 item 7 left open (a
+core-format writer for synthetic products and the null-surrogate gate), and the synthetic product that record 12AN's
+D4 reads. Nothing has run. It was written together with record 12AN's declaration (record branch
+`phase12an/declare`), which uses it.
+
+**Blinding: unchanged.** No posterior and no H0 value is computed or written here. The core-side checks write only
+H0-shapes of ln μ differences, ensemble spreads, and ratios of μ. Per-point ln μ goes to an absolute file that agents
+never open. The H0 values used are the a-priori ones: the 241-point grid [20, 140] at step 0.5, the windows [50, 90]
+(12AK's) and [50, 100] (12AN's), and the generation cosmology (67.9, 0.3065). The spectral-only posterior with D4
+injections is computed in record 12AN, under its rules, not here.
+
+**The owner's reporting rule applies.** No p-values and no σ-based decisions. V1 reports two-sample distances. The
+gates below are numerical-accuracy checks with fixed tolerances.
+
+### B3.1 Inputs (sha256)
+
+All under `phase12_5/pdet_surrogate/ours/`. Each `model.npz` equals the sha256 in `summary/STATUS.json`
+(`edf9e5594953f95a7ddc8810a0e70bfe4efd4e535f351003257688d06811a7cb`); all 16 trained, all reload bit for bit.
+
+| model | m1 | m2 | m3 | m4 | m5 |
+|---|---|---|---|---|---|
+| A_O3 | `7ad25dc42f0a3d0954eff5d2b7c6e1740f0fbd2443d491b5b3b0fdc9a26f5e73` | `9f0d92e36525003009646f8fa5e990b44ce850ac832d0c23345e37eb490316c3` | `6edc4bc0530dfadb8a8437bba02291748bfbbabf3e5d08051ba2862362f8646d` | `25f4fc50dac586e7bb61aa4fe468e7fc32dbfc02e9a6ecd7f001d995eaa2c69c` | `1a74ce4413fe74ab7fa6dee6b1f0500de43eb2f371c4f98e1c9b98c0f0c64ab7` |
+| A_O4 | `9cbc3f13dda09ded4f3f6f49eafa682361e37c1f59174dd55c54f42be630ba68` | `d1f26b2aa6ccdbda6b249ad7fb1c4e9f7b0ebbfedfb01b16ae18ccd58282c8d1` | `bc3d3a5ab3fbda2a13b3e516775d539e98a1e4cd0efaf325d95c54bbd14933df` | `f0f62a2e2020c176bd3c7d88f0733ce4a35627435122da0e0113d7ab22a27980` | `5b5a3b2c13818608241e79a0392c94e57aa3d0e28a9ff8d35766c9472450ed8c` |
+| B_joint | `49c2495538de4fc4c337e1a6a866a72a0cbfc80583b93f553b7b58527936b8f5` | `10463a7ae72b096fc4a3199aff038faae143534b4cbe386525de09241e2e45ea` | `9b6dc2380d47a259f92bdc3e30bb79f762b3c8cba0543c9e2aa3fb835602f56e` | `c1acd6648f260486ed4cb82f733f008bf1a4c5fd4e4e76113df7d61edd550f5e` | `08db9cb2b1552fe8a14ed3d051ca42eaf041547157216b1c76f58179df3987d8` |
+| P_control | `8e7dbd20dce0acd7cf1b13980f5a9f18123561a50035765b15261e42713c84df` | | | | |
+
+- Training sets: `data/12AK_detected_O3.h5` `f41580d87e15db3dc8d14da3d61ccef0fc369b339033545f621104ffe8b1be32`,
+  `data/12AK_detected_O4ab.h5` `9ed5dde953a9cd31606da32248199993daec9a602bd1bd29a433149dcc9249b7`. They hold the 13
+  inputs, the weights, the split labels, the raw row index and the product's pdraw per row.
+- The product `phase12t/gwcat_exact/A_sel_chieffref_o3o4ab_v20_exact.h5`:
+  `56e51af209c999059c721d8c379d43eab9f4edef1700f36288e1fcf5e1fe49b6`.
+- The raw files (endo3 `86e7e481…`, O4ab `d5d28b77…`, full values in `config/phase12ak_design.json`) were re-hashed
+  in stage 2. The writer re-hashes them when it reads them.
+- The spectral-only population block: `phase12_5/spectral_gamma/runs/gamma_+2.5439/spectral_h0.json`
+  `db9f7b80c4b799c18559c99040916a821ed99aa7feb06fcec1d6589a171a6f9f`.
+
+Every validation job checks these and refuses a mismatch.
+
+### B3.2 Code, environments and precision
+
+- **Code:** repo_12AK, a new branch `phase12ak/validation` from 2b31955 (the build stage writes it). Local commits
+  only. Every validation entry runs from a clean worktree of one committed sha under `ours/worktrees/<sha>/`.
+- **Flows** (sampling and log densities): our GPU venv `pdet_surrogate/venv_gpu` (jax 0.7.2, flowjax 17.2.1),
+  loaded through `load_model`, which refuses any version or structure mismatch (B2 item 3). **x64 on, as in
+  training** (the design JSON's `x64: true`). The flows are not run in float32.
+- **Core-side checks:** core e7c3007 through the consumer env, x64 on and enforced, `core_defaults`, the soft guard at
+  20 (as declared).
+- **The writer:** numpy in the GPU venv, with the gwcat chi_eff prior imported from the pinned 8263ae9 source tree
+  (as B1).
+- No pip into a shared env. Caches on the project disk.
+
+### B3.3 Sampling
+
+- **Members.** Model A's member m is the pair (A_O3_m, A_O4_m). Model B's member m is B_joint_m. P_control is one
+  member.
+- **Chunks.** Each member draws 10 chunks. A chunk is the size of the campaign's real detected set: A_O3 81,117 and
+  A_O4 986,829 (so model A's chunk has 1,067,946 draws), B_joint 1,067,946, P_control 986,829. So each member draws 10
+  times the real count, as declared in stage 1.
+- **Seeds.** Model index as B2 item 2 (A_O3 0, A_O4 1, B_joint 2, P_control 3); member m = 1 to 5, P_control 42.
+  - flow draws: `jax.random.fold_in(jax.random.key(s), j)` for chunk j = 0 to 9, with s the first uint32 of
+    `SeedSequence([7300 + m, model index])`;
+  - the thinning above the clip: `default_rng(SeedSequence([7400 + m, model index, j]))`.
+- **Per draw:** θ from the flow's full theta-space distribution; ln p_flow(θ); ln p_inj(θ) (the campaign's for A and
+  P; ln q_mix for B); the raw p_det = ξ p_flow / p_inj; the keep mask of `surrogate.synthetic_keep` (support drop,
+  and keep with probability clip / p_det above the clip; the clip is 1 for A and P, and the summed T_k of the
+  campaigns whose support holds θ for B).
+- **N_draw for the product** counts every draw before masking (as declared): N_k = N_s,k / ξ_k.
+- Outputs: `validation/samples/<model>/<member>/chunk_<j>.npz` (θ, both log densities, the raw p_det, the mask).
+  H0-free.
+
+### B3.4 The core-format writer
+
+- **Format:** `gwcat-selection-2.0`, the real product's 16 datasets in float64: `a1`, `a2`, `chieff`, `chip`,
+  `cost1`, `cost2`, `dL`, `dec`, `m1det`, `m1src`, `m2det`, `m2src`, `pdraw`, `q`, `ra`, `redshift`.
+- **Columns from the 13 inputs:** m1src, m2src, redshift = z; m1det = m1 (1+z) and m2det = m2 (1+z); dL from the
+  campaign's own z → dL map (B1 item 3; model B uses O4's); q = m2/m1; a1, a2, cost1, cost2 as drawn; chieff =
+  (m1 a1 cost1 + m2 a2 cost2)/(m1 + m2); chip by gwcat 8263ae9's own function; ra as drawn (in [0, 2π)); dec =
+  arcsin(sin dec).
+- **pdraw:** gwcat's chieff-reference convention through `injections.export_pdraw` (A and P: each campaign's
+  p_k, T_k and fraction N_k/ndraw; weight 1) and `export_pdraw_joint` (B: q_mix, T = 1, fraction (N_s/Z)/ndraw). The
+  sentinel 1e300 where a spin exceeds 0.99 or chi_eff leaves the reference prior's support.
+- **ndraw** = round(Σ_k N_k), with the exact N_k in each row's fraction (`surrogate.synthetic_ndraw`, B1 item 5).
+- **Attributes:** the real product's, with ndraw and the row counts (`n_detected`, `n_injections_before_filter`,
+  `n_injections_after_filter`) replaced and `campaign_ndraws` set to the rounded N_k. Added, as provenance: the
+  model, the members, the chunks, N_s per campaign, the exact N_k, ξ, the kept counts, every model's sha256, the
+  repo_12AK sha, the seeds, and the writer mode. A CPU test checks that core e7c3007 loads every kind of product
+  (A, B, P, both nulls) through `ds.load_injections`, and that each attribute core reads (`ndraw`,
+  `chi_eff_swap_applied`, `format_version`, the spin basis, `sky_position_available`) keeps its meaning.
+- **Row order:** member, then chunk, then draw order, kept rows only. The null products keep the real product's order.
+- **Products written** (under `validation/products/`, each with its sha256 in `manifest.json`):
+  - `val/<A|B>/m<k>.h5`: each member's 10 chunks (about 10.6 million kept rows each). For U1 and U2.
+  - `val/P/m0.h5`: P_control's 10 chunks (O4 rows only).
+  - `d4/<A|B>/m<k>.h5`: chunks 0 and 1 of member k (2,135,892 draws). For 12AN's member entries.
+  - `d4/<A|B>/pooled.h5`: chunks 0 and 1 of all five members in one file. **N_s = 10,679,460 draws, ten times the
+    real count** (A: O3 811,170 and O4ab 9,868,290). For 12AN's D4-C check and its S/D4 grid.
+  - `null/null_P.h5`, `null/null_S.h5` and `null/null_S_O4.h5` (B3.5).
+- **Departure from stage 1's export (for D4 only).** Stage 1 declared 10 times the real rows per member. The
+  validation keeps that (the `val/` files). The product that 12AN uses holds ten times the real rows in all, split
+  equally over the five members (two chunks each). Reason: the owner's brief for 12AN, and the cost of a catalog
+  likelihood per point grows with the row count. Pooling the members samples the ensemble-mean surrogate (12AN
+  algebra v). The D4 product is a subset of the validated draws.
+
+### B3.5 The null products and the plumbing gate (B2 item 7, completed, with one departure)
+
+**The null products** are the 1,067,946 real detected rows, written by the writer:
+- **null_P (synthetic path):** from the rows' 13 inputs, exactly as flow draws are written (maps, Jacobian, pdraw),
+  but with each row's own monthly weight w_i in pdraw (O3: 1) and N_k = N_draw,k, the campaign's real number drawn.
+  Then ndraw = 944,412,448 exactly.
+- **null_S (stored-input mode, B1 item 4):** every column except pdraw copied from the product row (aligned by the raw
+  row index); pdraw from the writer with the raw files' own stored densities. This isolates the file format, the
+  attributes and the pdraw conventions (Jacobian, T, fractions, chi_eff swap, sentinel).
+- **null_S_O4:** null_S restricted to the O4 rows, with N_O4 and T_O4 only. It is P_control's reference.
+
+**Departure from B2 item 7.** B2 wrote "with `synthetic_ndraw` and N_s,k = n_det,k". With O4's weighted ξ that gives
+N_O4 = n_det N_draw / Σw, 1.26% off N_draw for O4 and not for O3. That moves O4's part of μ against O3's by a constant
+factor, which bends the H0-shape wherever O3's share of μ changes with H0. The real rows are draws from the
+unweighted detected density, not from the weighted one that a flow learns. So the null carries their weights and the
+real N_draw,k. The flow path is unchanged.
+
+**The plumbing gate (gates 12AN's D4).** It passes when all of these hold:
+- **Shape:** with core's spectral-only selection term (the population block above, the 241 coarse points), δ(H) =
+  ln μ_null_P − ln μ_product has max |δ − mean δ| ≤ 1e-6 over the 241 points (12AK's declared gate). Reported beside:
+  the level mean δ and max |N_eff,null/N_eff,product − 1|. The same for null_S, reported.
+- **Rows, the columns the catalog path reads:** null_P's ra (modulo 2π) and dec within 1e-12 rad of the product's;
+  dL and m1det within 1e-6 relative.
+- **Reported, not gating:** every other column's largest difference; pdraw's (with B1 item 4's endo3 rows at
+  m1 < 2.1 counted apart); the number of rows whose nside-256 pixel differs from the product's.
+
+If the plumbing gate fails or does not run, record 12AN runs no D4 entry, and U1 to U3 are not computed (they use the
+same writer).
+
+### B3.6 The checks: V1 and V2 (diagnostic), X1, X2, U1 and U2 (numerical gates), U0 (scale), U3 (choice)
+
+**V1, amended: two-sample distances, no p-values.** Flow draws (the kept draws of chunk 0, per member, and the five
+members' chunk 0 pooled) against the held-out test rows, each test row weighted by its loss weight (w for O4, u for B,
+1 for O3), as B2 item 6:
+- per marginal, for the 13 inputs and chi_eff, q and the chirp mass: the weighted Kolmogorov distance
+  sup |F_flow − F_test|, and the weighted 1-Wasserstein distance divided by the test rows' weighted sd;
+- jointly, on the standardised 13 inputs: PQMass's region-count total-variation distance, ½ Σ_r |f_flow,r − f_test,r|,
+  over 100 nearest-reference regions (references drawn from the pooled set, seed 7601; our implementation of PQMass's
+  construction);
+- a classifier two-sample distance: the held-out AUC of a gradient-boosted classifier (scikit-learn's
+  HistGradientBoostingClassifier in the GPU venv; balanced, weighted, 50/50 split, seed 7602), written as the AUC and
+  2|AUC − 0.5|.
+- **Scale, beside each:** the same distance between the test rows and an equal-size, equally weighted subset of the
+  validation rows (two real samples; seed 7603). It is a scale, not a test. No decision is taken from it.
+- No KS or AD p-value, no PQMass p-value, no Cauchy combination. V1 decides nothing.
+
+**V2, amended.** The per-bin ratios as declared (z, m1, q, chi_eff, sin dec and RA; bins straddle O3's m1 = 100 and
+z = 1.9; also on the training rows). The summary lists the bins with |r − 1| > 3%. The "3σ" clause is removed: no
+σ-based flag. V2 decides nothing.
+
+**X1 (gate).** Per member and campaign: ξ_emu/ξ = E_flow[min(1, clip/p_det) · 1_support], computed as the mean over
+the drawn samples (the kept fraction is reported beside it). Passes when every member of the model is at least 0.995.
+
+**X2, amended (gate).** μ_flow/μ_MC − 1 for four populations: p_O3, p_O4 and q_mix (in θ space, numpy, with 12AK's
+own densities; μ_MC from the real rows with their weights), and the spectral-only population at the generation
+cosmology (67.9, 0.3065) through core. On each model's pooled `val/` members; per member reported. Passes when
+|μ_flow/μ_MC − 1| ≤ 1% for all four. The "or 2σ_MC" clause is removed: no σ-based decision. Core's relative Monte-Carlo
+sd of μ_MC is printed beside it, as a number. P_control's X2 is on the O4 part, under both its ξ values (B2 item 8).
+
+**U0 (scale; decides nothing).** 100 Poisson(1) bootstraps of the real rows (seeds 7501 to 7600; each row repeated by
+its count, ndraw unchanged), spectral-only ln μ on the 241 points: the rms and the largest S_W[50, 90] of
+ln μ_boot − ln μ_MC. It shows the size of the real Monte Carlo's own shape noise inside U1.
+
+**U1 (gate).** Per model, with the spectral-only population on the 241 points:
+- Δ_m(H) = ln μ_m − ln μ_MC for each member's `val/` file, and Δ_ens for the five members pooled exactly (12AN
+  algebra v);
+- S_W = max over the coarse points in the window of |Δ − mean_W Δ|, with mean_W the plain mean over those points;
+- reported: S_W on [50, 90] and on [50, 100], S over all 241 points, the level mean_W Δ, and N × S_W in nat (N = 259);
+- also U1 of the D4 product itself (`d4/<model>/pooled.h5`), reported beside;
+- **passes when S_W[50, 90] of Δ_ens ≤ 3e-3** (as declared).
+
+**U2 (gate).** The sd over the five members (ddof 1) of Δ_m − mean_W Δ_m. Passes when its maximum over the coarse
+points in [50, 90] is at most 1.5e-3 (as declared). The maximum over [50, 100] is reported.
+
+**U3 (the choice), amended.**
+1. A model that passes the plumbing gate, X1, X2, U1 and U2 is preferred to one that does not. **New.** Reason: U3
+   alone could pick a model that fails X1 or U2, which would make every D4 number a systematic when the other model
+   would have counted as a noise reduction.
+2. Between two models in the same state, the smaller ensemble S_W[50, 90] wins; ties within 5e-4 go to A (as
+   declared).
+3. P_control is never a candidate. Its S_W is reported as context.
+
+**The label (as declared):** D4 counts as a noise reduction only if X1, X2, U1 and U2 pass for the chosen model.
+Otherwise 12AN labels every D4 number "systematic".
+
+### B3.7 Order, outputs and compute
+
+**Order.** The entries run in record 12AN's pool (12AN, Compute), in this order of prerequisites:
+1. **sample** (GPU, venv_gpu): all 16 models, 10 chunks each, and X1. About 15 minutes.
+2. **write** (CPU on a lane's node, 16 to 32 processes): every product of B3.4 and B3.5, and the manifest. About 20
+   minutes.
+3. **V1 and V2** (CPU on a lane's node). About 20 minutes. Nothing waits for it.
+4. **core: null** (GPU, consumer env): the plumbing gate, X2's core part, U0. About 15 minutes.
+5. **core: A** and **core: B** (GPU, consumer env, in parallel): U1 and U2 per model; U1 of the D4 products; P's U1.
+   About 25 minutes each.
+6. **choose** (CPU, seconds): X1, X2, U1, U2, the plumbing gate and U3. It writes `validation/D4_CHOICE.json`
+   (location-free: the model, the gate results, the label, the D4 product's paths and sha256). It exits non-zero
+   when the plumbing gate failed or did not run, and 12AN's D4 entries are then blocked.
+7. **the validation summary** (HENON, in 12AN's summary job, afterany on every lane): `validation/VALIDATION.json`
+   and `validation/STATUS.json`, V1 and V2 included. The results are then recorded here.
+
+**Outputs** under `pdet_surrogate/ours/validation/`: `samples/`, `products/` (with `manifest.json`), `metrics/`
+(location-free: distances, ratios, Δ shapes, spreads), `absolute/` (per-point ln μ and N_eff: never opened by
+agents), `D4_CHOICE.json`, `VALIDATION.json`, `STATUS.json`, `logs/`. About 50 GB on the project disk (14 TB free at
+01:10 UTC).
+
+**Compute.** About 2 card-hours in all, 40 minutes of it CPU work on a lane's node, and about 1 to 1.3 hours of wall
+time from 12AN's submission to `D4_CHOICE.json` when four cards are free. Not counted: the build stage's tests and
+short GPU control (12AN).
+
+**Tests (the build stage).** CPU tests on tiny inputs: the writer's columns and attributes, and core loading each
+product kind; the null products equal the real product where they should; pooling five members equals one file of
+their rows; X1 against a closed form; U1 and U2 on known curves; U3's rule in each case; V1's distances against
+closed forms (two equal samples give 0); the seeds and chunking (a chunk is the same whatever else is drawn).
