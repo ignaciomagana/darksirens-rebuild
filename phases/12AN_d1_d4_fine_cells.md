@@ -672,3 +672,206 @@ Printed progress carries no likelihood value.
 - **Two events were resampled with replacement upstream** (12AJ). Their PE variance is understated.
 - **D1's known shift** (12AL: about −0.3 spectral sd) is reported as it comes out. D1 is the floor of the shares
   removed, not a candidate.
+
+## Amendment B1 (build stage and review fixes), 2026-10-20, before any production job
+
+Written before the production submission. Nothing here was read from an absolute file. Every number below is a
+deviation, a time, a memory figure, a count or a gate result.
+
+### B1.1 What was built
+
+**Consumer** `phase12_5/repo_12AN`, branch `phase12an/d1-d4` from 698504a (local commits; the main session pushes):
+- D0 to D3: 8317e58, 3b5b388, c12c5b5, c1a27e7. Files `scripts/phase12an_{common,table,cell,control5,plan_d03}.py`,
+  `tests/test_phase12an.py`, and the build-control scripts in `slurm/`.
+- D4: 3de5efc, 81a6622, 72116ea, 28b9639, 7097130, 8054532, 8fdbe71. Files `scripts/phase12an_d4.py` (modes member,
+  tie, spectral, measure), `scripts/phase12an_plan_d4.py`, `tests/test_phase12an_d4.py`.
+- Review fixes: d3cbd97, cabb3b6 and cb7c638 (this amendment). New files `scripts/phase12an_pool.py`,
+  `scripts/phase12an_summary.py`, `tests/test_phase12an_pool.py`, `tests/test_phase12an_summary.py`, and in `slurm/`
+  the lane, the HENON fallback summary, the submit script, the watcher check, the final CPU tests and the D4 smoke.
+- Nothing in `phase12/`, `phase12t_*`, `phase12ag_*`, `phase12ah_*`, `phase12al_*` or `phase12am_*` changed.
+
+**repo_12AK** branch `phase12ak/validation` from 2b31955: ec2e3eb, 9173947, 170fae2, a136a28, 00eb483, c8d29e4 and
+ad0c0b9 (this amendment). The validation code of 12AK amendment B3 (`phase12ak/{writer,sampling,validation,
+core_eval,vcommon}.py`, `scripts/phase12ak_{sample,write,v1v2,core_null,core_model,choose,validation_summary}.py`).
+
+The production shas are stated in the Production section. Every stage runs from a clean worktree of one of them.
+
+### B1.2 Build checks (not results)
+
+**D0 to D3, GPU control** (cell stages in control mode, tied to 12AM's Lane A):
+- R1(a): the streamed D2 table equals 12AM's bit for bit at (128, 1e-3), (128, 1e-4) and (256, 1e-4), both node
+  counts, with f̄, the g grid, dN_exp and C̄.
+- R2(a) at (128, 1e-3): D3r, D3a and D3b equal 12AL's tables to 1.1e-15, 1.1e-15 and 9.7e-16 relative; f̄ and m bit
+  for bit.
+- R1(c) (D0, D1, D2 and the spectral grid against 12AM) and R2(b) (D3 at the five points against 12AL): bit for bit.
+- C3(d) and C3(e): bit for bit at the five points, all six densities.
+- C6: D2 fails on 24,501 nodes at sigma_kde 1e-4 (as in 12AM) and passes on 98,001. D3r and D3a pass on 98,001 (7.8e-5
+  to 9.0e-5 against 1e-4). D3b fails on 98,001 at both nsides and passes on 392,001 (1.2e-5 and 9.1e-6). The declared
+  fallback works; the `--d3-fine-base` switch stays off.
+- C7 1.4e-14. C5 passes at both nsides for all four variants.
+
+**D4, build checks** (12AK's full-size build tree; not the validation):
+- The plumbing gate's null_P shape: 3.9e-9 against 1e-6. The level 7.1e-8, N_eff 4.7e-8, null_S shape 5.2e-9.
+- D4-P preview: the stock target with a pooled synthetic file gives Lane A's PE side bit for bit at the five points.
+- A 5%-scale end-to-end run of the whole 12AK chain ran every step to exit 0. The pooled file against the algebra:
+  4e-15.
+- X1 on one full-size chunk: A_O3 member 1 0.9495, A_O4 member 1 0.9993, B members 0.9943 to 0.9958. If production
+  confirms this, no model passes X1, U3 compares two failing models, and every D4 number is labelled "systematic".
+
+**CPU tests** (each at its commit): 48 D0 to D3 and 12AM/12AL tests; the D4 tests; 12AK's validation and core-load
+tests. The final run at the production shas is in the Production section.
+
+### B1.3 Memory, speed and the injection count
+
+| stage | card | time | routing value (GiB) |
+|---|---|---|---|
+| table (128, 1e-3) | A100-40 | 2.6 min | 6.1 |
+| table (128, 1e-4) | A100-40 | 9.6 min | 24.6 |
+| table (256, 1e-4) | A100-80 | 25.3 min (13.6 of it the 392,001-node pass for D3b) | 24.6 |
+| cell (128, 1e-3) | A100-40 | 7 compiles of 71 to 105 s, then 0.255 s per point | 24.8 |
+| cell (256, 1e-4) | A100-80 | 0.348 s per point | 64.8 |
+| cell (128, 1e-4) | A100-40 | out of memory building the 392,001-node D3b table | (32.8 before) |
+| D4 member, 2.1 M rows | A100-40 at 128 / A100-80 at 256 | 0.286 / 0.365 s per point | 24.8 / 58.1 |
+| D4 stock target, 10.6 M rows, sel_batch_size 2^20 | A100-40 at 128 | 0.41 s per point | 25.9 |
+| D4 stock target, unbatched | A100-80 at 256 | 0.51 s per point | 101 (too close to the card) |
+
+The routing value is the larger of nvidia-smi's peak and 1.6 × jax's peak (12AM's rule).
+
+**N_s used: 10,679,460 draws** (10 × 1,067,946, two chunks from each of the five members), as declared. It fits
+with no reduction. In the build probe of model B, 10,627,184 draws were kept (99.51%).
+
+### B1.4 Departures (each before any production job)
+
+1. **The (128, 1e-4) cell stage runs on an 80 GB card.** It ran out of memory on an A100-40 in the build (12AM's
+   rule). All nside-256 work stays on rita.
+2. **D4 members are not padded to one shape.** The record said they would be, with a CPU test. The target's compact
+   catalog view holds the pixels of the PE samples and of the injections. Members with different sky draws have views
+   of different sizes, so padding the injection rows cannot give one shape. Each member entry compiles once (about
+   1.5 minutes). No number changes.
+3. **The tie entries set core's `sel_batch_size` to 2^20 at both nsides.** This is the record's first remedy: the
+   stock target with the pooled 10.6-million-row file does not fit an A100-40 unbatched at nside 128 and sits at the
+   edge of an A100-80 at 256. Core documents it as a reassociation of the same sums (rtol 1e-12). The member entries
+   run unbatched.
+4. **Writer details** (12AK B3.4): ra is taken modulo 2π (core refuses ra = 2π); `spin_reference_excluded_rows` is
+   the product's own count; `T_obs_yr` and `campaign_ndraws` are set per product (model B: one pseudo-campaign;
+   P_control: O4 only). Core reads none of these three attributes (checked in core's source).
+5. **12AK's sample chunks are written where 12AK B3.3 declares them,** `validation/samples/<model>/<member>/`. The
+   build code doubled the directory (`validation/validation/samples/`). Fixed in ad0c0b9 before any validation job.
+6. **The null products are named by explicit keys** `null_S` (D4-N) and `null_P` (D4-N′) in `D4_CHOICE.json`. The tie
+   looked them up by a description's prefix before. A choice without the keys is refused.
+7. **V1 and V2 for P_control use its loss weight, 1.** P_control was trained unweighted. 12AK B3.6's "w for O4"
+   applies to A_O4 (and u to B). Noted in 12AK.
+8. **The plumbing gate's coverage (the review's item 5), stated as a limit.** null_P sets each campaign's fraction
+   directly as N_draw,k/ndraw. So the gate does not exercise the per-campaign ξ normalisation of `synthetic_ndraw`,
+   nor model B's `export_pdraw_joint` path (q_mix, T = 1, the joint fraction). Those are checked only by 12AK's CPU
+   closed-form tests. Not changed.
+9. **The S/D4 stage turns jax x64 on itself,** before its spectral grid, then checks it (C3(b)). In the build smoke it
+   refused, because only a target build had turned x64 on. No number changes.
+10. **The tie releases the compiled executables between its three targets** (the two null products, then the stock
+    target with the pooled file), to bound its peak memory. No number changes.
+11. **Build-only options** in `phase12an_d4.py`: `--points control` (a member on the five points), `--lane-a` and
+    `--cell-dir` (the tie's inputs). The production plan sets none of them.
+
+### B1.5 The pool (the record's "Scheduling", made concrete; departures marked)
+
+- **State.** An attempt is a directory `pool/claims/<entry>/attempt_<k>` made by `mkdir`. A lane that saw an older
+  state loses the race. Each attempt holds the claiming job and card, and, when the process ends, its exit code.
+- **Blocked:** an exit of 3, 4 or 5 (the plumbing gate failed, C3(d) failed, a D4 entry refused; deliberate gate
+  outcomes, never retried); or two failed attempts (an exit other than 0, an exit 0 without DONE, or a claiming job
+  that ended without a result); or a blocked hard prerequisite.
+- **New: the retry goes to an 80 GB card.** The record routes a stage that ran out of memory on a 40 GB card to an
+  80 GB card. The pool does this for any failed attempt on a 40 GB card, because it does not parse the cause. It also
+  covers the review's item 6: D4 memory at sigma_kde 1e-4 was not probed.
+- **New: a soft prerequisite.** 12AK's `ak_core_P` (P_control, context only, never a candidate) is a soft prerequisite
+  of `ak_choose`: the choice waits for it while it may finish, but its failure never blocks the choice or any D4
+  entry (the review's item 4). The choice handles a missing `core_P.json`.
+- **New: V1/V2's priority is 900,** below every GPU entry (it was 3100). Nothing waits for it. It runs when a lane has
+  nothing else (the review's item 7).
+- **Order.** A100-40 lanes take the highest priority first. Rita lanes, while one of our A100-40 lanes runs, take the
+  80-GB-only entries first, then the other GPU entries, then CPU entries. With no A100-40 lane running, rita takes
+  the highest priority first, so the 12AK chain never waits for a lane that has not started.
+- **Waiting and exit.** A lane with nothing claimable waits 60 s while an entry it could run later is pending or
+  running. Otherwise it exits. Lanes exit 0 whatever their entries did (exit 2 only when the pool itself fails); the
+  summary decides every failure.
+- **New: the summary runs as the pool's last entry,** on a lane's node CPUs, when every other entry is done or blocked.
+  It runs 12AK's validation summary first, then 12AN's. Reason: on 2026-10-20 HENON held our 8-CPU test jobs pending
+  for more than two hours (the 7-day limit leaves them out of backfill), so a HENON-only summary could wait hours.
+  The HENON summary (afterany on every lane) stays as the fallback. If the pool's summary wrote `STATUS.json` at rc 0,
+  the lane that ends the pool cancels the HENON job while it is still pending; if it starts anyway, it finds rc 0 and
+  exits without rewriting.
+- **The end.** That lane cancels our own still-pending lane jobs from `plans/jobs.json` (only ours, only PENDING) and,
+  as above, the pending HENON fallback. Each cancellation is written to `plans/cancelled.json` before the `scancel`, so
+  the watcher never reads our own cancellation as a failure.
+- **The watcher** (`slurm/phase12an_watch_check.sh` inside the main session's until-loop, sleep 600) ends on
+  `summary/STATUS.json`, or on one of our jobs not in `cancelled.json` in FAILED, CANCELLED, TIMEOUT, OUT_OF_MEMORY or
+  NODE_FAIL, or pending with DependencyNeverSatisfied. A failed squeue or sacct counts as "keep watching".
+- CPU tests cover the claim race, the priorities and rita's order, the soft prerequisite, the gate exits, the retry on
+  an 80 GB card, a dead claim, the summary's place, and the end's cancel rule (with a fake squeue and scancel).
+
+### B1.6 The summary (the record's "What is reported", made concrete)
+
+- ln L of every density from Lane A's PE side and core's correction (x64). D4/D0 and D4/D2 pooled from the five
+  members by algebra (v), with the pooled file's ndraw from `D4_CHOICE.json` (checked against the tie's).
+- Per cell and density: items 1 to 9 of the record. The share removed uses I90 of D0 for all three variances; its
+  denominator is written beside it. The comparison grid follows the window rule; only `window_holds` is written.
+- **Every reported quantity is also written as a 2 × 2 matrix per density** (rows nside 128, 256; columns sigma_kde
+  1e-3, 1e-4) in `summary.json` and as plain text in `summary/matrices.txt`. A withheld entry reads "withheld" with
+  the failing control.
+- **Withholding, by the record's table:** C3(b) and C3(c) are record gates. C3(c) counts every compute stage's commit
+  (table, Lane A, cell, D4 members, tie, S/D4, C5) and requires one consumer sha, one repo_12AK sha and clean trees;
+  the summary's own commit is not counted. Cell gates: R1(a), R1(b), R1(c) and its spectral part, C3(a), C3(d) (job
+  and summary side), C3(e), C7 and unit galaxy weights. R2 withholds D3r, D3a and D3b everywhere. C6 (after the
+  fallback) withholds the variant at the cell, and D4/D2 with it when the variant is D2. C3(f) withholds the density
+  at the cell (D0's walls are reported). C9 withholds D3a and D3b at nside 256 and marks D2 and D4/D2. D4: no choice
+  or a failed plumbing gate writes "not run"; a failed D4-N, D4-P, D4-C or C3(e) for D4, or a missing member,
+  withholds D4 at that cell. Marks: C5, C8, C9 (D2, D4/D2), D4-N′.
+- Beside every D4 number: the model, N_s drawn and kept, X1, X2, U1, U2, U3, the plumbing result, the tie's gates and
+  the members' spread. The label comes from `D4_CHOICE.json`.
+- No band, reading, verdict, z-score, p-value, noise floor or rank is computed or written. 12AM's reading code is not
+  called. The location guard (12AM's `FORBIDDEN_KEYS`, and every computed median and 90% bound as forbidden values)
+  covers `summary.json` and `controls.json`; `matrices.txt` is written only when both pass.
+- `summary/absolute.npz` (never opened by agents): per cell and density, and for the in-lane spectral grid and S/D4,
+  the posterior on the 501-point window and the 241-point coarse grid, ln L, ln μ, N_eff, the PE variance sum, and
+  whether the window rule holds and whether the density is withheld.
+- A CPU test on a synthetic run tree checks the matrices, the guard, the shares (0 for D0, 1 for D1), the pooling, and
+  withholding by a D4 gate at one cell, by C6, by a failed plumbing gate and by two consumer commits.
+
+### B1.7 The review's findings and what was done
+
+| finding | done |
+|---|---|
+| 1. pool, lane, submit, watcher and summary missing | written (B1.5, B1.6); plans regenerated from the production sha; CPU tests at that sha |
+| 2. build departures without an amendment | this amendment (B1.4); 12AK note B3.8 |
+| 3. tie and spectral modes never ran | run in a GPU smoke on an A100-40 (B1.8) |
+| 4. one failed 12AK core entry blocks all D4 | `ak_core_P` a soft prerequisite (B1.5) |
+| 5. plumbing gate coverage | stated as a limit (B1.4 item 8) |
+| 6. D4 memory at 1e-4 not probed | any failure on a 40 GB card retries on rita (B1.5) |
+| 7. CPU entries can idle the bottleneck cards | rita takes CPU entries last; V1/V2 at 900 (B1.5) |
+| 8. tests at the production commits queued | the final CPU tests run at the production shas before submission |
+| 9. doubled sample directory | fixed (B1.4 item 5) |
+| 10. null lookup fragile | explicit keys (B1.4 item 6) |
+| 11. minor issues in `phase12an_d4.py` | the tie checks the cell's DONE first; the dead branch removed |
+| 12. old watcher loop | the production watcher uses sacct states and the summary's `STATUS.json` (B1.5) |
+| 13. every D4 number likely "systematic" | not a code defect; reported as it comes out |
+
+### B1.8 The D4 smoke and the final CPU tests (build stage; not results)
+
+**The smoke** (job 1390622, twig A100-40, consumer cabb3b6, repo_12AK ad0c0b9; outputs under
+`controls/smoke_d4`, outside the production tree). The tie and S/D4 modes ran for the first time, on 12AK's
+5%-scale end-to-end products (model A, about 106,000 rows per member; full-size null products), at (128, 1e-3),
+against the build control's cell stage and 12AM's Lane A:
+- the five member entries at the five points: exit 0; C3(e) for D4 passes (member 1);
+- the tie: exit 0. D4-N: ptp of ln μ_null − ln μ_real 3.5e-9 (D0) and 3.5e-9 (D2), N_eff 6.0e-8 and 2.2e-8, against
+  1e-6. D4-N′ (mark): 6.2e-9 and 1.8e-9, N_eff 4.9e-8 and 4.2e-8. D4-P: bit for bit. D4-C: ln μ 4.1e-16, N_eff
+  8.1e-15 relative, ln L 9.1e-13. Peak 24.8 GiB (nvidia-smi) on the A100-40 with three targets in one process; host
+  15.4 GiB; 5.4 minutes;
+- S/D4: exit 0 on the 641 points, x64 on, 16 s;
+- the first smoke (job 1390621) found the S/D4 x64 refusal (B1.4 item 9) and a missing log directory; fixed in
+  cabb3b6. Between cabb3b6 and the production consumer sha only new files were added (the pool, the summary, their
+  tests and scripts); `phase12an_d4.py` is the same.
+
+**The final CPU tests** at the production shas (consumer cb7c638, repo_12AK ad0c0b9; run niced in a shell on the
+session's node, `controls/cpu_final/STATUS.json`): the consumer's 24 tests (`test_phase12an.py`,
+`test_phase12an_d4.py`, `test_phase12an_pool.py`, `test_phase12an_summary.py`), 12AK's 38 tests (12AK venv) and its 3
+core-load tests (consumer env): all pass. The smoke job also ran the D0 to D3, D4 and 12AK tests at cabb3b6: all
+pass. The submit script refuses unless this file records every test passing at exactly the submitted shas.
