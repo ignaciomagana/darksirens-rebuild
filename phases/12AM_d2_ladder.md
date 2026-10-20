@@ -993,3 +993,22 @@ stands. Production runs from `54d9815`.**
 - **Estimated finish:** the longest lane is about 92 minutes (rita1), then the summary takes 5 to 10 minutes. So
   the summary is due about **00:30 to 00:45 UTC on 2026-10-20**. The range is 1.5 to 3 hours after submission
   (00:25 to 01:55 UTC). The 7-day and 2-day limits are ceilings, not the estimate.
+
+## Amendment B3 (2026-10-20, 00:35 UTC, before the summary is rerun): a key name in the summary's bookkeeping
+
+**What happened.** All five lanes COMPLETED, 22:55 to 00:25 UTC: rita0 1390545, rita1 1390546, twig0 1390547,
+twig1 1390548 and henongpu 1390549. The summary 1390550 then exited with rc 5. Its location guard refused 20 paths,
+one per cell: `bookkeeping/timing/cell/nominal_per_point/median`. That key is the median wall-clock seconds per
+grid point, copied from each cell's own record. It is not an H0 quantity, but the guard refuses the key name
+"median" anywhere. No cell gate, D2 reading gate or ladder gate failed, and `summary.json` was not written.
+STATUS.json, controls.json and absolute.npz were written, and the agents do not read absolute.npz.
+
+**The fix (consumer 698504a).** When the summary copies the timing bookkeeping, it renames the key "median" to
+"p50_seconds". The values are unchanged.
+- Nothing else changes: no lane output, no table or grid, no control, tolerance, gate or reading rule.
+- The guard and its forbidden names are unchanged.
+- The cells' stage commits are unchanged (54d9815), so B2.6's mixed-commit mark does not apply. The summary's own
+  commit is not one of a cell's stages.
+
+**The rerun.** Only the summary job reruns, on HENON, from a clean worktree of 698504a. The first STATUS.json
+(rc 5) is kept as `summary/STATUS_1390550_guard.json`.
