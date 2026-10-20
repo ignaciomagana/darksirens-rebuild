@@ -30,6 +30,8 @@ priori:
 Files holding absolute log-likelihoods are written by jobs and are not for agents to open. That includes the 12AG
 and 12AL per-cell files that 12AM's jobs compare against. This record holds only their sha256.
 
+**RESULTS (2026-10-20, 00:29 UTC; location-free), at the end:** under D2 all 20 cells read, none MC-limited, none narrows; R vs spectral 0.981–1.026; washout "not explained".
+
 **Experimental.** As in 12AL, this is a measurement, kept as a record. D2 is not a core option. Adopting it would be
 a core PR, and that is the owner's call.
 
@@ -1012,3 +1014,75 @@ STATUS.json, controls.json and absolute.npz were written, and the agents do not 
 
 **The rerun.** Only the summary job reruns, on HENON, from a clean worktree of 698504a. The first STATUS.json
 (rc 5) is kept as `summary/STATUS_1390550_guard.json`.
+
+## Results (2026-10-20, 00:29 UTC; location-free)
+
+**Runs.**
+- All five lanes COMPLETED, between 22:55 and 00:25 UTC (1 h 04 min to 1 h 30 min each). Every stage ran from
+  54d9815, with no mixed commits.
+- The summary reran as 1390583 from 698504a (amendment B3), with rc 0. There were no guard violations, no cell, D2
+  or ladder gate failures, and no reading is withheld.
+- Read: `summary/summary.json`, `controls.json` and `STATUS.json`. `absolute.npz` is not for agents.
+
+**Marks.**
+- **Control 8** (D1 = spectral only up to a constant) does not pass at any of the 20 cells, with identical numbers:
+  0.0101 nat against 0.01, and 3.0e-4 against 1e-4. These are the same values as 12AL's control 4, from the dV_c/dz
+  interpolation on two grids. D1's numbers are marked; D1 is context only.
+- **Roughness** (supplemental, decides nothing) fails N2 at 9 cells: every sigma_kde ≤ 3e-4 cell, and (256, 1e-3).
+  Window roughness under D2 there is 0.04–0.57, against about 0.02 elsewhere. It is PE-sample structure, which D2
+  does not change.
+
+**Per cell under D2** (R and Delta against spectral only, on the fine window; V is the maximum inside the 90%
+interval; D0 on the same grid for comparison):
+
+| nside | sigma_kde | R (D2) | Delta (D2) | V_sel | V_PE | V_tot | reading (D2) | R (D0) | reading (D0) |
+|---|---|---|---|---|---|---|---|---|---|
+| 32 | 1e-4 | 1.025 | −0.00 | 0.71 | 0.23 | 0.94 | no narrowing | 1.060 | no narrowing |
+| 32 | 3e-4 | 1.025 | +0.00 | 0.71 | 0.23 | 0.94 | no narrowing | 1.060 | no narrowing |
+| 32 | 1e-3 | 1.022 | +0.00 | 0.71 | 0.23 | 0.93 | no narrowing | 1.070 | no narrowing |
+| 32 | 3e-3 | 1.014 | +0.02 | 0.71 | 0.22 | 0.93 | no narrowing | 1.057 | no narrowing |
+| 32 | 1e-2 | 0.998 | +0.10 | 0.70 | 0.22 | 0.92 | no narrowing | 0.988 | no narrowing |
+| 64 | 1e-4 | 1.007 | −0.02 | 0.71 | 0.27 | 0.98 | no narrowing | 1.027 | MC-limited (selection) |
+| 64 | 3e-4 | 1.008 | −0.01 | 0.71 | 0.25 | 0.96 | no narrowing | 1.000 | no narrowing |
+| 64 | 1e-3 | 1.006 | −0.01 | 0.71 | 0.24 | 0.95 | no narrowing | 1.030 | no narrowing |
+| **64** | **3e-3** | **1.007** | **−0.01** | 0.71 | 0.23 | 0.94 | no narrowing | 1.047 | no narrowing |
+| 64 | 1e-2 | 0.996 | +0.08 | 0.71 | 0.22 | 0.93 | no narrowing | 0.989 | no narrowing |
+| 128 | 1e-4 | 1.024 | +0.02 | 0.71 | 0.40 | 1.11 | no narrowing | 1.237 | MC-limited (selection) |
+| 128 | 3e-4 | 1.026 | +0.01 | 0.71 | 0.31 | 1.02 | no narrowing | 1.163 | MC-limited (selection) |
+| 128 | 1e-3 | 1.017 | −0.02 | 0.71 | 0.27 | 0.98 | no narrowing | 1.156 | no narrowing |
+| 128 | 3e-3 | 1.008 | −0.03 | 0.71 | 0.24 | 0.95 | no narrowing | 1.147 | no narrowing |
+| 128 | 1e-2 | 0.984 | +0.06 | 0.70 | 0.22 | 0.93 | no narrowing | 0.990 | no narrowing |
+| 256 | 1e-4 | 1.012 | −0.09 | 0.71 | 0.71 | 1.39 | no narrowing | 1.190 | MC-limited (selection) |
+| 256 | 3e-4 | 1.016 | −0.11 | 0.71 | 0.44 | 1.12 | no narrowing | 1.275 | MC-limited (selection) |
+| 256 | 1e-3 | 1.003 | −0.14 | 0.71 | 0.30 | 1.01 | no narrowing | 1.022 | MC-limited (selection) |
+| 256 | 3e-3 | 0.994 | −0.12 | 0.71 | 0.26 | 0.97 | no narrowing | 1.030 | no narrowing |
+| 256 | 1e-2 | 0.981 | +0.05 | 0.70 | 0.23 | 0.94 | no narrowing | 0.942 | a hint |
+
+**Reading (as declared).**
+- Under D2, all 20 cells are read, and none is limited by the Monte-Carlo variance: 0 by the PE samples, 0 by the
+  selection, 0 by both.
+- No cell narrows or hints. Washout rule: **"not explained"**.
+- The verdict sentence: R against spectral only runs from 0.981 to 1.026, and Delta from −0.14 to +0.10 spectral
+  sd. The largest step along nside is −0.019, and the largest along sigma_kde is −0.024. The largest change from D0
+  to D2 is −0.259, at (256, 3e-4).
+- The summary's caveat, that "the photometric galaxies' own redshift errors are not tested", is 12AG's template
+  text. Record 12AH Part B did scale the photometric widths by 0.5 and 0.25 and found no narrowing, but under D0
+  and at four cells only.
+
+**Under D0 on the same grid,** six finer cells are limited by the selection Monte Carlo: (64, 1e-4), (128, 1e-4),
+(128, 3e-4), (256, 1e-4), (256, 3e-4) and (256, 1e-3). Their D0 R is 1.02–1.28, and D2 brings it to 1.00–1.03.
+
+**nside pairs** (Hellinger, fine window, D2 against D0):
+- at 1e-2: 0.006–0.010, against 0.010–0.025;
+- at 1e-3: 0.024–0.067, against 0.076–0.145.
+
+Under D2 the selection term is the same at every nside up to a constant (control 9 passed), so what remains is the
+PE side's resolution effect plus PE-sample noise. 12AJ's PE floor is not available for these pairs.
+
+**Observations (not readings; for the owner).**
+1. **The fine settings' widening was selection noise.** With D2, no nside or sigma_kde setting moves R by more than
+   about 0.045 across the whole ladder (0.981 to 1.026). No setting narrows H0 relative to spectral only.
+2. **What remains at the smallest kernels is PE-sample structure.** V_PE rises to 0.71 at (256, 1e-4), and the
+   posteriors stay spiky (N2 fails at 9 cells). Their R values sit inside the same 0.98–1.03 band.
+3. **Not tested under D2:** the photometric-redshift scalings, the spectroscopic-only catalog, the well-covered event
+   subsets, luminosity weighting, and the real-data null with the catalog moved on the sky.
