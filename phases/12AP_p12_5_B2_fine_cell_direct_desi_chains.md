@@ -244,3 +244,29 @@ $B/run_12ap.sh status             # any time, reads only
   Monte-Carlo variance than nside 64 (12AL). At limit 4 with the smooth guard this can change the fraction of
   penalised samples against B2's. It is reported.
 - **The estimate assumes B2's iteration counts.**
+
+## Results: before the chains (2026-10-21)
+
+Recorded before any 12AP chain. No H0 value is quoted here. Paths relative to `phase12_5/B2_fine/`.
+
+### The log10 n0 prior — recomputed; equal to B2's
+
+HENON jobs 1391047 (nside 128) and 1391048 (nside 64 repeated), consumer 3b638a0, env `consumer_e7c3007_cuda12`, 27
+and 26.5 minutes. Outputs `inputs/calibration/union_nside{128,64}.json` (sha256 `9e48c95f…a57a` and `a8b1dbb2…21ba`).
+
+| | a (the mean at δ = 0) | b | sd | bounds | footprint nside, Σ f_p |
+|---|---|---|---|---|---|
+| B2's prior (12U run, 2026-10-06) | −1.8105180913918975 | −0.08944896694398258 | 0.03636106345065229 | [−2.346, −1.146] | 64, 27461.16486555487 |
+| the recipe repeated at nside 64 | −1.8105180913918975 | −0.08944896694398258 | 0.03636107071569033 | [−2.346, −1.146] | 64, 27461.16486555487 |
+| **the recipe at nside 128** | **−1.8105180883934107** | −0.08944896672067851 | **0.036361083914024636** | [−2.346, −1.146] | 128, 109844.6594622195 |
+
+- **nside 128 against B2's prior:** the mean differs by 3.0e-9 dex (8e-8 prior sd), the sd by 2.0e-8 dex (5.6e-7 prior
+  sd); the 91 ridge points by at most 3.4e-9 dex; the bounds are the same. Far below the 0.5-sd stop rule, so the
+  checks went ahead.
+- **At the preset's precision they are equal** (a −1.810518, sd 0.036361, bounds as written), so the chains keep the
+  preset `count_ridge_union_delta0`: **12AP's log10 n0 prior is N(−1.810518, 0.036361) truncated to [−2.346, −1.146],
+  as B2's.** `scripts/phase12ap_make_manifest.py --check --ridge inputs/calibration/union_nside128.json` confirms the
+  committed manifests.
+- The repeat at nside 64 reproduces a and b bit for bit and sd to 7e-9 (2e-7 prior sd); the luminosity inversion's
+  result is bit for bit B2's. The nside-128 run moves the luminosity inversion by 4e-9 in M0hat: the effective area
+  changes in its last digit and the mock's fit follows it. That is the whole effect of the nside, as expected.
