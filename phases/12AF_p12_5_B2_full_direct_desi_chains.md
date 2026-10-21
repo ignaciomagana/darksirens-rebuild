@@ -918,7 +918,7 @@ limit-2 chains (12AA), which are not to be disturbed (owner, 12:50 UTC).
 
 All four chains converged (convergence "verified", the start check met): MIKO H100 NVL ran both seeds of the lower part
 and seed 42 of the upper; Jetstream2 ran seed 41 of the upper part (and its lower seed 31 copy; files copied back,
-identical by sha256). Combined at 2026-10-21 10:39 UTC (, ),
+identical by sha256). Combined at 2026-10-21 10:39 UTC (`B2/runs/combined/combined.json`, `B2/runs/compare.json`),
 commit 78b84f9, 40,000 pooled samples.
 
 **H0 (absolute; owner page only, never to the clean-room):**
