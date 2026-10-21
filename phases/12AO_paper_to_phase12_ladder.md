@@ -2,6 +2,9 @@
 
 ## Status
 
+**DONE (2026-10-21, summary 06:11 UTC).** Results in "Results" at the end (location-free); amendment B2 records
+the one rerun (step I). As declared:
+
 **DECLARED (2026-10-21, about 02:00 UTC), before any 12AO job.** Nothing has been submitted. This record fixes the
 question, the steps, the inputs, the controls, what is reported and the compute. The build stage (code, CPU tests and
 a CPU smoke on this node) is done and is recorded in amendment B1 at the end; the smoke is plumbing, not a result.
@@ -478,3 +481,102 @@ bash /hildafs/projects/phy230054p/magana/darksirens-core-data/phase12_5/repo_12A
 
 (or the branch's later head, if the owner's decisions change the code). The estimate stands: about 3 to 5
 card-hours and about 1.5 HENON CPU-hours; about 2 to 2.5 hours from submission to the summary (range 1.5 to 5).
+
+## Amendment B2 (step I rerun), 2026-10-21, before the summary
+
+Lane `phase12` (job 1391027, consumer 6cc7ae8) ran E_I to completion, then both I entries stopped at argument parsing
+(rc 2, before any computation): `phase12ao_scan.py` called `phase12ah_a_scan.py` without the 12AG parser's `scan`
+subcommand. Consumer b0e9f03 adds it (one token; the rest of the argv unchanged; parse checked on CPU). The lane was
+resubmitted alone (job 1391032, rita A100-80, worktree `paper_ladder/worktrees/b0e9f039197c`); E_I's DONE was kept, so
+only I_0245 and I_030 ran; the summary job's dependency was extended to it. Nothing else changed.
+
+## Results (2026-10-21; location-free)
+
+Jobs: prep 1391024, union 1391025, lanes v2 1391026, phase12 1391027 + 1391032 (B2), union_asis 1391028, union_fixed
+1391029, summary 1391030; all COMPLETED, every entry rc 0. STATUS: 28 entries present, 19 reported, no guard
+violation, nothing withheld. Every grid is the coarse one (the window rule did not hold for every pair).
+
+**Controls.** A0: A reproduces the paper's shipped scan, max |Δ ln L| 4.6e-5 nat after a constant, no finiteness
+mismatch (per-event ln Z within 2.4e-5, ln mu 1.0e-6, N_eff 3.2e-6 relative). Settings table: 0 mismatches. C3 ok on
+every entry. G-T2 ok. **G-T1 (mark) misses its tolerance on G and G2**: per-event |Δ ln Z| up to 4.5e-3 (tolerance
+1e-4) on both; |Δ ln mu| up to 5e-4 on G (within 2e-3) and 0.016 to 0.040 on G2 (outside); |Δ ln L| 0.007 to 0.010 on
+G, 0.32 to 0.83 on G2 at the three control points. U0 and U1: the branch's build reproduces the paper's as-is union
+exactly (22,787,835 rows, every column; every pixel); the leak-fixed union has 22,269,369 rows (518,466 fewer).
+
+**Per entry against its spectral pair** (R = catalog over spectral-only; shift in spectral sd; H = Hellinger; V_tot =
+ln L MC variance, maximum over the entry's own central 90%, nats; the pair's V_tot in brackets):
+
+| entry | pair | R68 | R90 | sd ratio | shift | H | V_tot |
+|---|---|---|---|---|---|---|---|
+| A | E_A | 0.775 | 0.689 | 0.717 | −0.12 | 0.25 | 0.41 (0.03) |
+| B | E_B | 0.771 | 0.687 | 0.715 | −0.11 | 0.25 | 0.40 (0.03) |
+| C | E_C | 0.785 | 0.751 | 0.756 | −0.22 | 0.22 | 0.53 (0.04) |
+| D | E_D | 0.557 | 0.593 | 0.584 | +2.61 | 0.82 | 0.33 (0.01) |
+| D2 | E_D2 | 0.595 | 0.581 | 0.595 | +2.73 | 0.82 | 0.49 (0.01) |
+| F | E_C | 0.594 | 0.690 | 0.661 | +0.06 | 0.25 | 0.36 (0.04) |
+| F2 | E_D2 | 0.537 | 0.582 | 0.570 | +2.44 | 0.82 | 0.41 (0.01) |
+| G0 | E_C | 0.790 | 0.780 | 0.763 | −0.34 | 0.23 | 0.48 (0.04) |
+| G0_2 | E_D2 | 0.530 | 0.563 | 0.552 | +2.75 | 0.83 | 0.47 (0.01) |
+| G | E_C | 1.278 | 1.142 | 1.201 | +0.05 | 0.19 | 0.49 (0.04) |
+| G2 | E_D2 | (0.068) | (0.079) | (0.087) | (−1.32) | 0.80 | 0.64 (0.01) |
+| H_asis_bS | E_HbS | 0.843 | 0.802 | 0.814 | −0.43 | 0.18 | 0.23 (0.09) |
+| H_fix_bS | E_HbS | 0.816 | 0.784 | 0.801 | −0.47 | 0.20 | 0.24 (0.09) |
+| H_asis_D | E_HD | 0.626 | 0.641 | 0.642 | +3.76 | 0.95 | 0.21 (0.03) |
+| H_fix_D | E_HD | 0.628 | 0.643 | 0.642 | +3.70 | 0.94 | 0.22 (0.03) |
+| H_asis_D2 | E_HD2 | 0.648 | 0.643 | 0.651 | +3.76 | 0.95 | 0.31 (0.03) |
+| H_fix_D2 | E_HD2 | 0.650 | 0.643 | 0.650 | +3.69 | 0.94 | 0.32 (0.03) |
+| I_0245 | E_I | 0.812 | 0.898 | 0.865 | −0.01 | 0.13 | 0.17 (0.04) |
+| I_030 | E_I | 0.768 | 0.865 | 0.823 | −0.06 | 0.15 | 0.16 (0.04) |
+
+**Two readings the summary numbers do not carry by themselves (main session, from the owner-only curves; no
+location written):**
+- **G2 is not a width.** Its ln L is monotone over the whole grid (about 23 nats end to end) and its posterior piles
+  against one edge of the grid; R and shift above are those of a truncated posterior (bracketed). G-T1 also misses on
+  G2 by 0.3 to 0.8 nat. G2 is reported, not read.
+- **The 21-event spectral pairs under all-sky selection (E_D, E_D2) are bounded by one grid edge**: their ln L is flat
+  within 0.1 nat over about a third of the grid. Their medians and sd depend on the grid's bound, so the shifts of D,
+  D2, F2 and G0_2 (in E_D2's sd) are measured against a prior-bounded reference; the catalog curves themselves are
+  not edge-bounded (they fall by about 23 nats toward that edge). The 44-event pairs (E_HD, E_HD2, E_I) and the
+  beta_S pairs fall on both sides inside the grid.
+
+**Per transition** (shift in the destination's spectral sd; ΔR68, ΔR90; H between the two posteriors):
+
+| from → to | change | shift | ΔR68 | ΔR90 | H |
+|---|---|---|---|---|---|
+| A → B | exact mass normaliser | +0.01 | −0.004 | −0.001 | 0.004 |
+| B → C | trusted uncut PE | −0.23 | +0.013 | +0.064 | 0.13 |
+| C → D | beta_S → paper all-sky | +1.38 | −0.228 | −0.158 | 0.62 |
+| C → D2 | beta_S → trusted all-sky | +1.46 | −0.190 | −0.170 | 0.61 |
+| D → D2 | all-sky: paper → trusted | +0.08 | +0.038 | −0.012 | 0.09 |
+| C → F | radial null (beta_S) | +0.28 | −0.191 | −0.062 | 0.24 |
+| D2 → F2 | radial null (all-sky) | −0.28 | −0.058 | +0.001 | 0.19 |
+| C → G0 | pixel weights by count | −0.11 | +0.005 | +0.029 | 0.08 |
+| G0 → G | soft edge (beta_S) | +0.38 | +0.488 | +0.362 | 0.29 |
+| D2 → G0_2 | pixel weights (all-sky) | +0.02 | −0.065 | −0.018 | 0.07 |
+| G0_2 → G2 | soft edge (all-sky) | (−4.06) | (−0.463) | (−0.484) | 1.00 |
+| H_asis → H_fix (bS / D / D2) | spectra leak fixed | −0.05 / −0.06 / −0.07 | −0.027 / +0.002 / +0.002 | −0.018 / +0.003 / −0.000 | 0.02 / 0.03 / 0.04 |
+| H_asis_bS → H_asis_D | union: beta_S → all-sky | +2.37 | −0.218 | −0.161 | 0.81 |
+| H_asis_D2 → I_0245 | Phase 12's treatment (bundle) | −3.84 | +0.164 | +0.255 | 0.97 |
+| I_0245 → I_030 | depth 0.245 → 0.30 | −0.05 | −0.044 | −0.033 | 0.03 |
+
+**ln L_cat − ln L_spec over the window (mean removed; peak-to-peak, nats):** total / PE part / selection part: C 1.5 /
+8.5 / 8.2; G0 1.9 / 8.0 / 7.0; G 1.8 / 1.9 / 2.3; F 2.8 / 7.5 / 6.0; D2 12.0 / 8.5 / 19.7; G0_2 12.0 / 8.0 / 19.2; F2
+13.1 / 7.5 / 19.3; G2 3.8 / 1.9 / 5.2; I_0245 2.1 / 2.3 / 0.5.
+
+**What the numbers say, and no more.**
+1. Core reproduces the paper's likelihood (A0 4.6e-5 nat). The mass normaliser moves nothing; the uncut PE moves the
+   result by −0.23 spectral sd and widens R90 by 0.06.
+2. The selection is the largest single step on the paper's catalog: beta_S → all-sky moves the catalog posterior by
+   +1.4 to +1.5 spectral sd (H 0.61 to 0.62); with all-sky selection the catalog posterior sits +2.6 to +2.7 E_D2 sd
+   from spectral-only (against a prior-bounded reference, above), and +3.7 to +3.8 sd on the union's 44.
+3. The paper-mode catalog's width and location survive the radial null (F: R68 0.59, R90 0.69; F2: R 0.54 to 0.58,
+   F2 within 0.3 sd of D2): in complete mode with the hard edge, galaxy redshift structure carries little of it.
+4. The soft edge removes it under beta_S (G: R 1.14 to 1.28, catalog wider than spectral-only, shift +0.05), and it
+   removes most of both the PE and the selection parts of ln L_cat − ln L_spec (C 8.5 / 8.2 → G 1.9 / 2.3 nats ptp).
+   Under all-sky selection the soft edge gives the edge-bounded G2 (not read).
+5. The catalog-construction changes tested move little: pixel weights by count H 0.07 to 0.08; the spectra-leak fix
+   at most 0.07 sd and 0.03 in R; depth 0.245 → 0.30 0.05 sd.
+6. Phase 12's treatment on the 44 (I) sits at −0.01 to −0.06 spectral sd from its spectral pair, R68 0.77 to 0.81,
+   R90 0.87 to 0.90, ln L_cat − ln L_spec 2.1 nats ptp over the window, of which 0.5 from the selection part.
+7. Not tested here: the v2 (volume-limited Kibo x BGS) catalog against the union on the same events (A to G use the
+   21 on v2, H and I the 44 on the union); the paper's event cut in the all-sky selections (known limits).
