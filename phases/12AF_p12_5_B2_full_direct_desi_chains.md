@@ -913,3 +913,66 @@ limit-2 chains (12AA), which are not to be disturbed (owner, 12:50 UTC).
 - **Check 5 passed at 15:33 UTC, so the gate is open** for both H0 parts.
   The coordinating session starts the launcher after this entry is pushed:
   MIKO at once, and Jetstream2 when the limit-2 chains have been combined.
+
+## Results: the chains (2026-10-21)
+
+All four chains converged (convergence "verified", the start check met): MIKO H100 NVL ran both seeds of the lower part
+and seed 42 of the upper; Jetstream2 ran seed 41 of the upper part (and its lower seed 31 copy; files copied back,
+identical by sha256). Combined at 2026-10-21 10:39 UTC (, ),
+commit 78b84f9, 40,000 pooled samples.
+
+**H0 (absolute; owner page only, never to the clean-room):**
+
+| | median | 68% | 90% | sd |
+|---|---|---|---|---|
+| **B2, DESI, all 17 population parameters sampled (direct)** | **70.4** | **[54.7, 81.3]** | [44.6, 87.1] | 13.1 |
+| B1, the same posterior by reweighting A1 (12AD) | 69.0 | [53.9, 80.4] | | 12.7 |
+| A1, spectral only, population sampled (12AA) | 68.0 | [55.2, 79.9] | | 12.4 |
+
+Per chain: upper part seeds 41 and 42: 70.8 [56.9, 81.4] and 71.8 [59.0, 81.8] (ln Z −682.19 ± 0.20 and −682.12 ± 0.20);
+lower part seeds 31 and 32: 40.3 [36.8, 43.7] and 40.2 [36.8, 43.7] (ln Z −683.87 ± 0.20 and −683.53 ± 0.20).
+Fraction of samples the variance limit penalises: 0.178 to 0.191.
+
+**The lower part's weight:** 0.047 and 0.060 for the two matched pairs (B1 after reweighting: 0.042, range 0.024 to
+0.073 over its pairings; A1: 0.037).
+
+**1. Against B1** (the owner's rule of 2026-10-20 replaces the declared bootstrap test and bands: differences are
+reported as they are): d_med = +1.46 (+0.11 B1 sd, +0.12 A1 sd), d_sd = +0.35 (width ratio 1.03). The two upper-part
+seeds differ by 1.0 in their medians, so the difference is of the size of B2's own seed scatter. μ1 and γ agree: μ1
+10.01 [9.64, 10.34] against B1's 10.04 [9.67, 10.37]; γ 2.47 [2.03, 2.93] against 2.45 [2.00, 2.92].
+
+**2. The catalog's effect, against A1:** Δ = (median_B2 − median_A1) / sd_A1 = +0.20; R = sd_B2 / sd_A1 = 1.06; 68%
+widths 26.7 against 24.7 (ratio 1.08). B1's were +0.08 and 1.03 (12AD).
+
+**Every sampled parameter** (median [68%]; B1 and A1 shown where their summaries carry the parameter):
+
+| parameter | B2 direct (median [68%]) | B1 reweighted | A1 spectral (proposal) |
+|---|---|---|---|
+| H0 | 70.4 [54.7, 81.3] | 69 [53.9, 80.4] | 68 [55.2, 79.9] |
+| M0hat | -20.5 [-20.7, -20.3] | — | — |
+| alpha1 | 1.7 [1.03, 2.23] | — | — |
+| alpha2 | 5.2 [4.26, 6.21] | — | — |
+| beta_q | 1.23 [0.707, 1.8] | — | — |
+| delta_m1 | 3.28 [1, 6.31] | — | — |
+| delta_m2 | 4.66 [1.97, 6.71] | — | — |
+| gamma | 2.47 [2.03, 2.93] | 2.45 [2, 2.92] | 2.41 [1.97, 2.88] |
+| lambda0 | 0.404 [0.296, 0.523] | — | — |
+| lambda1 | 0.552 [0.434, 0.66] | — | — |
+| lambda2 | 0.0402 [0.0262, 0.0581] | — | — |
+| log10n0_q | 0.525 [0.179, 0.848] | — | — |
+| m1_low | 4.37 [3.44, 5.47] | — | — |
+| m2_low | 3.44 [3.09, 4.19] | — | — |
+| m_break | 37.7 [29.5, 45.1] | — | — |
+| mu1 | 10 [9.64, 10.3] | 10 [9.67, 10.4] | 10 [9.7, 10.3] |
+| mu2 | 34 [32.6, 35.6] | — | — |
+| mu_chi | 0.0355 [0.0247, 0.0459] | — | — |
+| sigma1 | 0.243 [0.121, 0.47] | — | — |
+| sigma2 | 1.63 [0.418, 4.78] | — | — |
+| sigma_M | 0.558 [0.435, 0.686] | — | — |
+| sigma_chi | 0.11 [0.0993, 0.121] | — | — |
+
+σ1 sits at 0.24 [0.12, 0.47], pressed toward the variance limit as in A1. The catalog nuisances (M0hat, σ_M,
+log10 n0) are reported above; their priors are in "The target".
+
+**Not done here:** B2's Monte Carlo error by the declared bootstrap (superseded by the owner's rule); the H0–μ1
+correlation and slope; the selection N_eff at the posterior points. They can be computed from the chains on request.
