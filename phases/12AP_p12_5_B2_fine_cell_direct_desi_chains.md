@@ -7,6 +7,9 @@ changes against stage B2 (record 12AF), the inputs with their sha256, the checks
 and the compute. The checks are recorded under "Results: before the chains" as they finish. The main session
 launches the chains on the owner's go, with the commands under "How it runs".
 
+**Checks 1 to 6: passed (2026-10-21, 13:30 UTC).** Check 1 needed one fix, to the help text of a new script;
+nothing in the chains changed. The launch commit is 2c06a3d; see "The gate" at the end.
+
 **Blinding: location-free.** No H0 location appears here, in commit messages or in the logs agents read: no median,
 interval, MAP or shift in km/s/Mpc. The H0 values in this record are fixed a priori: the split prior's bounds (20,
 45, 140), the start points 32.5 and 92.5, and the tie points of check 3 (20, 32.5, 45, 60, 70, 80, 92.5, 110, 125,
@@ -270,3 +273,204 @@ and 26.5 minutes. Outputs `inputs/calibration/union_nside{128,64}.json` (sha256 
 - The repeat at nside 64 reproduces a and b bit for bit and sd to 7e-9 (2e-7 prior sd); the luminosity inversion's
   result is bit for bit B2's. The nside-128 run moves the luminosity inversion by 4e-9 in M0hat: the effective area
   changes in its last digit and the mock's fit follows it. That is the whole effect of the nside, as expected.
+
+### Copies of the js2h100 check outputs
+
+The outputs of checks 2 to 5 were written on js2h100 and copied to Hildafs `checks/` (40 files), identical by sha256 on
+both sides (`logs/checks_sha256.{hildafs,js2h100}.txt`). The sequence (`checks/logs/checks_js2h100.out`, consumer
+aabf05b, clean) ran 12:33 to 13:04 UTC: pin and start check 343 s, the tie's values 322 s, the single-call timing
+163 s, one chain alone 493 s, two at once 535 s, each exit 0.
+
+### 1. Unit tests (CPU, HENON) — passed after one fix
+
+- **The full suite at aabf05b** (`logs/pytest-1391052.out`, `logs/pytest-1391053.out`):
+  - batch env (core 32c6210): job 1391052, 501 passed, 2 skipped, **1 failed**;
+  - e7c3007 env: job 1391053, 492 passed, 11 skipped, **1 failed**.
+- **The failure was 12AP's own, the same test in both envs:** the scripts' entry-point contract
+  (`tests/test_script_entrypoint_contract.py`) runs every script in `scripts/` with `--help` alone and expects the
+  usage text and exit 0. The new wrapper `scripts/phase12ap_count_ridge.py` refused `--help` without `--nside`
+  ("--nside is required"). The script is new in 12AP, so this is not a failure carried over from B2's commit.
+- **The fix (85073e2):** `--help` alone now prints the wrapper's usage and exits 0. With `--nside` the wrapper runs
+  `phase12u_calibrate.py` exactly as before; without `--nside` (and without `--help`) it still refuses. Only the
+  help path changes. No chain input, manifest, setting or target changes, and the chains never run the wrapper. The
+  n0 recompute above ran with `--nside` and is unaffected. `tests/test_phase12ap.py` now also covers `--help` alone.
+- **The rerun at 2c06a3d** (the launch commit; the runner change under "Code changes after the declaration"): the
+  contract file and `tests/test_phase12ap.py`, **41 passed in each env** (HENON jobs 1391082, batch env, and 1391083,
+  e7c3007 env; `logs/pytest-fix-2c06a3d-{batch,old}.out`). A first rerun at 85073e2 gave the same result but ran on
+  miko as a short CPU step of the holder job, because srun inherited the session's allocation. The HENON rerun
+  supersedes it.
+- **The skips are 12AF's.** In the batch env there are 2: the frozen-stack gate refuses this env on the darksirens
+  commit, and the frozen-core field-pin test skips on core 32c6210. In the e7c3007 env there are 11: the core-pool
+  tests of `test_direct_chain_jit.py`, which need the pool. That is 12AF's 9 at 70a0731 plus the two kernel-pin
+  resume cases added at 78b84f9.
+- **The full suite at 2c06a3d** was resubmitted as a confirmation: HENON jobs 1391084 (batch env) and 1391085
+  (e7c3007 env), `logs/pytest-<job>.out`. It is recorded when it ends. Against aabf05b's full run, the only changes
+  are the wrapper's help path and the combine step's srun.
+
+### 2. The pin on the new target (js2h100 H100) — passed
+
+`checks/pin_start/pin_start.json`, at aabf05b. In each H0 part, 16 prior draws and 16 points near the reference
+population, with H0 uniform in the part. Single calls, pin auto against pin off; core's batched form (batches of
+32) is reported beside.
+
+| H0 part | finite (both pins) | non-finite pattern | largest \|Δ ln L\|, single | largest \|Δ ln L\|, batches of 32 | bitwise equal, single |
+|---|---|---|---|---|---|
+| 20 to 45 | 29 of 32 | equal | 8.0e-13 | 1.1e-13 | 21 of 32 |
+| 45 to 140 | 29 of 32 | equal | 1.1e-13 | 9.1e-13 | 31 of 32 |
+
+- All are within 1e-9.
+- **The pin:** digest `0c32ede0dc9b097e814c231eccdc1f48` (catalog_digest; B2's `0a1bcf7a…` belongs to the nside-64
+  catalog). It holds 2.44 GB (B2: 1.35 GB) and builds in 74 s.
+- **Per single call:** 20.4 ms with the pin and 158 ms without it.
+- **The target:** 259 events with 4,096 samples each, a kernel window of 774 slots, and 196,577 compact rows (pixels)
+  holding 22,782,073 galaxies. The 3,206 galaxies in the 19 occupied nside-128 pixels that no PE sample or injection
+  falls in are outside the compact view, as in 12AG to 12AL. This is exact for the estimator, since such a galaxy
+  contributes to no term. B2's nside-64 view held all 22,785,279.
+
+### 3. The tie to Lane A (js2h100 H100) — passed
+
+`checks/tie/tie_vs_{selection_denominators,d2_ladder,d1_d4_fine,smearing_ladder}.json` hold differences only.
+`checks/tie/tie_values.json` holds the absolute values and is read only by `tie-compare`. The tie used the ten tie
+points and the new target with Lane A's three settings (the exact-prior PE build, limit 20, pin off), at the 12AG
+calibration and Phase 12's fixed population.
+
+| comparison | largest \|Δ ln L\| | largest \|Δ ln μ\| | largest relative Δ N_eff | flags |
+|---|---|---|---|---|
+| new target, pin off, against 12AL's stored Lane A (primary; rita A100, 198046c) | 9.1e-13 (7 of 10 bitwise) | 3.6e-15 | 6.9e-15 | equal |
+| the same against 12AM's (rita, 54d9815), 12AN's (twig, cb7c638) and 12AG's coarse grid (twig, 6337a56) | the same values | the same | the same | equal |
+| new target, pin off, against Lane A's fixed-population builder in the same process | 0 (bitwise at all 10) | 0 | 0 | equal |
+| new target, pin auto, against pin off | 1.1e-13 | 0 | 0 | equal |
+
+- **Pass:** within 1e-10 in the same process and 1e-6 against the stored values. log10n0_q equals the reference's,
+  and the population anchor equals the fixed population in all 17 entries exactly.
+- **No constant:** Δ ln L spreads by 1.0e-12 over the ten points. The new target is Lane A's at this cell with no
+  offset, on the H100 and on both A100 types.
+
+### 4. The start check at limit 4 — passed in both parts
+
+`checks/pin_start/pin_start.json`. The reference population at the start H0 of each part, with the nuisances at their
+prior centres.
+
+| H0 part | start H0 | penalised | MC-reliability gate | total MC variance (limit 4) | PE / selection | selection N_eff over its threshold | B2 (12AF): total, N_eff ratio |
+|---|---|---|---|---|---|---|---|
+| 20 to 45 | 32.5 | no | accepted | 1.82 | 0.35 / 1.47 | 2.48 | 1.33, 3.6 |
+| 45 to 140 | 92.5 | no | accepted | 0.90 | 0.18 / 0.71 | 5.35 | 0.82, 5.9 |
+
+- Both pins give the same flags and the same variances (to 1e-16).
+- The selection variance is larger at nside 128, as 12AL measured. It is largest in the lower part, where it is
+  1.47 against B2's 1.33 in total. Both parts start unpenalised.
+
+### 5. GPU timing and memory on js2h100 — measured
+
+`checks/timing_single/timing.json`, `checks/check5_one/timing.json` and `checks/check5_two/timing.json`. The H100
+80GB HBM3 ran nothing else. The chain runs used the production command for high_seed41 (and low_seed31), in scratch
+directories, with 300 s of sampling after the setup. Every stretch was in dynesty's first, unit-cube phase, where
+every call is evaluated: one point per GPU call in the rows form.
+
+| | 12AP (js2h100) | B2 (12AF) |
+|---|---|---|
+| single call, pin auto (median of 32) | **20.1 ms** | 26.0 ms (MIKO H100 NVL) |
+| per point in core's vmap of 32 (not the chains' form) | 12.2 ms | 27.2 ms (MIKO) |
+| **per dynesty call in the chain, unit-cube phase, alone** | **21.0 ms** (14,532 calls in 305 s) | **32.1 ms** (js2h100: 21,672 calls in 695 s) |
+| GPU use in the chain | 97% | 87% (js2h100) |
+| GPU memory of the chain process (nvidia-smi) | 33.6 GB | 17.2 GB (js2h100) |
+| peak JAX bytes in use in the process | 17.5 GB (18.3 GB with the batch-of-32 probe) | — |
+| setup to the sampling loop | 183 s | 192 s (MIKO, shared) |
+
+- **Two chains at once** (high_seed41 with low_seed31, the same 306 s window): 7,026 and 7,001 calls, 43.5 and 43.6
+  ms per call each. Together that is 45.9 calls per second, against 47.7 for one chain alone: **0.96 times the
+  throughput**. The GPU showed 100% use and 67.2 GB for the two. Two at once give no gain, so the declared plan
+  stands: one after another.
+
+### 6. CPU smoke at 8 live points (HENON) — passed
+
+- **Manifest:** `config/phase12ap_fine_cell_manifest.smoke_cpu8.json` at aabf05b, outputs in `smoke_runs_cpu8/`.
+- **The four chains** ran in parallel: jobs 1391054 to 1391057, 14 to 21 minutes each, all exit 0. Each chain:
+  - passed its anchor at the midpoint of its part (accepted, unpenalised);
+  - had pin auto active and the nside-128 catalog (by sha256), with 196,577 rows, 22,782,073 galaxies and
+    sigma_kde 0.001;
+  - made 58 to 62 calls (capped and unconverged, as intended).
+- **The combination and the comparison:** job 1391058, exit 0 in 2 s (the combination 0.33 s, the comparison 0.05
+  s). At 8 live points there are a few dozen nested points; B2's real combination took 7 s.
+  - The combination holds the 4 chains, 2 seeds per part, none without a result, with 40,000 pooled samples and 21
+    labels.
+  - `compare/compare.json` carries no median or interval (location-free); `compare/compare_absolute.json` holds
+    the absolute values.
+- **The random-walk queue:** at 8 live points (and in check 5's stretches) the chains stay in the unit-cube phase.
+  On this target the random-walk queue first runs in the production chains. The sampler and the pool are B2's,
+  unchanged, and B2 exercised them on its target.
+
+### Code changes after the declaration
+
+- **85073e2:** the wrapper's `--help` (check 1).
+- **2c06a3d:** the combine mode of `slurm/phase12ap_run_js2h100.sh` unsets the `SLURM_*` variables before its
+  `srun -p HENON`. Launched from inside the MIKO holder job, srun would otherwise run the combination as a step of that
+  job on miko. B2's combination ran that way, for 7 s. `B2_fine/run_12ap.sh` is the same file again. Nothing in the
+  chains changes.
+- **The runner's sync mode at 2c06a3d** (`logs/pipeline.sync.20261021T132659Z.log`):
+  - the five inputs are identical by sha256 on both sides;
+  - repo_12AP is at 2c06a3d, clean, on js2h100;
+  - the batch env is identical (5e89753cdebf);
+  - the committed manifests are the generator's output for the re-derived ridge.
+
+### The estimate (from check 5)
+
+**B2's chains** (12AF results; calls, evaluated points and iterations from each chain's `result.json`):
+
+| chain | calls | evaluated points | iterations | B2 on js2h100 (sampling) |
+|---|---|---|---|---|
+| high_seed41 | 4,995,414 | 3,779,183 | 42,291 | 116,969 s (stage 32.6 h) |
+| low_seed31 | 4,703,940 | 3,452,232 | 40,111 | 107,928 s (stage 30.1 h) |
+| high_seed42 | 5,001,164 | 3,777,419 | 42,389 | ran on MIKO; 32.6 h at js2h100's rates |
+| low_seed32 | 4,726,508 | 3,487,498 | 40,192 | ran on MIKO; 30.1 h at js2h100's rates |
+
+On js2h100, B2 spent 29.1 to 29.4 ms per evaluated point in the likelihood, plus 1.40 ms per call outside it (dynesty
+and the prior transform, on the CPU).
+
+**Two ways of scaling:**
+
+- **The declared way:** B2's js2h100 time scaled by the ratio of the unit-cube per-call times on the same GPU, 21.0
+  / 32.1 = 0.654.
+- **The upper side:** B2's evaluated points times 12AP's cost per point (20.1 to 21.0 ms, the single call and the
+  in-chain unit-cube call), plus B2's time outside the likelihood. That time is on the CPU and is not expected to
+  shrink.
+
+Each chain also adds about 0.12 h of setup and finish.
+
+| chain | 12AP estimate on js2h100 |
+|---|---|
+| high_seed41 | 21.4 to 24.1 h |
+| low_seed31 | 19.7 to 22.1 h |
+| high_seed42 | 21.4 to 24.1 h |
+| low_seed32 | 19.8 to 22.3 h |
+| **the four, one after another** | **82 to 92 h (3.4 to 3.9 days), about 87 h at the centre** |
+| the two pairs at once (0.96 times the throughput) | 86 to 96 h |
+| for comparison, B2's four on js2h100 alone | about 126 h |
+
+- **The first combination:** possible after the first two chains (one seed per part), 41 to 46 h after the start.
+- **The final combination:** after the fourth chain. The watcher copies the chains back and runs the combination on
+  HENON within minutes (it polls every 10 minutes).
+- **The estimate assumes B2's iteration counts.** The 7-day limit is a ceiling, not the estimate.
+
+### The gate
+
+Checks 1 to 6 pass, and both H0 parts are allowed. **The launch commit is 2c06a3d.** The full-suite confirmation at
+2c06a3d (jobs 1391084 and 1391085) is recorded when it ends.
+
+**How it is launched** (the chains in tmux on js2h100; the watcher as a HENON job, so that it outlives the MIKO
+holder, which ends 2026-10-25 06:19 UTC, inside the estimate):
+
+```
+B=/hildafs/projects/phy230054p/magana/darksirens-core-data/phase12_5/B2_fine
+nohup setsid $B/run_12ap.sh js2h100 serial > $B/logs/run_12ap_js2h100.out 2>&1 < /dev/null &
+# after its last line reads "AP JS2H100 DONE rc=0":
+env -u SLURM_JOB_ID sbatch -A phy220048p -p HENON --qos henon -n1 -c 1 --mem 2G -t 7-00:00:00 -J p12ap-combine \
+  -o $B/logs/run_12ap_combine-%j.out --wrap "$B/run_12ap.sh combine"
+```
+
+**What signals the end:**
+
+- **The chains:** the ap_fine log on js2h100 (its path is in `logs/js2h100.logpath`) ends `EXIT=<rc>`, and each chain
+  writes `runs/<chain>/DONE` there.
+- **The combination:** `logs/run_12ap_combine-<job>.out` ends `AP DONE rc=<rc>`. On success it writes
+  `runs/combined/DONE` and `runs/compare/DONE` on Hildafs; on a failure, `FAILED_combine_<step>`.
