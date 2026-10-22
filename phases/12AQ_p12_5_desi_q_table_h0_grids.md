@@ -22,6 +22,13 @@ analysis equal to the stock target within 9.1e-13. **The sealed rehearsal stoppe
 setting fails the builder's Laplace check on its full covered-sky build (largest relative excess 0.0514 against
 0.05). All three are under "Amendments" at the end.
 
+**Amendment, the Laplace check (2026-10-22, about 23:45 UTC, before any table is built):** the eligibility now asks
+the full covered-sky build, made as production makes it, for the builder's Laplace check at 4,096 draws (first
+declared at 256, where the check reads its own Monte-Carlo noise) at seeds 3304 and 3301; every table build and the
+T0 pre-check run the check at 4,096 draws. Rows, seed rule and tolerances are unchanged. Re-applied to all 35
+settings, the eligible set, the primary (sigma 0.5, ell_grid 2) and the runner-up (sigma 0.5, ell_grid 4) are
+unchanged. The choice is now `q_scans/cv/choice_v2.json`; the first is kept as `choice_v1.json`.
+
 **Blinding: location-free.** No H0 location appears here, in commit messages or in the logs agents read: no median,
 interval, MAP or shift in km/s/Mpc. The H0 values in this record are fixed a priori: the grid ([20, 140] step 0.5;
 [50, 100] step 0.1), the tie points (20, 32.5, 45, 60, 70, 80, 92.5, 110, 125, 140), the member-count points (20, 45,
@@ -74,7 +81,9 @@ Everything else is the fiducial cell of the stored grids:
     Q = 1, with the fold sd.
   - Candidates: sigma {0.3, 0.4, 0.45, 0.5, 0.6} x ell_grid {1, 2, 3, 4, 6, 8, 16} nodes.
   - Eligible only if every row converges, the builder's Laplace check passes, no cell sits at the clip, and the
-    full covered-sky table passes the mask-free certificate.
+    full covered-sky table passes the mask-free certificate. *(Amended before any table was built: the Laplace check
+    is asked of the full covered-sky build at 4,096 draws at seeds 3304 and 3301; see "Amendment: the Laplace
+    check of the eligibility and of every table".)*
   - The primary setting is the best score, with settings within one fold sd tied and the tie broken toward smaller
     sigma, then larger ell_grid. The runner-up is the best eligible setting whose ell_grid differs by a factor of 2
     or more.
@@ -467,3 +476,182 @@ declared rule. It failed for 5 of the 20 eligible settings, the runner-up among 
   - If both fail, and not on the certificate alone, the pre-check writes HOLD=1 and every Q arm is held for the owner.
 - **Open for the owner or the main session; no choice is made here.** The eligibility rule never asked the full-sky
   build for the Laplace check that every production table must pass.
+
+### Amendment: the Laplace check of the eligibility and of every table (2026-10-22, 22:40 to 23:40 UTC, before any table is built; location-free)
+
+**Why an amendment.** The sealed rehearsal stopped because the primary's full covered-sky build failed the builder's
+Laplace check at the production seed 3304 (amendment above). The declared eligibility had asked that check of the
+10,000-row subset build only, never of the full covered-sky build that production makes. Under the declared rules the
+pre-check after T0 would decide the Q arms on that check. No table exists and no GW likelihood with any Q table has
+run, so the rule can still be amended before any table is used. Everything below is galaxy side and H0-free.
+
+**What was measured first: how precise the check is** (`q_scans/cv/laplace_robustness.json` sha256
+`c9c672f60845c1b6c3fd64822934b6d8d8110aa3a182ca4b28d3a5581c5a937b` and `laplace_robustness.md` sha256
+`17f8e25e09ca069c62b2c432a9f729d6c8674dd5a6c358875d0c2a11f7074530`; HENON array 1391905 for 27 settings at consumer
+2ee6633, one holder step for sigma 0.5 with ell_grid 16 at 8b59430, combined at 0a2139f; launcher
+`q_scans/scratch_launcher/laplace_robust.sh` sha256 `882fa1e44acc77e79ed1fa48b99886999e1b69837e343c69f183fd0d68e65be3`).
+For each of the 28 settings that passed the cross-validation filter: the full covered-sky build exactly as the T0
+builder makes it (seed 3304), then the builder's own check function re-run at seeds 3301-3308, at 128 further seeds,
+and at high precision (the builder's check with 256 rows and with the 64 declared rows, 4,096 draws per replicate, 8
+replicates).
+- **The true worst relative excess is well inside the tolerance for every setting.** At high precision it is
+  0.012-0.014 at sigma 0.3, 0.023-0.025 at 0.4, 0.030-0.031 at 0.45 and 0.037-0.039 at 0.5, almost independent of
+  ell_grid; the closest setting is about 10 Monte-Carlo errors below 0.05. The declared primary (sigma 0.5,
+  ell_grid 2) is 0.0384 +- 0.0009. The excess grows roughly as sigma squared (about 0.15 sigma^2), as lss's own
+  description of the Laplace mean's low-count bias says.
+- **The declared check (64 rows x 256 draws) reads its own Monte-Carlo noise.** For the primary it reads 0.046-0.086
+  across seeds 3301-3308 (3 of 8 pass) and passes at 31% of the 128 further seeds. Per row the 256-draw reads are
+  unbiased (they agree with the high-precision values within 0.0054 on average) but heavy-tailed, and the check takes
+  the largest of 64 rows. Its k-hat reads 0.65-1.01 at 256 draws against 0.22-0.39 at 4,096: lss's tail-shape
+  estimator shrinks toward 0.5 with weight 10/(n_tail + 10), 17% with the 48-draw tail of 256 draws.
+- **The builder's own check at 4,096 draws (64 rows) passes at all 8 replicate seeds for all 28 settings**
+  (largest excess 0.0463, largest k-hat 0.615).
+- A correction to the rehearsal amendment's reading: at 256 draws the runner-up (sigma 0.5, ell_grid 4) passes at
+  seed 3304 (0.0486, k-hat 0.559); it failed at seed 3301. Under the unamended rules the pre-check would have
+  promoted it on a margin of 0.0014, inside the check's noise.
+- **Disclosed: values known before the rule was fixed.** A probe (HENON job 1391879, `q_scans/probes/laplace_noise/`,
+  `laplace_noise.json` sha256 `32ba3cd48a5e27dbbe5533e7643d2f995278c6d2fbf807eb0ffa0da442457d13`) built the two
+  declared settings with the 4,096-draw check at seeds 3304 and 3301 before the amended rule was written: largest
+  excess 0.0396 and 0.0424 (primary), 0.0439 and 0.0407 (runner-up), all passing. No other setting's 4,096-draw value
+  at those seeds was known.
+
+**Options considered** (the owner was away; the researched recommendation is taken):
+- keep the 256-draw check and require a pass at every seed 3301-3308 plus a high-precision run: closes the gap but
+  selects on the check's noise; it would push the choice to sigma 0.3-0.4 for a reason unrelated to the table's
+  accuracy (cross-validation score 0.132 against 0.171);
+- change only the check (another seed, a larger tolerance, or more draws) without an eligibility change: seed or
+  tolerance picking after the failure, and the eligibility gap stays;
+- waive the Laplace check for the map table: breaks section 5.1 and check 10, erases the distinction from the
+  rougher-field arm, and is not needed;
+- keep the declared rules: the runner-up would be promoted on a margin inside the noise, the data-preferred setting
+  replaced for a reason that is the check's noise, and the setting-sensitivity arm lost;
+- **taken: add the full covered-sky build's check to the eligibility and make the check precise wherever 12AQ uses
+  it.** The measurements support it: the true excess of every setting is far inside the tolerance, and the
+  4,096-draw check resolves it. The standard (64 rows, k-hat <= 0.7, every relative excess <= 0.05) is unchanged;
+  only the measurement's precision changes, uniformly for every setting and every build.
+
+**The amended rule** (`choice_v2.json` "rule"; consumer `phase12aq/q-scans` at
+`ef77d5db2aecd5bd6cea85d5cda79394c0b0e89e`, committed 23:00:16 UTC, and `ffccb39cc54603a632d9dc1dc6e1cd7de81b3f19`,
+23:03:58 UTC, which only frees memory between the two builds; both commits come before the full-sky jobs below):
+- eligible = the 10,000-row subset build converged on every row and had no fitted cell at the clip after the gauge
+  (its 256-draw Laplace check is recorded, not used), **and** the full covered-sky build, made with the production
+  builder call (the production grid at the build H0 70 with the stock target's decoded calibration; the 119,457
+  fitted rows; bias 1, the per-redshift gauge, the clip at 7; the builder's Laplace check on 64 rows evenly spaced in
+  expected count with **4,096 draws**), converged on every row, **passed the builder's Laplace check at seed 3304 (the
+  production seed) and at seed 3301 (the cross-validation's check seed)**, gave the same table at both seeds (bit for
+  bit), and passed lss's mask-free certificate (unchanged);
+- primary, tie and runner-up rules unchanged (best spatial score; settings within the best setting's fold sd tied,
+  the tie broken toward smaller sigma, then larger ell_grid; runner-up = the best eligible setting whose ell_grid is
+  at least 2x or at most 0.5x the primary's);
+- **production:** every table build (`phase12aq_build.production_build`: the map tables, the member build, the H0 60
+  and 80 builds, the rougher-field build) and the T0 pre-check run the builder's check at 4,096 draws, with the same
+  64-row rule, the build seed 3304 and lss's tolerances. The table check (check 10) refuses a table stamped at another
+  precision. The rougher-field arm stays a declared Laplace failure.
+- unchanged: the candidates, the scores, the certificate and its tolerance, the seeds, the replacement rule (at most
+  once, after T0), decision 19's fallback.
+
+**What ran.** `phase12aq_cv.py fullsky` for all 35 candidates, from the detached worktree `q_scans/wt/ffccb39`
+(clean) with the old env's python, the frozen core main `10224291eac92b391dc2a06925dc08e49980f9e5` and the frozen
+lss integration head `881fce6c875943013c0da48327d4aff5b49b27f7` (both recorded by `__file__` in every output): HENON
+array 1391955 (tasks 0-5, six groups of five settings, 8 CPUs each, 23:04-23:34 UTC; task 6 failed at the node's
+TaskProlog on henon05 before running anything and its five settings ran as job 1391972, 23:26-23:37 UTC). The
+dependent choice job 1391956 was cancelled (its dependency could no longer be met) and `choose` (rule v2) ran once all
+35 records existed, on the host at nice 19 from the same worktree (23:39 UTC; log `q_scans/logs/aq-choose2.local.out`).
+Launcher outside the repo: `q_scans/scratch_launcher/fullsky.sh` (sha256
+`567cd91f27648f101ae5105b42a0a2ae027fbfff6f84c61e6359ab92fe8d1f99`); job ids in `q_scans/logs/fullsky_jobs.txt`.
+- **Inputs:** the production grid (119,457 fitted rows) equals the cross-validation arrays bit for bit on the 10,000
+  rows (counts, C, dN_exp, the redshift grid; the decoded calibration round-trips exactly).
+- **The check seed moves no table value:** the seed-3304 and seed-3301 tables are identical bit for bit in all 35
+  settings, and all 35 check the same 64 rows.
+- **The certificate is unchanged:** on the 28 settings that `certify` had measured, the worst |delta| is identical
+  (difference 0.0) with the same verdict. The 7 sigma 0.6 settings were certified here for the first time: ell_grid 1
+  fails (0.1025), the other six pass (margins +0.013 to +0.029).
+- **The Laplace check at 4,096 draws** passes at both seeds for every setting with sigma 0.5 or below (largest
+  relative excess 0.0461, sigma 0.5 with ell_grid 8 at seed 3304; largest k-hat 0.49) and fails at both seeds for
+  every sigma 0.6 setting (0.053-0.062; k-hat at most 0.51). At sigma 0.6 the excess sits above the tolerance at both
+  seeds, as the measured scaling with sigma squared expects (about 0.055).
+- The declared pair reproduces the probe's values (across jobs, within 3e-11 in the excess and 4e-8 in k-hat):
+  primary 0.0396 (seed 3304) and 0.0424 (seed 3301);
+  runner-up 0.0439 and 0.0407. The runner-up's worst row at seed 3304 (row 114261, a heavy-tailed low-count row) has
+  an importance-sampling error of 0.0066, about one error from the tolerance; the primary's worst rows have errors of
+  0.0017-0.0021.
+
+**The amended choice** (`q_scans/cv/choice_v2.json`, schema `phase12aq-cv-choice-2`, sha256
+`390c28c5d2bed0a23258b96b7623a5e80bd23738d36199abd36f9206b9a9a4f5`; it lists the sha256 of every cross-validation file and of the 35 records
+`q_scans/cv/fullsky/<setting>.json`):
+
+| role | sigma | ell_grid | spatial score, nat per held-out galaxy (fold sd) | full sky, 4,096 draws: largest relative excess, seed 3304 / 3301 | k-hat, seed 3304 / 3301 | certificate worst \|delta\|, margin |
+|---|---|---|---|---|---|---|
+| **primary** | 0.5 | 2 | 0.1712 (0.0014) | 0.0396 / 0.0424 | 0.415 / 0.471 | 0.0891, +0.0109 |
+| **runner-up** | 0.5 | 4 | 0.1586 (0.0016) | 0.0439 / 0.0407 | 0.458 / 0.455 | 0.0858, +0.0142 |
+
+- **The eligible set is unchanged: the same 20 settings, the same primary and the same runner-up as the first
+  choice.** No setting became eligible and none dropped out. The sigma 0.6 settings, which the first rule excluded on
+  the subset's 256-draw check, are excluded by the full covered-sky check at 4,096 draws at both seeds; every setting
+  excluded by the certificate before is excluded by it again.
+- No tie for the primary (the next eligible setting, sigma 0.45 with ell_grid 2, scores 0.1651, 4.2 fold sd below).
+  The runner-up's candidates are the eligible settings with ell_grid 4, 6, 8 or 16, as before.
+- **The first choice is kept unchanged as `q_scans/cv/choice_v1.json`** (the same bytes as the `choice.json` of the
+  hyperparameter amendment, sha256 `a7a77fabed6908dc720c567168d0ccded347ac9fed4aa4c6f84a06a300fb4382`). `choice.json`
+  no longer exists, so a stale consumer fails rather than reading it.
+
+**The full table** (35 settings; `choice_v2.json` "table"; the subset's 256-draw check recorded, not used; FAIL
+marks a failed 4,096-draw check):
+
+| sigma, ell_grid | score (fold sd) | subset 256-draw check (recorded) | full sky, seed 3304: k-hat, max abs excess | full sky, seed 3301: k-hat, max abs excess | same table | certificate worst, margin | eligible first / amended |
+|---|---|---|---|---|---|---|---|
+| 0.3, 1 | 0.1132 (0.0007) | pass (0.0151) | 0.332, 0.0119 | 0.334, 0.0111 | yes | 0.1061, -0.0061 | no / no |
+| 0.3, 2 | 0.1296 (0.0009) | pass (0.0195) | 0.443, 0.0145 | 0.329, 0.0146 | yes | 0.0938, +0.0062 | yes / **yes** |
+| 0.3, 3 | 0.1324 (0.0010) | pass (0.0221) | 0.399, 0.0153 | 0.388, 0.0160 | yes | 0.0907, +0.0093 | yes / **yes** |
+| 0.3, 4 | 0.1318 (0.0011) | pass (0.0238) | 0.400, 0.0170 | 0.388, 0.0166 | yes | 0.0902, +0.0098 | yes / **yes** |
+| 0.3, 6 | 0.1282 (0.0012) | pass (0.0250) | 0.380, 0.0196 | 0.339, 0.0168 | yes | 0.0891, +0.0109 | yes / **yes** |
+| 0.3, 8 | 0.1239 (0.0012) | pass (0.0249) | 0.419, 0.0212 | 0.382, 0.0165 | yes | 0.1063, -0.0063 | no / no |
+| 0.3, 16 | 0.1088 (0.0014) | pass (0.0209) | 0.377, 0.0149 | 0.388, 0.0158 | yes | 0.1390, -0.0390 | no / no |
+| 0.4, 1 | 0.1481 (0.0010) | pass (0.0288) | 0.316, 0.0233 | 0.356, 0.0233 | yes | 0.1045, -0.0045 | no / no |
+| 0.4, 2 | 0.1567 (0.0012) | pass (0.0337) | 0.433, 0.0264 | 0.383, 0.0273 | yes | 0.0936, +0.0064 | yes / **yes** |
+| 0.4, 3 | 0.1540 (0.0013) | pass (0.0353) | 0.429, 0.0257 | 0.385, 0.0278 | yes | 0.0894, +0.0106 | yes / **yes** |
+| 0.4, 4 | 0.1498 (0.0013) | pass (0.0364) | 0.404, 0.0289 | 0.376, 0.0275 | yes | 0.0884, +0.0116 | yes / **yes** |
+| 0.4, 6 | 0.1417 (0.0014) | pass (0.0363) | 0.423, 0.0313 | 0.444, 0.0271 | yes | 0.0978, +0.0022 | yes / **yes** |
+| 0.4, 8 | 0.1350 (0.0014) | pass (0.0349) | 0.435, 0.0326 | 0.398, 0.0264 | yes | 0.1093, -0.0093 | no / no |
+| 0.4, 16 | 0.1161 (0.0015) | pass (0.0270) | 0.410, 0.0257 | 0.410, 0.0255 | yes | 0.1081, -0.0081 | no / no |
+| 0.45, 1 | 0.1602 (0.0012) | pass (0.0372) | 0.355, 0.0309 | 0.380, 0.0311 | yes | 0.1050, -0.0050 | no / no |
+| 0.45, 2 | 0.1651 (0.0013) | pass (0.0414) | 0.429, 0.0329 | 0.408, 0.0347 | yes | 0.0916, +0.0084 | yes / **yes** |
+| 0.45, 3 | 0.1604 (0.0014) | pass (0.0420) | 0.440, 0.0311 | 0.421, 0.0342 | yes | 0.0885, +0.0115 | yes / **yes** |
+| 0.45, 4 | 0.1550 (0.0015) | pass (0.0426) | 0.454, 0.0360 | 0.444, 0.0337 | yes | 0.0872, +0.0128 | yes / **yes** |
+| 0.45, 6 | 0.1456 (0.0015) | pass (0.0417) | 0.460, 0.0381 | 0.428, 0.0329 | yes | 0.0942, +0.0058 | yes / **yes** |
+| 0.45, 8 | 0.1381 (0.0015) | pass (0.0395) | 0.491, 0.0391 | 0.432, 0.0315 | yes | 0.0889, +0.0111 | yes / **yes** |
+| 0.45, 16 | 0.1182 (0.0015) | pass (0.0331) | 0.403, 0.0320 | 0.444, 0.0312 | yes | 0.0883, +0.0117 | yes / **yes** |
+| 0.5, 1 | 0.1692 (0.0013) | pass (0.0462) | 0.398, 0.0391 | 0.393, 0.0399 | yes | 0.1047, -0.0047 | no / no |
+| 0.5, 2 | 0.1712 (0.0014) | pass (0.0491) | 0.415, 0.0396 | 0.471, 0.0424 | yes | 0.0891, +0.0109 | yes / **yes** |
+| 0.5, 3 | 0.1650 (0.0015) | pass (0.0484) | 0.431, 0.0380 | 0.454, 0.0414 | yes | 0.0874, +0.0126 | yes / **yes** |
+| 0.5, 4 | 0.1586 (0.0016) | pass (0.0486) | 0.458, 0.0439 | 0.455, 0.0407 | yes | 0.0858, +0.0142 | yes / **yes** |
+| 0.5, 6 | 0.1482 (0.0016) | pass (0.0468) | 0.468, 0.0455 | 0.434, 0.0384 | yes | 0.0827, +0.0173 | yes / **yes** |
+| 0.5, 8 | 0.1403 (0.0015) | pass (0.0439) | 0.464, 0.0461 | 0.439, 0.0394 | yes | 0.0797, +0.0203 | yes / **yes** |
+| 0.5, 16 | 0.1198 (0.0016) | pass (0.0405) | 0.430, 0.0389 | 0.462, 0.0381 | yes | 0.0696, +0.0304 | yes / **yes** |
+| 0.6, 1 | 0.1803 (0.0016) | fail (0.0684) | 0.441, 0.0570 FAIL | 0.438, 0.0600 FAIL | yes | 0.1025, -0.0025 | no / no |
+| 0.6, 2 | 0.1783 (0.0017) | fail (0.0641) | 0.471, 0.0567 FAIL | 0.510, 0.0600 FAIL | yes | 0.0874, +0.0126 | no / no |
+| 0.6, 3 | 0.1702 (0.0017) | fail (0.0606) | 0.476, 0.0550 FAIL | 0.511, 0.0574 FAIL | yes | 0.0847, +0.0153 | no / no |
+| 0.6, 4 | 0.1628 (0.0017) | fail (0.0595) | 0.466, 0.0621 FAIL | 0.492, 0.0544 FAIL | yes | 0.0823, +0.0177 | no / no |
+| 0.6, 6 | 0.1513 (0.0017) | fail (0.0560) | 0.496, 0.0624 FAIL | 0.462, 0.0544 FAIL | yes | 0.0781, +0.0219 | no / no |
+| 0.6, 8 | 0.1428 (0.0017) | fail (0.0519) | 0.494, 0.0617 FAIL | 0.481, 0.0540 FAIL | yes | 0.0741, +0.0259 | no / no |
+| 0.6, 16 | 0.1219 (0.0016) | fail (0.0599) | 0.442, 0.0542 FAIL | 0.489, 0.0533 FAIL | yes | 0.0707, +0.0293 | no / no |
+
+**Consumers of the choice** (consumer `ffccb39`): the T0 pre-check (`phase12aq_build.py precheck`, default
+`$Q/cv/choice_v2.json`) and the recheck (`phase12aq_cv.py recheck`) refuse any other choice file; every table build
+and the pre-check use the 4,096-draw check; the summary embeds `choice_v2.json` with `choice_v1.json` beside it;
+`q_scans/RUNBOOK_T0.md` now passes `choice_v2.json` and stops if the run head lacks `ffccb39`. Tests: 19
+cross-validation tests and 40 others pass on the frozen sources (2 slow tests skipped).
+
+**No table has been used.** No Q table exists (the rehearsal's builds failed before writing one), and no GW
+likelihood with any Q table has run. This amendment, the choice and its sha256 are committed before any table is
+built.
+
+**Still open:**
+- The sealed rehearsal must be rerun with the amended code (consumer `ffccb39` or later, 4,096-draw check) before T0:
+  its launcher `q_scans/scratch_launcher/rehearsal_tables.sh` is pinned to `0d45dcb`, which builds with the 256-draw
+  check.
+- These are pre-T0 numbers. The pre-check on the final lss head decides, with the replacement rule unchanged. With
+  radial.py unchanged on the final head the pre-check should reproduce the seed-3304 values; a changed solver or
+  stream could move the runner-up, whose worst row sits about one error from the tolerance.
+- The mock's per-seed choice (`phase12aq_mock.py`, running) still applies the first eligibility (the subset's
+  256-draw check and the certificate); the mock does not choose the real setting.
