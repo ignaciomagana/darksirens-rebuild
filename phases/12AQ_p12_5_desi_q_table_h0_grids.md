@@ -18,7 +18,9 @@ return.
 **Amendment, the hyperparameter choice (2026-10-22, about 22:00 UTC, before any table is built):** primary sigma 0.5,
 ell_grid 2; runner-up sigma 0.5, ell_grid 4; 20 of 35 settings eligible. **The early checks before T0 pass:** core
 main against the stored grids within 1.1e-12, the gathered form equal to the grid form bit for bit, core's field
-analysis equal to the stock target within 9.1e-13. Both are under "Amendments" at the end.
+analysis equal to the stock target within 9.1e-13. **The sealed rehearsal stopped at its table builds:** the primary
+setting fails the builder's Laplace check on its full covered-sky build (largest relative excess 0.0514 against
+0.05). All three are under "Amendments" at the end.
 
 **Blinding: location-free.** No H0 location appears here, in commit messages or in the logs agents read: no median,
 interval, MAP or shift in km/s/Mpc. The H0 values in this record are fixed a priori: the grid ([20, 140] step 0.5;
@@ -409,3 +411,59 @@ provenance is in `provenance.json` beside each run (`q_scans/runs/early_core_tie
 `dea180b540d24a6f5f9daf2c36812639c07b4ad8`, taken 2026-10-22T18:57:09Z. `same_process.json` records the same module
 file and `frozen_sources.darksirens: true`. `darksirens_lss` resolves to the installed copy in these two runs. It
 is not used by any of these arms.
+
+### Amendment: the sealed rehearsal stopped at its table builds (2026-10-22, 21:46 to 21:50 UTC; location-free)
+
+**What ran.** Two HENON builds at the declared primary setting (sigma 0.5, ell_grid 2), built at H0 70 with the
+declared member seed 3304:
+- job 1391874, `q_main_map` (no members, 16 CPUs);
+- job 1391875, `q_main_m4` (4 members, for the member-wiring rehearsal).
+
+They ran from consumer `0d45dcb` (detached worktree, clean) with the old env's python, the frozen core main 1022429
+and the frozen lss integration head 881fce6. The launcher is outside the repo:
+`q_scans/scratch_launcher/rehearsal_tables.sh` (sha256 `bb64670860421f8365283bf485fbd0cd58e19dc678caa85264163b161dfcc5b6`), job ids in `q_scans/logs/rehearsal_table_jobs.txt`.
+
+**What failed: the builder's Laplace check, in both builds.**
+- Both builds converged on all 119,457 fitted rows: Newton took at most 7 iterations, the whitened gradient is below
+  1e-8, and the missing-host budget at the clip is 0.0076.
+- Both stopped at the Laplace check, which section 5.1 requires of every table but the rougher-field one. On 64 rows x
+  256 draws, k-hat is 0.679 (limit 0.7) and the largest relative excess 0.0514 (tolerance 0.05).
+- The records: `q_scans/rehearsal/tables/FAILED_q_main_map.json` (sha256 `712a7193ff571b2f39392a15dc805f55f38f8b52967085410a0ac0bea428101b`) and `FAILED_q_main_m4.json`
+  (sha256 `6e00763ebffdadd1dfdca4d589a7780b05b093886b8fb0dcee665906174f7638`).
+- The certificate was not reached.
+
+**What followed:**
+- No rehearsal table exists, so there are no sha256s to commit.
+- Slurm cancelled the derived-table job (1391876) and the member check (1391878): their dependency could not be met.
+- The table check (1391877) found no table and exited 4 (check 8 not evaluated).
+- The holder rehearsal chain was not started.
+- The rehearsal stopped here. Nothing in the design, the code or the tables was changed.
+
+**Why the cross-validation did not catch it.** The declared eligibility is the builder's stamps on the 10,000-row
+subset plus the certificate of the full covered-sky build. That build also ran the Laplace check (64 rows x 256
+draws, seed 3301; `certify.json`, and `full_sky_build_ok` in `choice.json`), but its result is not part of the
+declared rule. It failed for 5 of the 20 eligible settings, the runner-up among them:
+
+| setting (sigma, ell_grid) | 10,000-row subset: k-hat, largest relative excess | full covered sky, seed 3301: k-hat, largest relative excess | full-sky check |
+|---|---|---|---|
+| 0.5, 2 (primary) | 0.467, 0.0491 | 0.528, 0.0499 | pass |
+| 0.5, 4 (runner-up) | 0.480, 0.0486 | 0.552, 0.0514 | fail (excess) |
+| 0.5, 3 | 0.478, 0.0484 | 0.489, 0.0505 | fail (excess) |
+| 0.5, 6 | 0.529, 0.0468 | 0.707, 0.0499 | fail (k-hat) |
+| 0.45, 6 | 0.537, 0.0417 | 0.754, 0.0438 | fail (k-hat) |
+| 0.4, 6 | 0.560, 0.0363 | 0.760, 0.0375 | fail (k-hat) |
+| the primary's production build, seed 3304 (this rehearsal) | — | 0.679, 0.0514 | fail (excess) |
+
+- **At sigma 0.5, the Laplace table's largest relative excess sits on the 0.05 tolerance:** 0.0484 to 0.0514 across
+  builds and seeds. In most full-sky builds of the cross-validation it comes from the same pixel row. Whether a build
+  passes depends on the check's random rows and draws. The primary passed by 1e-4 at seed 3301 and fails by 1.4e-3
+  at seed 3304. Every eligible setting with sigma 0.45 or below and ell_grid 2 to 4 passes the full-sky check, with
+  excess 0.0194 to 0.0445.
+- **After T0, under the declared rules (nothing changed here),** the pre-check builds the primary and the runner-up
+  on the final head with the same seed, 3304.
+  - If the final head leaves the solver and the check unchanged, the primary fails its Laplace check again.
+  - The replacement rule (at most once) then makes the runner-up the primary if it passes at seed 3304. It failed at
+    seed 3301.
+  - If both fail, and not on the certificate alone, the pre-check writes HOLD=1 and every Q arm is held for the owner.
+- **Open for the owner or the main session; no choice is made here.** The eligibility rule never asked the full-sky
+  build for the Laplace check that every production table must pass.
