@@ -68,6 +68,26 @@ map table bit for bit. The member-wiring tolerance stays at the declared 1e-10: 
 The sha256s are under "Amendments". The rita member job (wiring, member count, posterior mean, marginalised) is
 submitted after this commit.
 
+**Amendment 3, the results (2026-10-23, about 07:10 UTC; location-free):**
+- **Runs.** Every arm is complete on the 641 points, with no penalised point. The holder chain ran stages
+  "plumbing", "q" and "replicates" (01:02-03:31 UTC). rita job **1392033** ran the member arms (01:34-01:49 UTC).
+- **Checks.** Every check on the final head passes or is "equal": core's extension path 1.8e-15, member wiring
+  2.3e-13, replicate identity bit for bit, the core-version tie 1.1e-12.
+- **Posteriors and Bayes factors.**
+  - The LSS-conditioned completion leaves the DESI H0 posterior where Q = 1 puts it. The primary moves the median by
+    -0.024 of the Q = 1 sd and widens it by 0.7%. The marginalised 16-member estimand moves it by -0.026 sd.
+  - Q = 1 is mildly preferred over every table: ln B on [20, 140] is -0.067 for the primary (paired-replicate
+    accuracy 0.034) and -0.065 for the estimand, down to -0.163 for the rougher-field table (known Laplace bias). The
+    values on [50, 100] are the same to 3e-4.
+  - The real placement is not preferred over four stratified shuffles: ln B of the primary against them averages
+    -0.023, with a spread of 0.054.
+- **Size.** The Q effect is 12-15% of the catalog's own ln L structure, as declared. The selection part is the larger
+  in the primary. No event moves by 0.1 nat over the window.
+- **Mock.** Part 1 (100 seeds): radial Q gains +0.026 nat at the truth over Q = 1 (seed sd 0.135), against the
+  oracle's +0.049. Part 2 (all 30 seeds, DESI-like): the gain ratio is 0.030 in log score and 0.23 in width, an upper
+  bound for DESI. The mock ran the first-declared per-seed Laplace rule; the real tables use the amended one.
+- Details under "Amendments".
+
 **Blinding: location-free.** No H0 location appears here, in commit messages or in the logs agents read: no median,
 interval, MAP or shift in km/s/Mpc. The H0 values in this record are fixed a priori: the grid ([20, 140] step 0.5;
 [50, 100] step 0.1), the tie points (20, 32.5, 45, 60, 70, 80, 92.5, 110, 125, 140), the member-count points (20, 45,
@@ -1066,3 +1086,253 @@ wiring,sizing,posterior_mean,marginalize --member-batch-size 4 --out-root q_scan
   M = 32);
 - `q-mean` on the 641 points;
 - `q-marg` on the 641 points.
+
+### Amendment 3: the results (grids 2026-10-23 01:02 to 03:31 UTC; member arms on rita 01:34 to 01:49 UTC; summaries 06:37 to 06:50 UTC; recorded about 07:10 UTC; location-free)
+
+**Location-free.** Posteriors are compared as shifts of the median in the reference's sd, sd and width ratios,
+Hellinger distances and the weight of H0 20-45; likelihoods as ln L differences (peak-to-peak and rms after the
+mean is removed) and Bayes factors. No H0 median, interval or shift in km/s/Mpc appears here. The absolute
+posteriors are in the owner-only files `q_scans/summary/summary_absolute.json`, `absolute.npz`, `plots/` and
+`owner_page_numbers_absolute.json`, and on the owner page. Mock numbers are mock results.
+
+**What ran.**
+- **Holder chain** (miko job 1388940 through `srun --overlap`, one reniced step at a time; run worktree `ffccb39`;
+  env `consumer_1022429_lss57afebe_cuda12`: core `1022429`, lss `57afebe`; every step exit 0, peak host RSS at most
+  13 GB):
+  - stage "plumbing", 01:02-01:14 UTC: `stock`, `spectral` (with the stored spectral path rerun beside it), `core-field`;
+  - stage "q", 01:33-02:21 UTC: `unit-lss`; the same-process step (checks 3 to 7(c) and 11); `q-map`, `q-runnerup`,
+    `q-rough`, `q-shuffled-1..4`; the per-event host-weight shares;
+  - stage "replicates", 02:21-03:31 UTC: check 12, then the paired replicates b01-b08 through `q-map`, `unit-lss` and
+    `spectral` on the 641 points.
+- **rita job 1392033** (one A100-80; account phy220048p, partition RITA-GPU, QOS rita, 128 CPUs, 120G; from the same
+  worktree and env; 2026-10-23 01:33:56 to 01:49:00 UTC, COMPLETED): member wiring (check 9), the member count, then
+  `q-mean` and `q-marg` on the 641 points.
+- **Mock** (HENON, `JAX_PLATFORMS=cpu`, core's default redshift grid). Parts 1 and 2 ran from `0d45dcb` with the old
+  env's python and the frozen sources (core `1022429`, lss `881fce6`, examples `dea180b`):
+  - Part 1 array 1391931, 100 seeds. Seed 7 was rerun as 1392036 at 64G after an out-of-memory failure at 39G; seed 100
+    was rerun as 1392110 after a node prolog failure.
+  - the complete-catalog tie, array 1391932, seeds 1-5;
+  - Part 2 array 1391933, 30 seeds. Seed 30 was rerun as 1392126 after a node failure. **All 30 seeds are in Part 2.**
+  - The mock tie (seeds 1-10, arms unit and radial) ran as 1392014 (seed 10 rerun as 1392029), from `ffccb39` in the
+    final env.
+- **Summaries** (CPU at `nice -n 19`; the 12AQ summary peaked at 0.12 GB RSS and took 39 s). The mock Part 1 summary (06:37 UTC) and Part 2 summary (06:49 UTC)
+  ran from `0d45dcb` with the frozen sources. The mock tie comparison (06:39 UTC) and `phase12aq_summary.py` ran from
+  `ffccb39` in the final env. The summary's gate read "mock Part 1 recorded", before the time box (T0 + 8 h =
+  08:50:58 UTC). It ran first at 06:41 UTC, before Part 2's summary existed, and again at 06:49 UTC with it; between
+  the two runs the arms, the pairs, the accuracy, the per-event and the table blocks are identical, and only the mock
+  block gained Part 2.
+
+**Every arm is complete:** 641 points; no penalised point and every point accepted, in every arm; the value check
+passes in every lss arm (for `q-marg`, the log-mean-exp of the member records equals the target's value to 1e-12);
+each table's consumption is as declared. The event part and the selection part sum to the ln L difference within
+1.4e-12 in every comparison (tolerance 1e-10).
+
+**The checks on the final head (no miss; every Q arm is certified):**
+
+| check | result |
+|---|---|
+| 2, core-version tie | `stock` against the stored 12AL, 12AM and 12AN grids: ln L and the selection log correction within 1.1e-12, per-event ln Z 3.6e-15, ln mu 3.6e-15 (tolerance 1e-6). The stored spectral path, rerun, ties the stored 641-point spectral grid within 9.1e-13, and the `spectral` arm ties the rerun within 9.1e-13 ("equal"), population identical |
+| 3, gathered equals grid | bit for bit |
+| 4, core's field analysis equals the stock target | 9.1e-13 in both forms ("equal") |
+| 5, lss Q = 1 equals core | 1.8e-15 ("equal"); ln L bit for bit; consumption `unit` |
+| 6, gauge at consumption | the constant-per-redshift table cannot be certified; check 8 stands in (amendment 1) |
+| 7(c), the GW ln L is H0-free in the table | the H0 60 and 80 tables against the H0 70 table at the tie points: ln L bit for bit, per-event ln Z 1.8e-15 |
+| 8, budget identity | 4.9e-14 (amendment 1) |
+| 9, member wiring | 2.3e-13 (tolerance 1e-10): pass |
+| 10, certificates | every table passes (amendments 1 and 2) |
+| 11, core's extension path | `q-map` 1.8e-15 ("equal"; ln L bit for bit); Q = 1 1.8e-15. On the pre-T0 pin the rehearsal read 2.1e-3 ("fallback"); on the final head the two paths agree |
+| 12, replicate path identity | bit for bit for `q-map`, `unit-lss` and `spectral` |
+| member count (section 5.5) | M = 16 kept: sqrt(V_mem)/S is at most 0.032 at the five a-priori points (rule: double M above 0.1) |
+| mock tie | unit and radial, seeds 1-10, final head against the pre-T0 pin: largest \|delta ln L\| 0.0, finite patterns equal; Part 1's lss arms need no rerun |
+| complete-catalog tie | seeds 1-5 against the stored coverage results: 0.0 |
+
+`stock`, `core-field` and `unit-lss` give the same posterior (shift 0.0000 sd, sd ratio 1.0000, ln B 0.0000).
+
+**1. The posteriors and the Bayes factors against Q = 1** (`unit-lss`; flat prior; coarse grid [20, 140]; every
+range uses all its points, because no arm has a wall; `window_holds` is true for every pair). The accuracy is the sd
+over the 8 paired replicates, measured for `q-map` only (below).
+
+| arm | ln B on [20, 140] | ln B on [50, 100] | median shift (Q = 1 sd) | sd ratio | 68% width ratio | Hellinger | weight of H0 20-45 (arm; Q = 1 1.1e-6) |
+|---|---|---|---|---|---|---|---|
+| `q-map` (primary) | -0.067 | -0.067 | -0.024 | 1.007 | 1.011 | 0.018 | 1.3e-6 |
+| `q-marg` (16 members marginalised; the estimand) | -0.065 | -0.065 | -0.026 | 1.007 | 1.012 | 0.019 | 1.3e-6 |
+| `q-mean` (member posterior mean) | -0.066 | -0.066 | -0.026 | 1.007 | 1.012 | 0.019 | 1.3e-6 |
+| `q-runnerup` (ell_grid 4) | -0.147 | -0.147 | -0.025 | 1.019 | 1.020 | 0.015 | 1.4e-6 |
+| `q-rough` (rougher field, Laplace table biased high 8-14%) | -0.163 | -0.163 | +0.022 | 1.037 | 1.033 | 0.035 | 1.6e-6 |
+| `q-shuffled-1` (seed 3305) | -0.117 | -0.117 | -0.026 | 0.993 | 0.991 | 0.020 | 1.3e-6 |
+| `q-shuffled-2` (seed 3306) | +0.012 | +0.012 | +0.012 | 0.994 | 0.988 | 0.010 | 1.0e-6 |
+| `q-shuffled-3` (seed 3307) | -0.038 | -0.038 | +0.027 | 0.996 | 0.992 | 0.011 | 1.2e-6 |
+| `q-shuffled-4` (seed 3308) | -0.031 | -0.031 | +0.003 | 1.002 | 0.999 | 0.004 | 1.0e-6 |
+
+The catalog itself against spectral only (`unit-lss` against `spectral`): ln B -0.019 on [20, 140] and -0.017 on
+[50, 100]; median shift -0.001 of spectral's sd; sd ratio 1.072; 68% width ratio 1.153; Hellinger 0.139; weight of
+H0 20-45 8.0e-7 for spectral.
+
+**2. The size and the split of ln L_Q - ln L_(Q=1)** (mean removed; peak-to-peak, with the rms in brackets).
+
+| pair | coarse total | coarse event part | coarse selection part | window total | window event part | window selection part |
+|---|---|---|---|---|---|---|
+| `q-map` - Q = 1 | 0.48 (0.065) | 0.20 (0.033) | 0.30 (0.052) | 0.27 (0.053) | 0.11 (0.027) | 0.19 (0.045) |
+| `q-mean` - Q = 1 | 0.50 | 0.21 | 0.31 | 0.27 | 0.10 | 0.20 |
+| `q-marg` - Q = 1 | 0.50 | (members: total only) | | 0.27 | | |
+| `q-runnerup` - Q = 1 | 0.78 | 0.36 | 0.49 | 0.28 | 0.20 | 0.17 |
+| `q-rough` - Q = 1 | 1.42 | 0.90 | 0.80 | 0.57 | 0.44 | 0.28 |
+| `q-shuffled-1..4` - Q = 1 | 0.23-0.46 | 0.10-0.16 | 0.20-0.43 | 0.13-0.29 | 0.05-0.09 | 0.11-0.28 |
+| catalog - spectral (`unit-lss` - `spectral`) | 3.28 | 6.57 | 8.76 | 2.20 | 2.35 | 2.99 |
+
+- The Q effect is 15% (coarse grid) and 12% (window) of the peak-to-peak of ln L_cat - ln L_spec. Declared in
+  advance: at most about 15%.
+- In the primary, its member versions and the four shuffles, the selection part moves more than the event part.
+  In the runner-up (window) and the rougher field (both ranges) the event part is the larger.
+- Per event, no event's ln Z_Q - ln Z_(Q=1) spreads by 0.1 or more over the window (mean removed). The largest spread
+  is 0.040 (GW231226_101520). The 20 largest are 0.014-0.040. The top-ranked events are catalog-dominated at the
+  a-priori value 50: catalog share 0.38-0.92 of the host weight, fitted-row completion share 0.05-0.20.
+
+**3. The accuracy of the differences: 8 paired replicates** (check 12 passes; one common zero-wall range for every
+replicate, here the whole of both ranges; the nominal ln B on that range equals the arm's).
+
+| pair | sd of ln B on [20, 140] | sd of ln B on [50, 100] | per-point sd, coarse: median (max) | per-point sd, window: median (max) | window, mean removed: median (max) |
+|---|---|---|---|---|---|
+| `q-map` - Q = 1 | 0.034 | 0.034 | 0.053 (0.136) | 0.052 (0.118) | 0.050 (0.110) |
+| Q = 1 - spectral | 0.320 | 0.321 | 0.47 (1.60) | 0.50 (0.87) | 0.42 (0.86) |
+
+- The window rms of `q-map` - Q = 1 (0.053) is the size of its own per-point replicate sd (median 0.050 after the
+  mean is removed). The shape of the Q effect is at the level of its Monte-Carlo noise.
+- `q-marg`: the `q-map` spread combined with the member variance (V_mem at most 3.2e-4 per point, 1.0e-4 inside the
+  90% interval) gives about 0.04 for ln B. This is an approximation; the members are not replicated.
+- Replicates were run for `q-map` only. The other tables' Bayes factors have no measured accuracy of their own; the
+  `q-map` value is indicative.
+
+**4. Placement: `q-map` against the four stratified shuffles** (same statistics and f_p coupling, rows permuted
+within 20 f_p strata).
+- ln B of `q-map` against each shuffle on [20, 140]: +0.050, -0.078, -0.029, -0.036. Mean -0.023, sd over the four
+  seeds 0.054. The window values are the same to 3e-4.
+- Against Q = 1, `q-map` (-0.067) is second lowest of the five placements: the four shuffles read -0.117, +0.012,
+  -0.038 and -0.031.
+- Median shift of `q-map` against each shuffle: +0.002, -0.037, -0.052, -0.027 of the shuffle's sd.
+- The peak-to-peak of `q-map` - shuffle is 0.37-0.77 (coarse) and 0.30-0.37 (window).
+
+**5. Setting sensitivity, and plug-in against marginal** (`q-map` against each, ln B on [20, 140]).
+- Against `q-runnerup`: ln B +0.080; median shift +0.000 sd; sd ratio 0.988. Doubling ell_grid lowers the evidence by
+  0.08 nat and widens the posterior by 1.2%; the median does not move.
+- Against `q-rough`: ln B +0.096; median shift -0.044 sd; sd ratio 0.971. The rougher field lowers the evidence by
+  0.10 nat, moves the median up by 0.044 of its sd and widens the posterior by 2.9%. Its Laplace table has a known
+  bias (high by 8-14%), so the size is not a data preference.
+- Against `q-marg`: ln B -0.0016, median shift +0.002 sd. Against `q-mean`: -0.0006. The 16 members change nothing
+  that the map table does not.
+
+**6. The ln L Monte-Carlo variance of each arm.** The maximum total variance inside each arm's own 90% interval:
+Q = 1 1.385; `q-map` 1.420; `q-marg` 1.421 (member part at most 1.0e-4); `q-mean` 1.420; `q-runnerup` 1.422;
+`q-rough` 1.454; the shuffles 1.387-1.394; spectral 0.907. The PE part is 0.255 for Q = 1 and 0.260 for `q-map`. The
+selection part is 1.138 for Q = 1 and 1.169 for `q-map`. Against Q = 1 in the window, `q-map` raises the total
+variance by +0.013 to +0.072 and the selection variance by up to +0.067, as expected for structured completion. These
+bound each arm's own ln L, not the differences (item 3). The supplemental roughness of `q-map` - Q = 1 in the window
+(second-difference rms) is 5.6e-4.
+
+**7. The tables (galaxy side; H0-free).**
+
+| table | certificate margin (tolerance 0.10) | f_p-coupled share | budget ratio by f_p tercile (low, mid, high) | corr(row-mean log Q, f_p) | largest \|corr\| with the imaging-depth maps | sd of log Q at z 0.08 / 0.15 / 0.22 | Laplace evidence per galaxy |
+|---|---|---|---|---|---|---|---|
+| primary map | +0.0109 | 0.035 | 1.057, 0.940, 0.932 | -0.25 | 0.055 | 0.33 / 0.44 / 0.48 | -1.2068 |
+| runner-up | +0.0142 | 0.048 | 1.088, 0.907, 0.896 | -0.27 | 0.058 | 0.41 / 0.51 / 0.53 | -1.2107 |
+| rougher field | +0.0239 | 0.039 | 1.137, 0.853, 0.840 | -0.30 | 0.085 | 0.64 / 0.70 / 0.68 | -1.1962 |
+| shuffles 3305-3308 | +0.0052 to +0.0075 | 0.022-0.023 | 1.022-1.025, 0.939-0.940, 0.932 | -0.19 to -0.20 | 0.035 | 0.33 / 0.44 / 0.47 | — |
+| 16-member stack | +0.0102 | — | — | — | — | — | — |
+
+- The f_p-coupled share is the part of the budget-weighted variance of log Q that lies between 20 f_p strata. It is
+  3.5% for the primary. In the lowest f_p tercile Q adds 5.7% more missing hosts than Q = 1, and 6-7% fewer in the
+  other two. The shuffles keep most of this coupling (2.2%; 1.02 in the lowest tercile).
+- Every certificate margin is thin: 0.005-0.024 against a tolerance of 0.10.
+
+**8. The mock** (mock values; `q_scans/mock/summary/part1.json` and `part2.json`). Read over seeds, paired, as the mean
+with its seed-to-seed sd.
+
+Part 1 (100 seeds; full sky, nside 16, field sigma_g 0.55). In brackets: without the 9 seeds with recorded gate
+failures (91 seeds).
+
+| arm | log score at the truth minus unit's | median over seeds | posterior-mean shift against unit (unit sd) | sd ratio to unit | 68% / 90% coverage |
+|---|---|---|---|---|---|
+| radial (cross-validated per seed) | +0.026 (sd 0.135) [+0.027] | +0.020 | +0.020 (0.143) | 0.976 | 0.66 / 0.89 |
+| oracle (true field, gauged) | +0.049 (0.220) [+0.046] | +0.013 | +0.003 (0.208) | 0.957 | 0.69 / 0.88 |
+| antipodal (wrong placement) | +0.0015 (0.126) [-0.006] | +0.003 | -0.036 (0.146) | 0.990 | 0.66 / 0.91 |
+| radial-marg (seeds 1-10) | +0.064 (0.102); radial on the same seeds +0.065 (0.111); marg - radial -0.001 (0.016) | | -0.055 | 0.955 | 0.60 / 0.80 |
+| complete (stored) | -0.007 (0.188) | | -0.065 | 0.979 | 0.67 / 0.89 |
+| spectral | -0.477 (0.691) | | +0.108 | 1.577 | 0.60 / 0.91 |
+| unit (reference) | — | | — | — | 0.66 / 0.89 |
+
+- Gain ratio of Part 1, radial over oracle, each against unit, as a ratio of seed-means: 0.53 in log score and 0.55
+  in width.
+- The narrow-photo-z pair: narrow-radial minus narrow-unit has median +0.008 over the 100 seeds; radial minus unit
+  has median +0.020. The seed-means of the narrow arms (-20.6 for narrow-radial minus narrow-unit) are carried by a
+  few seeds whose truth lies where the narrow posterior is zero (log density at the floor of the code, -690.8).
+  Narrow-unit sits above unit (median +0.60). The narrow arms are walled at low H0 in 57 of the 100 seeds.
+- The chosen setting is sigma 0.3, ell_grid 16 in 96 of 100 seeds; sigma 0.45, ell_grid 16 in 2; sigma 0.3,
+  ell_grid 8 in 2.
+- Against the expectations stated in advance:
+  - radial lies between unit and oracle: yes.
+  - antipodal is not above unit: it sits at unit (+0.0015, seed sd 0.126).
+  - radial-marg is close to radial: -0.001.
+  - narrow-radial's gain is at least radial's: not in the medians (+0.008 against +0.020); the means cannot say.
+  - complete is read beside, not as a target.
+
+Part 2 (30 seeds; DESI-like). The depth is z 0.104, where the median detected event's below-depth share is 0.040.
+A contiguous cap with f_p = 0 covers 36% of the sky, and 8 of the 64 children are removed in every covered pixel
+(f_p = 0.875). Every Part 2 table passed its certificate.
+
+| arm | log score at the truth minus unit's | posterior-mean shift against unit (unit sd) | sd ratio to unit | 68% / 90% coverage |
+|---|---|---|---|---|
+| radial' | +0.002 (sd 0.040) [27 seeds: +0.003] | +0.004 (0.027) | 0.994 | 0.53 / 0.73 |
+| oracle' | +0.065 (0.194) [+0.066] | +0.040 (0.145) | 0.973 | 0.60 / 0.73 |
+| complete' | -0.020 (0.244) | +0.010 (0.132) | 0.980 | 0.50 / 0.73 |
+| unit' (reference) | — | — | — | 0.53 / 0.73 |
+
+- **Gain ratio of Part 2 (ratio of seed-means): 0.030 in log score and 0.23 in width** (27 seeds: 0.050 and 0.22).
+  Part 1's is 0.53 and 0.55. Declared in advance: a small fraction of Part 1's gain, and **an upper bound for
+  DESI**, because the mock has no sub-pixel structure and an exact f_p.
+- The coverage of Part 2 is low for every arm, Q = 1 included. That is a property of the shallow mock catalog, and Q
+  does not change it.
+- The chosen setting is sigma 0.3 with ell_grid 4 in 20 of 30 seeds; sigma 0.3, ell_grid 8 in 9; sigma 0.45,
+  ell_grid 4 in 1.
+
+**The per-seed rule of the mock differs from the real tables.** Parts 1 and 2 ran their per-seed eligibility with
+the builder's Laplace check as first declared (64 rows x 256 draws). The real tables use the amended rule
+(amendment 54de6f8: the full covered-sky build checked at 4,096 draws). The mock was not rerun with the amended rule.
+The mock tie shows that the final lss head reproduces the pre-T0 values of unit and radial on seeds 1-10 bit for bit.
+
+**Reading (Bayesian; no thresholds).**
+- **The LSS-conditioned completion leaves the DESI H0 posterior where Q = 1 puts it.** The primary table moves the
+  median by -0.024 of the Q = 1 sd and widens the posterior by 0.7%. The marginalised estimand moves it by -0.026 sd,
+  also +0.7%. The posterior moves by a small fraction of its sd, as declared.
+- **Q = 1 is mildly preferred over every Q table.** The Bayes factors range from 0.94 (`q-marg`, ln B -0.065) to
+  0.85 (`q-rough`, -0.16). For the primary, ln B is -0.067 with a paired-replicate accuracy of 0.034. The low-H0
+  weight is about 1e-6 in every arm, so no Bayes factor is carried by the low-H0 tail.
+- **The real placement is not preferred over scrambled placements.** ln B of `q-map` against the shuffles averages
+  -0.023 with a spread of 0.054 over four seeds.
+- **The size is as declared:** 12-15% of the catalog's own ln L structure. The selection part carries more than the
+  event part in the primary. No event moves by 0.1 nat or more over the window. The shape of the Q effect is at the level of its
+  Monte-Carlo noise.
+- **The catalog itself still carries no H0 information at this cell:** ln B against spectral only is -0.019, with
+  accuracy 0.32. The catalog widens the posterior by 7%.
+- **The mock agrees.** Without sub-pixel structure (Part 1), the cross-validated radial table recovers about half of
+  the oracle's gain, which is itself small (+0.05 nat at the truth). In the DESI-like geometry (Part 2) it recovers
+  3% of a +0.065-nat oracle gain. That fraction is an upper bound for DESI.
+
+**Caveats.**
+- Part of Q is the pixel's coupling to f_p. The f_p-coupled share is 3.5%, and Q adds 5.7% more missing hosts in the
+  lowest f_p tercile.
+- Every certificate margin is thin (0.005-0.024 against 0.10).
+- The mock has no sub-pixel structure and an exact f_p, so Part 2's gain ratio is an upper bound for DESI.
+- The per-seed rule of the mock differs from the amended rule of the real tables (above).
+- The rougher-field table has a known Laplace bias (high by 8-14% of a row's missing hosts).
+- Paired replicates exist for `q-map` only.
+- One cell, one fixed calibration, one PE build, one variance limit, 16 members.
+
+**Files (sha256).**
+- `q_scans/summary/summary.json` (location-free, through the location guard):
+  `0fc6528af4f8ef95f6864b4cc8d6ede436a2a71e0f635ec9f0893d2999598f95`.
+- `q_scans/mock/summary/part1.json`: `9c41064ec10d7578abe568aa6fac1b545076fcc07004be304c6253973ae3de0d`.
+- `q_scans/mock/summary/part2.json`: `397c4513f3083d8b920ac4b69f8bdc819198a4f8f50a8fdb3d6c0a6279f6e690`.
+- `q_scans/gates/mock_tie/mock_tie.json`: `df547b118278d2cf6d0809327ecdae464bb2c80533f38373bdda17e4c045a2e5`.
+- Owner only (not read by agents; absolute): `q_scans/summary/summary_absolute.json`, `absolute.npz`,
+  `owner_page_numbers_absolute.json` and `plots/` (figures made with the gwcat env's python, which has matplotlib).
+- Logs: `q_scans/logs/summary_run1.out`, `summary_run2.out` and `mock_summary.log`.
