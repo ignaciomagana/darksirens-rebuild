@@ -43,6 +43,13 @@ recorded only, as declared; with Q = 1 the two paths agree (ln L bit for bit). T
 1.1e-13, so the wrapper tie is reached. The member-wiring check passes (worst 1.1e-13), so its tolerance stays at the
 declared 1e-10. The replicate path is bit for bit. Details under "Amendments".
 
+**Amendment, T0 (2026-10-23, about 01:10 UTC; location-free):** the final lss head is
+`57afebe31191d565d30b0f068a7d5db3c3373abe` (pushed 2026-10-23T00:50:58Z). The pre-check on it passes the primary
+(sigma 0.5, ell_grid 2) and the runner-up (sigma 0.5, ell_grid 4) with the same stamps as on the pre-T0 pin; no
+fallback, no hold, no replacement; the recheck of the cross-validation reads the same score to the bit ("keep").
+The env on the final head passes its gate on CPU and GPU. The table builds, the mock tie and the holder chain are
+submitted. Details under "Amendments".
+
 **Blinding: location-free.** No H0 location appears here, in commit messages or in the logs agents read: no median,
 interval, MAP or shift in km/s/Mpc. The H0 values in this record are fixed a priori: the grid ([20, 140] step 0.5;
 [50, 100] step 0.1), the tie points (20, 32.5, 45, 60, 70, 80, 92.5, 110, 125, 140), the member-count points (20, 45,
@@ -804,3 +811,60 @@ primary table, Q = 1 through lss and spectral, by operand swap: **pass, bit for 
 **Next:** the T0 inputs (lss final head `57afebe31191d565d30b0f068a7d5db3c3373abe`, pushed 2026-10-23T00:50:58Z),
 the run worktree, the pre-check on the final head, the env and the table builds, by `q_scans/RUNBOOK_T0.md`. No GW
 likelihood with a Q table on the final lss head has run.
+
+### Amendment: T0, the pre-check on the final lss head, the env and the submissions (2026-10-23 00:50 to 01:10 UTC; location-free)
+
+**T0.** The final head of the lss fix PR (darksirens-lss branch `fix/review-2026-10-21`, PR #16, not merged) is
+`57afebe31191d565d30b0f068a7d5db3c3373abe`, pushed to GitHub at **2026-10-23T00:50:58Z** (`q_scans/env/LSS_SHA_TARGET`,
+`q_scans/env/T0_UTC`). The time box (T0 + 8 h) is 2026-10-23T08:50:58Z.
+- Frozen archive of the final head: `q_scans/src/lss_final/` (`git archive` of that SHA from the local lss repo,
+  taken 2026-10-23T00:54:43Z; `q_scans/src/ARCHIVES_FINAL.txt`; sha256 of the sorted per-file sha256 list
+  `bad71aaa7e5e5c70c95845d02d34c0b40433925c324dde478b7b96fd17caf3a4`).
+- Run worktree: `q_scans/wt/ffccb39`, consumer `ffccb39cc54603a632d9dc1dc6e1cd7de81b3f19` (the branch head at T0;
+  it contains the amendment of the Laplace check), clean (`q_scans/env/RUN.txt`). Every post-T0 job runs from it.
+
+**The pre-check on the final head** (HENON job 1392003, henon03, COMPLETED in 2.5 min; the old env's python with the
+frozen core main and `lss_final` first on the path, `JAX_PLATFORMS=cpu`; `q_scans/gates/precheck/`: `precheck.json`
+sha256 `b14d5c480bc987defe493a62784b8a2c9b522302b0e97101f90fa5f83c64d235`, `recheck.json`
+`8cb8c013b9d3973b48b3642793864b4ac2406044f8b11e02db968c588c2cb930`, `settings.env`
+`216c2b96dd6920d6f64e2ba10df7cad5d1e92ea2989eb966416ac21e9be454bd`):
+
+| setting | converged rows | Laplace check (4,096 draws, 64 rows, seed 3304) | certificate worst \|delta\| | margin |
+|---|---|---|---|---|
+| primary, sigma 0.5, ell_grid 2 | 119,457 of 119,457 | largest relative excess 0.0396, k-hat 0.415: pass | 0.0891 | +0.0109 |
+| runner-up, sigma 0.5, ell_grid 4 | 119,457 of 119,457 | 0.0439, k-hat 0.458: pass | 0.0858 | +0.0142 |
+
+- `settings.env`: PRIMARY "--ell-grid 2 --sigma 0.5", RUNNER "--ell-grid 4 --sigma 0.5", FALLBACK 0, HOLD 0,
+  REPLACED 0 ("the primary passes on the final head"). The values equal those of the pre-T0 pin and of the
+  rehearsal's tables.
+- The recheck of the cross-validation (the primary's spatial score on all 5 folds on the final head): the builder
+  inputs (galaxy counts, completeness, expected counts, redshift grid) equal those of the pre-T0 pin exactly, and the
+  score equals the pre-T0 score fold by fold (difference 0 against a fold sd of 0.0014 nat per held-out galaxy; the
+  runner-up likewise). Decision **keep**: the cross-validation is not rerun.
+- Bookkeeping note: `precheck.json`'s "archives" block repeats `ARCHIVES.txt` (the pre-T0 pin's archive list), while
+  the lss it imported is `lss_final` (its module file, and `recheck.json` records the lss SHA as the final head).
+
+**The env** `phase12t/envs/consumer_1022429_lss57afebe_cuda12` (built at nice 19 on the session host, 00:55 to
+00:59 UTC, from GitHub; lss from GitHub at the final SHA): the freeze equals that of `consumer_e7c3007_cuda12`
+except the core and lss lines (`FREEZE_SAME_EXCEPT_CORE_AND_LSS`, `BUILD_OK`; freeze sha256
+`e9437a0611d883f0e2405481281bbb6fe35ae93033b121d5a4798dabcc7bcecd`), core `10224291eac92b391dc2a06925dc08e49980f9e5`,
+lss `57afebe31191d565d30b0f068a7d5db3c3373abe`. **The env check (check 1) passes:** on CPU at nice 19 (pinned
+commits, lss capabilities, the missing-density form, the footprint loader bit equal to the surveys f_p, a tiny
+target on mock seed 1 with every keyword; peak RSS 3.5 GB; `q_scans/gates/env/env_cpu.json` sha256
+`fc871f7f3790787f62a466d0ae2da022a51a621138eeaf6660be1b88d25662e0`) and on the holder GPU through the wrapper (GPU
+backend in float64, the union catalog loaded with no warning; `env_gpu.json` sha256
+`d1002279fe9df77b8218cae091b57f8590a734ca6626fb43de01576b393808b8`).
+
+**Submitted (runbook sections 2 to 4 and 6), from the run worktree with the new env's python:**
+- HENON table builds and checks, 2026-10-23T01:02:13Z (`q_scans/logs/table_jobs.txt`): the primary's map table
+  1392006, the 16-member build 1392005 (henon03; submitted first so it takes the room there), the H0 60 and 80 builds
+  1392007 and 1392008, the runner-up 1392009, the rougher-field table 1392010, the derived tables 1392011 (after the
+  map build, `afterok`), the table check 1392012 (`afterany` on every build and the derived job; it excludes the member
+  tables), the member check 1392013 (`afterok` on the member build and `afterany` on the map build). The nested
+  submissions unset the holder session's Slurm variables.
+- The mock tie in the final env: HENON array 1392014 (seeds 1-10).
+- The holder chain stage "plumbing" (stock, spectral, core field, then the core-version tie), and a second chain
+  "q" then "replicates" that waits for `q_scans/gates/AMENDMENT1_COMMITTED` before any step.
+- The table builds were submitted a few minutes before this amendment (the runbook asks for it before them); they
+  are galaxy-side only. **No GW likelihood with a Q table on the final lss head has run**, and none runs before
+  amendment 1 (the table sha256s).
