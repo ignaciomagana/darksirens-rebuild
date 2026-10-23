@@ -50,6 +50,17 @@ fallback, no hold, no replacement; the recheck of the cross-validation reads the
 The env on the final head passes its gate on CPU and GPU. The table builds, the mock tie and the holder chain are
 submitted. Details under "Amendments".
 
+**Amendment 1, the tables on the final lss head (2026-10-23, about 01:35 UTC, before any GW likelihood with a Q
+table on the final head; galaxy side only):** every table build and check completed (HENON 1392006-1392012). The
+primary's map table, its builds at H0 60 and 80, the runner-up and the rougher-field table converge on all 119,457
+fitted rows. The builder's Laplace check passes everywhere except the rougher-field table, which fails it as
+declared; the primary reads 0.0396 (k-hat 0.415), as on the pre-T0 pin, and its log Q array equals the rehearsal's
+bit for bit. Every certificate passes (margins +0.0052 to +0.0239). The constant-per-redshift table fails its
+certificate, as expected, so the budget identity stands in for the gauge check. The table check has no miss: the
+inputs are H0-free to 3.0e-15 (normwise), the H0 60 and 80 tables differ from the H0 70 table by at most 7.5e-11 in
+log Q (bound 1e-8, no row above it), and the consumed budget closes to 4.9e-14 at the five a-priori points. The
+sha256s are under "Amendments"; the member tables follow in amendment 2.
+
 **Blinding: location-free.** No H0 location appears here, in commit messages or in the logs agents read: no median,
 interval, MAP or shift in km/s/Mpc. The H0 values in this record are fixed a priori: the grid ([20, 140] step 0.5;
 [50, 100] step 0.1), the tie points (20, 32.5, 45, 60, 70, 80, 92.5, 110, 125, 140), the member-count points (20, 45,
@@ -868,3 +879,124 @@ backend in float64, the union catalog loaded with no warning; `env_gpu.json` sha
 - The table builds were submitted a few minutes before this amendment (the runbook asks for it before them); they
   are galaxy-side only. **No GW likelihood with a Q table on the final lss head has run**, and none runs before
   amendment 1 (the table sha256s).
+
+### Amendment 1: the tables on the final lss head (builds and checks 2026-10-23 01:02 to 01:20 UTC; recorded about 01:35 UTC; location-free; before any GW likelihood with a Q table on the final head)
+
+**What ran.** Runbook section 2, from the run worktree `q_scans/wt/ffccb39` (consumer
+`ffccb39cc54603a632d9dc1dc6e1cd7de81b3f19`, clean) with the final env's python
+(`phase12t/envs/consumer_1022429_lss57afebe_cuda12`: core `10224291eac92b391dc2a06925dc08e49980f9e5`, lss
+`57afebe31191d565d30b0f068a7d5db3c3373abe`), `JAX_PLATFORMS=cpu`, at the settings of
+`q_scans/gates/precheck/settings.env` (primary "--ell-grid 2 --sigma 0.5", runner-up "--ell-grid 4 --sigma 0.5",
+no fallback). HENON, henon01, every job COMPLETED with exit 0 (`q_scans/logs/table_jobs.txt`):
+- 1392006, the primary's map table `q_main_map`, built at H0 70, seed 3304 (1 min 41 s; peak RSS 16.4 GB);
+- 1392007 and 1392008, the same at build H0 60 and 80 (2 min 34 s and 1 min 31 s; 16.4 GB each);
+- 1392009, the runner-up's map table `q_runnerup_map` (1 min 31 s; 16.4 GB);
+- 1392010, the rougher-field table `q_rough_map`, ell_grid 2, sigma 1.0 (1 min 35 s; 16.4 GB);
+- 1392011, the derived tables after the map build: `unit`, `constant`, the stratified shuffles at seeds 3305-3308
+  (2 min 32 s; 10.8 GB);
+- 1392012, the table check (`afterany` on every build and the derived job; the member tables excluded; 9 min 3 s;
+  26.9 GB).
+
+The 16-member build (1392005, henon03) and its member check (1392013) are in amendment 2. The galaxy-count cache
+`grid_counts.npy` has sha256 `978d5f10c32caa3b116e8b59a921f36ca8e97ec89dd44b39c02d2970af6f7247`, the same as the
+rehearsal's.
+
+**The tables** (`q_scans/tables/`; each sha256 recomputed after the jobs, and equal to the one the writer stored
+beside the file, to the build record's and to the table check's):
+
+| table | what it is | sha256 |
+|---|---|---|
+| `q_main_map.h5` | the primary's map table, built at H0 70 (`q-map`) | `4ab478024d3b49be9f4b1058b7e76b41c21f5929f1316f93651dc8369f2a7fd9` |
+| `q_main_map_h60.h5` | the same, gridded at H0 60 (gate 7) | `dc02f15950cf8715dab7974b4b17b47bd43ae43bf436e49cf74a7df192860fac` |
+| `q_main_map_h80.h5` | the same, gridded at H0 80 (gate 7) | `4a0e88c394113d368ab4e68daa4967f13e329a1d00f3646287c45b8afa67cea3` |
+| `q_runnerup_map.h5` | the runner-up, sigma 0.5, ell_grid 4 (`q-runnerup`) | `bd35cc7a85a3d6b84f0742e480ac6d15676b3c273b9e6f885b3f9e3eebf26e05` |
+| `q_rough_map.h5` | the rougher field, ell_grid 2, sigma 1.0: a sensitivity with a known Laplace bias (`q-rough`) | `051f90fc1dfed358ead96acd1d3f05f594bf0f898893346f7c7a3e3111c04307` |
+| `unit.h5` | derived from the map table: log Q = 0 everywhere (`unit-lss`, the Q = 1 reference) | `b67fdcb781833597f661233856e9d8f5948162ba3edafaa706c70189fe1e3c04` |
+| `q_shuffled_s3305.h5` | derived: fitted rows permuted within 20 f_p quantile strata, seed 3305 | `d0afb7a2c5257ec5b11bf930cbdcceab8f2431e7ef18c752a033d20a3ee297e6` |
+| `q_shuffled_s3306.h5` | the same, seed 3306 | `8a55bafca20c088925e217587fb02d1d2de003e33a9542ea3f18f8e4abb0240a` |
+| `q_shuffled_s3307.h5` | the same, seed 3307 | `d48f648eb603cd701e85d89062dae6bd59e0f8835b312d72c070a9979a9b379e` |
+| `q_shuffled_s3308.h5` | the same, seed 3308 | `86061d72f011979ca0c6b92037f78e3e216567fa175f57b315d47ee846823971` |
+
+The primary's log Q array equals the rehearsal's map table bit for bit (`logq_map_sha256`
+`e58351fa86c27c83f3e2fa19539c6f2fc5ba5378d1a65a124749187ed05425aa` in both); the file digests differ only through
+the records the final lss writes beside the array.
+
+Records beside them (sha256): `q_main_map.json` `9a0b6c9e838ec8eaf9d45756e5452eba3d0ea1f9a805ec7f51b0f58a159e55f7`,
+`q_main_map_h60.json` `8e29f30e7d864cf10106115e412de87f724e15f27a08cac1e63fc6a75f8d83c4`, `q_main_map_h80.json`
+`4f1b8cec81224a580d01ebfd28c1cd0d5e18c7b60585dbaf0c0976468ba77c6f`, `q_runnerup_map.json`
+`fcb7d1c9b451d49f2a604bc603638ed9e10f4a1864853150ae134fb589ae849b`, `q_rough_map.json`
+`31f7747ea9ac046374b49ef178e4d47df4f7609cb89c58b5af985d05ffad626c`, `unit.json`
+`6751c444fbb0298d78c81e8536a700af1535604bc97c28cabcf7dc008ded7e67`, `q_shuffled_s3305.json` to `_s3308.json`
+`0a1b1d96a54912832537e5f71880e761b827a8e9335bed003d30387305f0caa1`,
+`a4d532d267fbe5fa9dafc6b53336a98844a066fbb78db176175d24ec8ae0579c`,
+`5ad6d90e973219f8ae85c3d248c767d36f447d6a9313815f9f7daabbcb5e1234`,
+`902738615fe7475199b12262e669f131c75b1ca988ecdfabb04a4644a2ab73f9`; `shuffle_seeds.json`
+`1384efae1551eae6c292129643c6745f27de318c634fb29cab4306377b1811d0` (seeds 3305-3308 each certified at the first
+draw, no replacement); `FAILED_constant.json` `7b2eea119ab61dc15950aa9e1183ccd0e2e42979be5b1ffaf6c6b4cbf09e09f9`
+(the only failure record); the table check `q_scans/gates/tables/check.json`
+`7120984688fb103ad38312c1378045ba5519bcd77023589b6f6c52a02f2c4fb1`.
+
+**The stamps and the certificates** (build records; galaxy side, H0-free). Every build runs the builder's Laplace
+check on 64 rows with 4,096 draws at seed 3304. The certificate is lss's mask-free measurement, tolerance 0.10 on the
+worst |corr(Q, f_p) - corr(N/f_p, f_p)| over 9 redshift slices. In every table log Q is exactly 0 on the 69,870
+rows off the footprint, and after the gauge no fitted cell sits at the clip.
+
+| table | converged rows | Newton, most iterations | Laplace check: largest relative excess, k-hat | missing hosts at the clip before the gauge | consumed gauge residual | certificate worst \|delta\| | margin |
+|---|---|---|---|---|---|---|---|
+| primary map, H0 70 | 119,457 of 119,457 | 7 | 0.0396, 0.415: pass | 0.0076 | 3.6e-14 | 0.0891 | +0.0109 |
+| primary map, H0 60 | 119,457 of 119,457 | 7 | 0.0396, 0.415: pass | 0.0076 | 3.6e-14 | 0.0891 | +0.0109 |
+| primary map, H0 80 | 119,457 of 119,457 | 7 | 0.0396, 0.415: pass | 0.0076 | 3.6e-14 | 0.0891 | +0.0109 |
+| runner-up | 119,457 of 119,457 | 7 | 0.0439, 0.458: pass | 0.0074 | 3.5e-14 | 0.0858 | +0.0142 |
+| rougher field | 119,457 of 119,457 | 8 | 0.169, 0.703: **fails, as declared** (stamped `laplace_declared_fail`) | 0.050 | 3.2e-14 | 0.0761 | +0.0239 |
+| shuffle, seed 3305 | the map table's rows | — | the map table's stamps | — | — | 0.0925 | +0.0075 |
+| shuffle, seed 3306 | the map table's rows | — | the map table's stamps | — | — | 0.0948 | +0.0052 |
+| shuffle, seed 3307 | the map table's rows | — | the map table's stamps | — | — | 0.0938 | +0.0062 |
+| shuffle, seed 3308 | the map table's rows | — | the map table's stamps | — | — | 0.0925 | +0.0075 |
+| unit | — | — | — | — | — | no angular structure; passes on the off-footprint check | pass |
+| constant per redshift | — | — | — | — | — | 0.205 | **fails** (`FAILED_constant.json`), as expected |
+
+- The primary's and the runner-up's stamps equal those of the T0 pre-check on the final head.
+- **The expected failure.** The constant-per-redshift table is two-valued across the covered rows (the empty
+  covered rows stay at Q = 1), and lss refuses to stamp it as footprint-aware (0.205 against 0.10). As declared
+  (DESIGN 5.2 and 9.1), the derived job wrote `FAILED_constant.json` and went on with exit 0. `constant.h5` is not
+  written, gate 6 is not run, and **gate 8 (the budget identity) stands in for gate 6.**
+
+**The table check: no miss** (`q_scans/gates/tables/check.json`, 10 tables; the footprint loader bit equal to the
+surveys f_p, sha256 `27174bdcbef3a36b21032d589fe969ac75758cb316313ca4c939308c4882d581`):
+- **Gate 7(a), the inputs are H0-free.** `grid.C`, `grid.dN_exp` and the gauge weights (1 - C), gridded at H0 60
+  and 80 against 70: worst normwise relative difference 3.0e-15 (tolerance 1e-13). The elementwise maximum, recorded
+  beside, is 1.0e-11 in C, where C or 1 - C is tiny and the difference cancels. The galaxy counts are equal.
+- **Gate 7(b), the tables are H0-free.** Against the H0 70 table, the largest absolute difference in log Q is
+  7.5e-11 for the H0 60 table and 9.3e-15 for the H0 80 table. Every fitted row differs at rounding size, and no row
+  is above the solver's bound of 1e-8. The Newton counts (most iterations 7, total 560,973) are the same in all
+  three builds; the builds do not record per-row counts. These rounding-size differences are recorded and are not a
+  stop. Gate 7(c), the GW ln L of the 60 and 80 tables, runs in the same-process step after this amendment.
+- **Gate 8, the budget identity.** At the five a-priori points (20, 45, 67.74, 92.5, 140), on the 119,457 fitted
+  rows and 123 nodes, the consumed tables (clipped, then re-gauged by lss's moments gauge) close to a worst relative
+  residual of 3.8e-14 for the map table and 4.3e-14 to 4.9e-14 for the four shuffles (tolerance 1e-10). Before the
+  per-proposal gauge, as stored, the residuals are 0.020 (map) and 0.030 to 0.033 (shuffles).
+- **Gate 10, the certificates.** All 10 tables pass as stamped: converged; the Laplace check passes, or fails as
+  declared for the rougher field; the certificate passes with the margins above.
+
+**Systematics** (`check --systematics`, galaxy side):
+
+| table | budget-weighted sd of log Q at z 0.08 / 0.15 / 0.22 | corr. of row-mean log Q below the depth with f_p | with median m5 / mth_eff / stratum map | share of the variance between f_p strata | budget ratio per f_p tercile |
+|---|---|---|---|---|---|
+| primary map | 0.33 / 0.44 / 0.48 | -0.25 | 0.055 / 0.032 / 0.038 | 0.035 | 1.057 / 0.940 / 0.932 |
+| runner-up | 0.41 / 0.51 / 0.53 | -0.27 | 0.058 / 0.033 / 0.040 | 0.048 | 1.088 / 0.907 / 0.896 |
+| rougher field | 0.64 / 0.70 / 0.68 | -0.30 | 0.085 / 0.033 / 0.040 | 0.039 | 1.137 / 0.853 / 0.840 |
+| shuffles 3305-3308 | 0.330-0.331 / 0.437-0.438 / 0.468-0.469 | -0.19 to -0.20 | -0.035 to -0.026 / -0.003 to +0.003 / -0.003 to +0.001 | 0.022-0.023 | 1.022-1.025 / 0.939-0.940 / 0.932 |
+
+- No fitted cell is at the clip in any table. The primary's numbers equal the rehearsal's. The shuffles keep most
+  of the f_p coupling and remove the correlation with imaging depth, as designed.
+- The full covered-sky Laplace evidence of the counts, relative to the primary: runner-up -0.0039 nat per galaxy,
+  rougher field +0.0107 nat per galaxy. The rougher field's Laplace approximation is biased, as declared.
+
+**Bookkeeping.** The check's and the builds' "archives" block repeats `q_scans/src/ARCHIVES.txt`, the pre-T0 pin's
+archive list with lss `881fce6`. The lss they import is the env's, at `57afebe` (the "packages" block; no frozen
+sources on the path). This is the same note as in the T0 amendment.
+
+**Next.** After this commit, `q_scans/gates/AMENDMENT1_COMMITTED` is touched. That releases the holder chain "q",
+which has waited since 01:03 UTC. It runs `unit-lss`; then the same-process step (gates 3 to 7(c) and 11), which
+includes the first GW likelihoods with these tables; then the Q arms; then the chain "replicates". The member
+tables and the rita member job are in amendment 2.
