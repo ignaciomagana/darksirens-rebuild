@@ -61,6 +61,13 @@ inputs are H0-free to 3.0e-15 (normwise), the H0 60 and 80 tables differ from th
 log Q (bound 1e-8, no row above it), and the consumed budget closes to 4.9e-14 at the five a-priori points. The
 sha256s are under "Amendments"; the member tables follow in amendment 2.
 
+**Amendment 2, the member tables (2026-10-23, about 01:40 UTC, before any member arm runs; galaxy side only):** the
+16-member build of the primary (seed 3304) and its member 0 are written. Both pass the builder's stamps and the
+certificate: margin +0.0102 on the member mean, +0.0041 on member 0. The 16-member build's map equals the primary's
+map table bit for bit. The member-wiring tolerance stays at the declared 1e-10: the rehearsal's check read 1.1e-13.
+The sha256s are under "Amendments". The rita member job (wiring, member count, posterior mean, marginalised) is
+submitted after this commit.
+
 **Blinding: location-free.** No H0 location appears here, in commit messages or in the logs agents read: no median,
 interval, MAP or shift in km/s/Mpc. The H0 values in this record are fixed a priori: the grid ([20, 140] step 0.5;
 [50, 100] step 0.1), the tie points (20, 32.5, 45, 60, 70, 80, 92.5, 110, 125, 140), the member-count points (20, 45,
@@ -1000,3 +1007,62 @@ sources on the path). This is the same note as in the T0 amendment.
 which has waited since 01:03 UTC. It runs `unit-lss`; then the same-process step (gates 3 to 7(c) and 11), which
 includes the first GW likelihoods with these tables; then the Q arms; then the chain "replicates". The member
 tables and the rita member job are in amendment 2.
+
+### Amendment 2: the member tables (build and check 2026-10-23 01:02 to 01:18 UTC; recorded about 01:40 UTC; location-free; before any member arm runs)
+
+**What ran.** These are the member jobs of runbook section 2. They ran from the same run worktree and env as
+amendment 1, on HENON henon03, and both COMPLETED with exit 0:
+- 1392005, the 16-member build `q_main_m16` of the primary (sigma 0.5, ell_grid 2), seed 3304, built at H0 70
+  (32 CPUs; 5 min 52 s; peak RSS 67.6 GB against the 160G request);
+- 1392013, member 0 derived from it as a map table, then the member check (`afterok` on the member build and
+  `afterany` on the map build; 2 min 29 s; peak RSS 39.0 GB).
+
+**The member tables** (`q_scans/tables/`; each sha256 recomputed after the jobs, and equal to the one the writer
+stored beside the file, to the build record's and to the member check's):
+
+| table | what it is | sha256 |
+|---|---|---|
+| `q_main_m16.h5` | the primary with 16 members, seed 3304 (`q-mean`, `q-marg`) | `9e4068cff3d1474964afeeb034a06793c34d0085cc51767c6673004d8fc00989` |
+| `q_member0_map.h5` | derived from the 16-member build: member 0 as the map, no members (gate 9) | `3c739646821d121a3e7f4acff130e3c87974e51cf6288b404e6baf7d979e2e87` |
+
+The member content digest of `q_main_m16.h5` is `556dafb0d798f3cf732e37ed1e4367d019755b27db42150b6fe95e222b8100d1`.
+Records beside them (sha256): `q_main_m16.json` `6453f0f5b6eb992260eb068ff9b6e7a9ae221563ab633d08b0d11b25a6bcb38a`,
+`q_member0_map.json` `a22757041233e307839628e22b5ed0cd58030aa420a2cb359742d3e2a64dd721`; the member check
+`q_scans/gates/tables_m16/check.json` `54ee2bbc16dae1d4ccacda244e768e2f6968dc2865d5313bab4f5ed95beb9745`.
+
+**The stamps and the certificates** (galaxy side, H0-free). The certificate is the same mask-free measurement as in
+amendment 1; on the member stack lss measures the member mean (log mean_m Q_m). Off the footprint, log Q is exactly
+0 on the 69,870 rows in both tables.
+
+| table | converged rows | Newton, most iterations | Laplace check (4,096 draws, 64 rows, seed 3304) | missing hosts at the clip before the gauge | consumed gauge residual | certificate worst \|delta\| | margin |
+|---|---|---|---|---|---|---|---|
+| 16-member stack | 119,457 of 119,457 | 7 | 0.0396, k-hat 0.415: pass | 0.0076 | 3.6e-14 | 0.0898 | +0.0102 |
+| member 0 | the build's rows | — | the build's stamps | — | — | 0.0959 | +0.0041 |
+
+**The member check: no miss.**
+- The 16-member build's map equals `q_main_map.h5` bit for bit (`map_equals`: `bitwise_equal` true; both log Q
+  arrays have `logq_map_sha256` `e58351fa86c27c83f3e2fa19539c6f2fc5ba5378d1a65a124749187ed05425aa`). The deterministic
+  per-row solve is the same with and without members.
+- Both certificates pass. The only failure record in the directory is the expected `FAILED_constant.json` of
+  amendment 1.
+- For comparison, the rehearsal's 4-member build had margins +0.0097 on the stack and +0.0043 on member 0.
+
+**The member-wiring tolerance (gate 9), set before the member job is submitted.** The rehearsal's member-wiring
+check, `q_scans/rehearsal/gates/member_wiring/gate9.json` (sha256
+`2522e47a7245cc48f84c0a6ea4bf71ce791fd54be258f452cdc3f80b0e2abcbf`), compared member 0 inside the 4-member
+marginalised target with a map target of member 0 at the ten tie points. It read worst_abs 1.1e-13 (relative
+1.7e-16 in ln L), with equal finite patterns and equal consumption ("proposal" in both). This is below 1e-10, so by
+the runbook's rule (section 7) **the declared 1e-10 is kept**: `TOL_WIRING` in `scripts/phase12aq_common.py` is
+unchanged and the run worktree stays at `ffccb39`. After T0, a miss holds both member arms (`HELD_gate9`, exit 9),
+and the tolerance is not revised after a miss.
+
+**Next: the member arms on rita** (runbook section 7; submitted after this commit, job id in
+`q_scans/logs/rita_member_job.txt`). One rita A100-80 job (`slurm/phase12aq_rita.sbatch`: account phy220048p,
+partition RITA-GPU, QOS rita, 128 CPUs, 120G, 7-day limit; the holder session's Slurm variables unset). It runs
+`scripts/phase12aq_scan.py --arm lss --table q_scans/tables/q_main_m16.h5 --member-sequence
+wiring,sizing,posterior_mean,marginalize --member-batch-size 4 --out-root q_scans/runs`, in this order:
+- the member wiring (gate 9, tolerance 1e-10; `q_scans/gates/member_wiring/gate9.json`);
+- the member count (section 5.5, at the five a-priori points; `q_scans/runs/q_marg/sizing.json`; exit 10 asks for
+  M = 32);
+- `q-mean` on the 641 points;
+- `q-marg` on the 641 points.
