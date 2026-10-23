@@ -35,6 +35,14 @@ completed: the primary's map table and its 4-member build pass the builder's Lap
 0.0396, k-hat 0.415, as the full-sky record of the choice) and the certificate; the unit, shuffled and member-0
 tables are written; the table checks have no miss. The sha256s are under "Amendments".
 
+**Amendment, the sealed rehearsal's results (2026-10-23, about 01:00 UTC, after T0 and before any table on the final
+lss head is built; tiers and differences only):** the holder chain at the ten tie points on the pre-T0 sources
+finished. Every same-process check is "equal" or passes except core's extension path for the primary table against
+lss's target (check 11), which is in the "fallback" tier (worst 2.1e-3, in the selection log correction) and is
+recorded only, as declared; with Q = 1 the two paths agree (ln L bit for bit). The wrapper ties to lss within
+1.1e-13, so the wrapper tie is reached. The member-wiring check passes (worst 1.1e-13), so its tolerance stays at the
+declared 1e-10. The replicate path is bit for bit. Details under "Amendments".
+
 **Blinding: location-free.** No H0 location appears here, in commit messages or in the logs agents read: no median,
 interval, MAP or shift in km/s/Mpc. The H0 values in this record are fixed a priori: the grid ([20, 140] step 0.5;
 [50, 100] step 0.1), the tie points (20, 32.5, 45, 60, 70, 80, 92.5, 110, 125, 140), the member-count points (20, 45,
@@ -737,3 +745,62 @@ rehearsal`, from the same worktree and the frozen sources; differences only unde
 same-process step at the ten tie points with every arm and the wrapper's ties, the shuffled table at the tie points,
 the member-wiring check on the 4-member build (it sets the post-T0 member-wiring tolerance by the runbook's rule) and
 the replicate identity check.
+
+### Amendment: the sealed rehearsal's results (chain 2026-10-23 00:06 to 00:15 UTC; recorded about 01:00 UTC, after T0 and before any table on the final lss head is built; location-free: tiers and differences only)
+
+**What ran.** The holder chain stage `rehearsal` (`slurm/phase12aq_miko_chain.sh rehearsal` through the committed
+wrapper, one `srun --overlap` step at a time in the owner's miko job), from the detached worktree `q_scans/wt/ffccb39`
+(consumer `ffccb39cc54603a632d9dc1dc6e1cd7de81b3f19`, clean), with the old env's python and the frozen core main
+`10224291eac92b391dc2a06925dc08e49980f9e5` and lss integration head `881fce6c875943013c0da48327d4aff5b49b27f7` first
+on the path, on the rehearsal tables of the amendment above, at the ten a-priori tie points. Four steps, all rc 0:
+the same-process step (ten arms; 246 s; process peak RSS 16.1 GB), the shuffled table (seed 3305) at the tie points,
+the member-wiring check on the 4-member build, and the replicate identity check (replicate b01). End mark
+`q_scans/rehearsal/runs/CHAIN_DONE_rehearsal`; log `q_scans/logs/chain_rehearsal.log`. The watchdog's host RSS stayed
+at or below 20 GB (limit 48 GB). Nobody read an absolute value: the numbers below come from the gate files only.
+
+**The same-process step** (`q_scans/rehearsal/gates/same_process/tiers.json`, sha256
+`53843d7280b8797513d3df629ec4b43e1fc2dfbf6c837f71cf55fee5f197edd7`; `same_process.json`, sha256
+`f9b201ae1616e0ea3f6ab04b720ce99b7e9d1880567fb2dc27c73d87c641b8a1`). Worst absolute difference over ln L, ln mu, the
+selection log correction, per-event ln Z and their MC variances at the ten points (N_eff as a relative difference);
+flags and finite patterns equal in every comparison; forms asserted:
+
+| check (in words) | compared | forms | worst | tier |
+|---|---|---|---|---|
+| 3, gathered equals grid | the stock target in the grid form against the gathered form | grid / gathered | 0 (bit for bit) | pass (1e-10) |
+| 4, field analysis equals the stock target (gathered) | core's field analysis against the stock target | gathered / gathered | 9.1e-13 | equal |
+| 4, the same in the grid form | | grid / grid | 9.1e-13 | equal |
+| 4, decoded population, calibration, selection | | | all equal exactly | equal |
+| 5, Q = 1 through lss equals core | lss's target with the unit table against core's field analysis (grid) | grid / grid | 1.8e-15 (per-event ln Z; ln L, ln mu, N_eff and the selection correction bit for bit); consumption `unit` | equal |
+| 6, gauge at consumption | the constant-per-redshift table cannot be certified | | not run | check 8 stands in, as declared |
+| 11, Q = 1 through core's extension path | lss's core-extension target with the unit table against lss's target with the unit table | grid / grid | 1.8e-15 (ln L, ln mu, N_eff and the selection correction bit for bit) | equal |
+| **11, the primary table through core's extension path** | the extension target with `q_main_map.h5` against lss's target with it (consumption `proposal`) | grid / grid | **2.1e-3** in the selection log correction; ln L 8.1e-4, per-event ln Z 1.5e-4, ln mu 7.9e-6, per-event MC variance 1.7e-6, N_eff 1.1e-5 relative | **fallback** |
+| the wrapper with the unit table | the scoped wrapper on the stock target against the stock target (grid) | grid / grid | 0 (bit for bit) | equal |
+| the wrapper with the primary table | the scoped wrapper, the table gauged once, against lss's target | grid / grid | 1.1e-13 (ln mu, N_eff and the selection correction bit for bit) | equal |
+
+- `stop_q_arms` false, no stop reason, no recorded failure; **the wrapper tie is reached** (`wrapper_tie_reached`
+  true), so decision 19's fallback path stays available after T0.
+- **Check 11 with the primary table is "fallback" and is recorded only, as declared:** lss's values stay primary and
+  the difference goes to the lss line. With Q = 1 the two paths agree, so the difference is in how the extension
+  path consumes a non-trivial table: on the pre-T0 lss pin the multi-catalog extension does not gauge the table at
+  the proposal (its tracer metadata carries no gauge flag), while lss's target does. The final lss head's fix makes
+  the multi-catalog path gauge at the proposal; check 11 re-checks it on the final head in the same-process step
+  after amendment 1.
+
+**The shuffled table at the tie points** (`q_shuffled_s3305.h5` through lss's target, map mode): ran to its end
+mark. It has no check of its own in the rehearsal; it shows that a placement-control table loads and evaluates.
+
+**The member-wiring check (check 9)** (`q_scans/rehearsal/gates/member_wiring/gate9.json`, sha256
+`2522e47a7245cc48f84c0a6ea4bf71ce791fd54be258f452cdc3f80b0e2abcbf`): member 0 inside the 4-member marginalised
+target against a single-table target of member 0 (`q_member0_map.h5`), both consumed `proposal`: **pass**, worst
+absolute 1.1e-13 (ln L; per-event ln Z 3.6e-15, MC variance 2.7e-17, ln mu, N_eff and the selection correction bit
+for bit), worst relative in ln L 1.7e-16; finite patterns equal, consumption equal. By the runbook's rule (worst at
+most 1e-10, patterns and consumption equal) **the post-T0 member-wiring tolerance stays at the declared 1e-10**. It
+is not revised after a post-T0 miss.
+
+**The replicate path identity (check 12)** (`q_scans/rehearsal/gates/replicates/gate12.json`, sha256
+`aa72611ecbd07a51d25857a679b65726ed048e36078daa04146f438e206b265c`): the identity replicate files through the
+primary table, Q = 1 through lss and spectral, by operand swap: **pass, bit for bit** in all three arms.
+
+**Next:** the T0 inputs (lss final head `57afebe31191d565d30b0f068a7d5db3c3373abe`, pushed 2026-10-23T00:50:58Z),
+the run worktree, the pre-check on the final head, the env and the table builds, by `q_scans/RUNBOOK_T0.md`. No GW
+likelihood with a Q table on the final lss head has run.
