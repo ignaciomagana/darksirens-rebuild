@@ -29,6 +29,12 @@ T0 pre-check run the check at 4,096 draws. Rows, seed rule and tolerances are un
 settings, the eligible set, the primary (sigma 0.5, ell_grid 2) and the runner-up (sigma 0.5, ell_grid 4) are
 unchanged. The choice is now `q_scans/cv/choice_v2.json`; the first is kept as `choice_v1.json`.
 
+**Amendment, the sealed rehearsal's tables (2026-10-23, about 00:10 UTC, before the rehearsal chain uses them):** the
+rehearsal's table builds were rerun with the amended code (consumer `ffccb39`, the 4,096-draw check). All five jobs
+completed: the primary's map table and its 4-member build pass the builder's Laplace check (largest relative excess
+0.0396, k-hat 0.415, as the full-sky record of the choice) and the certificate; the unit, shuffled and member-0
+tables are written; the table checks have no miss. The sha256s are under "Amendments".
+
 **Blinding: location-free.** No H0 location appears here, in commit messages or in the logs agents read: no median,
 interval, MAP or shift in km/s/Mpc. The H0 values in this record are fixed a priori: the grid ([20, 140] step 0.5;
 [50, 100] step 0.1), the tie points (20, 32.5, 45, 60, 70, 80, 92.5, 110, 125, 140), the member-count points (20, 45,
@@ -655,3 +661,79 @@ built.
   stream could move the runner-up, whose worst row sits about one error from the tolerance.
 - The mock's per-seed choice (`phase12aq_mock.py`, running) still applies the first eligibility (the subset's
   256-draw check and the certificate); the mock does not choose the real setting.
+
+### Amendment: the sealed rehearsal's tables (2026-10-22 23:55 to 2026-10-23 00:02 UTC; location-free; before the rehearsal chain uses them)
+
+**What ran.** The rehearsal's table chain of DESIGN 11.1 at the primary setting of `choice_v2.json` (sigma 0.5,
+ell_grid 2), built at H0 70 with the member seed 3304, on the pre-T0 pin: the old env's python, the frozen core main
+`10224291eac92b391dc2a06925dc08e49980f9e5` and the frozen lss integration head
+`881fce6c875943013c0da48327d4aff5b49b27f7`, from the detached worktree `q_scans/wt/ffccb39` (consumer
+`ffccb39cc54603a632d9dc1dc6e1cd7de81b3f19`, clean; every build runs the builder's Laplace check on 64 rows with
+4,096 draws, as amended above). HENON, henon03, all five jobs COMPLETED:
+- 1391982, the map table `q_main_map` (16 CPUs; 72 s; peak RSS 16.4 GB);
+- 1391983, the 4-member build `q_main_m4` (16 CPUs; 179 s; peak RSS 25.0 GB);
+- 1391984, the derived tables after the map: `unit`, `constant`, the stratified shuffle at seed 3305;
+- 1391985, the table check (after the map build and the derived job, `afterany`);
+- 1391986, member 0 of the 4-member build and the member check (after the member build, `afterok`, and the map
+  build, `afterany`).
+
+The launcher is outside the repo: `q_scans/scratch_launcher/rehearsal_tables_v2.sh` (sha256
+`514d4ce168cf845ad251c9e51267be505d30839d2fbffcfdeffcec66f2ccb89b`), the chain of the first launcher pinned to
+`ffccb39`; job ids in `q_scans/logs/rehearsal_table_jobs.txt`. The first attempt's failure records (consumer
+`0d45dcb`, 256-draw check; the rehearsal amendment above) were moved, bytes unchanged, to
+`q_scans/rehearsal/tables/attempt1_0d45dcb/`, and its table-check output to
+`q_scans/rehearsal/gates/attempt1_0d45dcb/tables/`. The galaxy-count cache `grid_counts.npy` of the first attempt was
+kept: its sha256 equals its metadata (`978d5f10c32caa3b116e8b59a921f36ca8e97ec89dd44b39c02d2970af6f7247`), and the builds
+reuse it only when the catalog digest and the shape match.
+
+**The rehearsal tables** (`q_scans/rehearsal/tables/`; each sha256 recomputed after the jobs and equal to the one
+the writer stored beside the file):
+
+| table | what it is | sha256 |
+|---|---|---|
+| `q_main_map.h5` | the primary's map table (no members) | `0a6d4ed702aeb8b068232a6cdd84bb696ecab4cc29c1cf06af894eeec338743d` |
+| `unit.h5` | derived from the map table: log Q = 0 everywhere | `be9fa75fd75229906a51d430b2128706233056d2d006a92dce8f05a7d375c837` |
+| `q_shuffled_s3305.h5` | derived: fitted rows permuted within 20 f_p quantile strata, seed 3305 | `73d73993aae85a3e05359e5efe7454ce4810fd3590534f61d7c578b347fd5b4e` |
+| `q_main_m4.h5` | the primary with 4 members, seed 3304 (for the member-wiring rehearsal) | `e9cced86a67cd37f2f1fdcf36eadfb04af4a99f19d37f725ba0efbb5b977039d` |
+| `q_member0_map.h5` | derived from the 4-member build: member 0 as the map, no members | `708205406f025cc67809c2947e2ec9f72808a528db2685654c84284fd9f90595` |
+
+Records beside them: `q_main_map.json` (sha256 `c257c81af8162abba1bf40d9fd170424a10f7a3751b0fb685b0f42a3da85e413`),
+`q_main_m4.json` (`50c3a8e1c31b3ea2069603d641a81c16eb6c37572f7903413705e5f167faab4c`), `shuffle_seeds.json`
+(`cec3a1642b27d282537f3f9625e4004837c85160158e885df6d1e0449c39230e`; seed 3305 certified, no replacement drawn),
+`FAILED_constant.json` (`bb8eae589be5395df96fbbfd6dc7173914cc9204bace434959e361f6bcb1f228`); the table checks
+`q_scans/rehearsal/gates/tables/check.json` (`86f7abd47b716f5d7a43af5b93a83e1d4c437e86ecf80c57609794df1d16648e`) and
+`q_scans/rehearsal/gates/tables_m4/check.json` (`0bbbb622b7e27c1021aa611151eb6978e8b269758e92d355701b78738726cf9c`).
+
+**What the builds and checks say (galaxy side, H0-free):**
+- **Both builds converged on all 119,457 fitted rows** (the expected count): Newton at most 7 iterations, missing-host
+  budget at the clip 0.0076 before the gauge, no fitted cell at the clip after it, consumed gauge residual 3.6e-14.
+- **Both pass the builder's Laplace check at 4,096 draws:** largest relative excess 0.0396, k-hat 0.415, the same
+  values as the primary's full covered-sky record of the choice at seed 3304. The 4-member build's stamps equal the
+  map build's.
+- **Certificates** (lss's mask-free measurement, tolerance 0.10 on the worst |corr(Q, f_p) - corr(N/f_p, f_p)| over
+  9 redshift slices; off the footprint log Q is exactly 0 in every table):
+
+| table | worst \|delta\| | margin |
+|---|---|---|
+| map table | 0.0891 | +0.0109 (as in the choice) |
+| 4-member stack (lss measures the member mean) | 0.0903 | +0.0097 |
+| member 0 | 0.0957 | +0.0043 |
+| stratified shuffle, seed 3305 | 0.0925 | +0.0075 |
+| unit (no angular structure; passes on the off-footprint check) | — | pass |
+| constant per redshift | 0.205 | fails (`FAILED_constant.json`), as section 5.2 expects: check 8 stands in for check 6 |
+
+- **The table check (map, unit, shuffled): no miss.** The consumed per-redshift budget closes to 4.3e-14 at the five
+  a-priori points (as stored, before the per-proposal gauge: 0.020 for the map table, 0.031 for the shuffle); the
+  inputs at build H0 60 and 80 equal those at 70 to 3.0e-15 normwise (tolerance 1e-13); the footprint loader is bit
+  equal to the surveys f_p; check 7(b) is not evaluated (the rehearsal builds no H0 60 or 80 table). Systematics of the
+  map table: budget-weighted sd of log Q 0.33 / 0.44 / 0.48 at z 0.08 / 0.15 / 0.22; row-mean log Q below the depth
+  correlates with f_p at -0.25 and with the imaging-depth maps at 0.03-0.05; the share of the redistribution between
+  f_p strata is 0.035; budget ratio per f_p tercile 1.057 / 0.940 / 0.932. The shuffle keeps the f_p coupling (-0.20)
+  and removes the imaging-depth correlations (-0.03 to 0.00).
+- **The member check: no miss.** The 4-member build's map equals `q_main_map.h5` bit for bit.
+
+**Next (no GW likelihood with any Q table has run yet):** the holder rehearsal chain (`phase12aq_miko_chain.sh
+rehearsal`, from the same worktree and the frozen sources; differences only under `q_scans/rehearsal/`): the
+same-process step at the ten tie points with every arm and the wrapper's ties, the shuffled table at the tie points,
+the member-wiring check on the 4-member build (it sets the post-T0 member-wiring tolerance by the runbook's rule) and
+the replicate identity check.
