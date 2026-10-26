@@ -488,3 +488,54 @@ Slurm rules of 18-19 Oct 2026 (7-day limits; rita GPU jobs at 128 CPUs and 120G;
 wrapper) and break them. They are kept unchanged in what they launch, as the record of how the record ran, and from
 the merge they refuse to run unless PHASE12_ALLOW_HISTORICAL names them (slurm/historical_launch_files.txt lists
 them). The B1 and B2 pipelines' HENON fallback now clears every SLURM_* variable first.
+
+## Amendment (26 Oct 2026): independent review, round 3
+
+An independent multi-agent review of the consumer repo (desi_darksirens_selection; report
+`darksirens-core-data/reviews/consumer-2026-10-24/out/REVIEW.md`) confirmed the findings cited in parentheses below.
+The amendment of 25 Oct 2026 above covers the fix packages merged first. This one covers five more, merged on 26 Oct
+2026 after a third fix round and an independent check of each: the 12AQ readings and mock (consumer PR #32, merge
+97ec978), the 12AO ladder (PR #27, merge ebb12ff), the GW inputs (PR #26, merge a152bed), the variance guard and
+estimator noise (PR #33, merge 901bb54) and catalog version 2 (PR #24, merge 402c947). The consumer's main is now
+402c947. `./ci.sh` passed on the merged tree in all three record environments (HENON, CPU;
+`ci_logs/20261026T124516Z_133bc47f981f_<env>.log`: consumer_e7c3007_cuda12 1568 passed, consumer_e7c3007batch_cuda12
+1577, consumer_1022429_lss57afebe_cuda12 1592; none failed). On 26 Oct 2026 the owner decided that catalog version 2
+vetoes the bright-star masks, BRIGHT and MEDIUM (Legacy Survey maskbits 2050), not the large-galaxy bit, and that the
+injections stay at the support gate for now (decision 4D; the replacement of the O3 campaign, 4A, is deferred and no
+new injection product is made). Location-free throughout. Unless an item says otherwise, no number of record changes.
+Still open and not amended here: resume markers and fingerprints (consumer PR #25) and the follow-ups of consumer PR
+#35, among them the refusal of a delta outside its prior's bounds.
+
+**Photometric kernel (consumer PR #24, merge 402c947; finding G2.1).** Core's row kernel N(z; z_i, s) dV_c/dz
+(1+z)^delta / Z_i treats the Legacy Survey photo-z as a likelihood centre and multiplies by the volume prior again,
+while the photo-z behaves as a posterior-mean estimate (unbiased given z_phot). On 7.8M non-training DESI matches the
+kernel of record has PIT mean 0.406 and 68%/95% coverage 0.633/0.911, against 0.492 and 0.699/0.937 for the plain
+truncated Gaussian; the log score favours the plain kernel by 0.083 nat per galaxy. Its mass below z_depth is 11.5%
+low for the photometric rows (7.9% for the union's observed-branch count). This record's re-centred arm (nside 64,
+sigma_kde 3e-3, delta sampled) moved H0 by about 1% of its sd; no later record used it.
+
+**Kernel-centre test (consumer PR #24, merge 402c947; finding G2.3).** The drop of the mean z_spec - z_phot to -0.023
+at z_phot 0.29 is an artefact of the test's own spectroscopic match, cut at z <= 0.30: 42.9% of matched galaxies at
+z_phot 0.29-0.30 have z_spec > 0.30. With the z <= 0.5 match the mean offset at z_phot 0.22-0.29 is +0.0008 to
++0.0018: the photo-z are unbiased given z_phot over the whole window, and neither offered reading (a photo-z bias, the
+selection of galaxies with spectra) holds.
+
+**Photo-z error calibration (consumer PR #24, merge 402c947; finding G2.5).** The photometric widths have Gaussian
+cores (robust pull width 0.944; north 0.890, south 0.971) but heavier tails (pull sd 1.076; 1.26% beyond 3 sigma
+against 0.27%), and the DR9 north photo-z sit low by 0.002 to 0.004 at z_phot 0.08-0.16. Even a fully catalog-driven
+H0 would move by about 0.1% from the north/south part.
+
+**Spectroscopic arm (consumer PR #24, merge 402c947; finding C019).** The spectroscopic luminosity fit truncates at r
+<= 19.5 only, but the floor is the tighter cut for 32.5% of spectroscopic rows (every row below z 0.15). With the
+floor in the truncation the fit moves by +0.47 mag in M0hat and +0.19 in sigma_M (45 and 33 prior widths); the chain
+does not move off this prior, and core's completeness cannot represent the floor (true completeness about 0.65 below z
+0.16 against the model's 0.99). The spectroscopic-only arm is a diagnostic; its H0 effect is not measured.
+
+**Photo-z mock (consumer PR #24, merge 402c947; finding C070).** The photo-z mock paragraph of 12R's amendment of this
+date applies to this record's calibrations: the finding shows the old ZERR lookup is wrong, so the galaxy's own bin is
+now the default; `phase12u_calibrate.py --zerr-lookup legacy_next_centre` reproduces this record's calibrations, and
+`config/phase12u_prep_manifest.json` now passes that option to the union and photometric parts, so the manifest keeps
+producing this record's numbers.
+
+**GW inputs (consumer PR #26, merge a152bed; findings C047, C057, G1.1).** See the GW inputs addendum
+(`phases/12_gw_inputs_addendum_2026-10-26.md`). No number of this record changes.

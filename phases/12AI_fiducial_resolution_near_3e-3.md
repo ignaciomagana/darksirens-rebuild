@@ -262,9 +262,10 @@ same.
 sum, and all 14 pass (largest |Delta ln L| 4.5e-13 against 1e-9). In the summary of record the result fed no reading,
 no comparison and no exit code, so a failed sum would have left the fiducial reading unchanged. Since the merge a new
 cell whose sum fails, or that has no `events.npz`, is withheld from every comparison and from the fiducial candidate,
-and the summary exits 4 (as it does for an incomplete cell). On the run of record nothing changes: re-run from the
-branch on the stored grids, the summary is the recorded one with two added (empty) lists, the fiducial candidate is
-unchanged and the exit code is 0.
+and the summary exits 4. Also new with the merge, the summary exits 4 when any cell, 12AG's included, is not complete
+(before it, an incomplete cell gave exit 0). *(Reworded 26 Oct 2026; see "Amendment (26 Oct 2026): independent review,
+round 3".)* On the run of record nothing changes: re-run from the branch on the stored grids, the summary is the
+recorded one with two added (empty) lists, the fiducial candidate is unchanged and the exit code is 0.
 
 **Core settings at trace time (consumer PR #29, merge 0989df4; findings C054, C055).** Core reads its
 normalisation-grid settings and its missing-density form when a likelihood program is traced, at its first call, not
@@ -291,3 +292,34 @@ commit of the code that wrote them (the commit is in the job logs and the record
 a `writer` block: the writing script, its checkout's commit, branch and changed-file count, and, where it reads a
 short list of files, their sha256. The stored summaries are unchanged; a summary rewritten from main carries the
 block.
+
+## Amendment (26 Oct 2026): independent review, round 3
+
+An independent multi-agent review of the consumer repo (desi_darksirens_selection; report
+`darksirens-core-data/reviews/consumer-2026-10-24/out/REVIEW.md`) confirmed the findings cited in parentheses below.
+The amendment of 25 Oct 2026 above covers the fix packages merged first. This one covers five more, merged on 26 Oct
+2026 after a third fix round and an independent check of each: the 12AQ readings and mock (consumer PR #32, merge
+97ec978), the 12AO ladder (PR #27, merge ebb12ff), the GW inputs (PR #26, merge a152bed), the variance guard and
+estimator noise (PR #33, merge 901bb54) and catalog version 2 (PR #24, merge 402c947). The consumer's main is now
+402c947. `./ci.sh` passed on the merged tree in all three record environments (HENON, CPU;
+`ci_logs/20261026T124516Z_133bc47f981f_<env>.log`: consumer_e7c3007_cuda12 1568 passed, consumer_e7c3007batch_cuda12
+1577, consumer_1022429_lss57afebe_cuda12 1592; none failed). On 26 Oct 2026 the owner decided that catalog version 2
+vetoes the bright-star masks, BRIGHT and MEDIUM (Legacy Survey maskbits 2050), not the large-galaxy bit, and that the
+injections stay at the support gate for now (decision 4D; the replacement of the O3 campaign, 4A, is deferred and no
+new injection product is made). Location-free throughout. Unless an item says otherwise, no number of record changes.
+Still open and not amended here: resume markers and fingerprints (consumer PR #25) and the follow-ups of consumer PR
+#35, among them the refusal of a delta outside its prior's bounds.
+
+**Catalog model (consumer PR #24, merge 402c947; findings C020, C002, G2.4).** These grids fix the calibration at
+log10 n0 = -1.8216 (12AB's baseline median, set almost entirely by the [0.02, 0.30] count ridge) and the luminosity
+prior means; the in-depth ridge and the floor are discussed in 12AF's amendment of this date (C020, C002). Cells below
+sigma_kde about 1e-3 are not physical host-redshift kernels (G2.4, see 12AG's amendment of this date).
+
+**GW inputs (consumer PR #26, merge a152bed; findings C047, C057, G1.1).** See the GW inputs addendum
+(`phases/12_gw_inputs_addendum_2026-10-26.md`). No number of this record changes.
+
+**Correction to the 25 Oct amendment (consumer PR #28, merge 8f8a7b2; finding C075).** The paragraph "The per-event
+sum" said that the summary exits 4 on a failed per-event sum "(as it does for an incomplete cell)". Before consumer PR
+#28 an incomplete cell gave exit 0 (the summary exited 3 only for a missing cell); exit 4 for an incomplete cell is
+also new with that pull request, and it covers every cell, 12AG's included (`summary_rc` in
+`scripts/phase12ai_summary.py`). The clause is reworded in place; nothing else changes.

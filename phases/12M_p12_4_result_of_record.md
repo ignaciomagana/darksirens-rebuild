@@ -119,3 +119,26 @@ the base configuration therefore uses (0.04, 0.10), not this record's population
 runners refuse the base configuration there. This record is reproduced from its tagged commit (c86629b), or from main
 with `--set population.fixed_values=null` (the configuration as it ran;
 `config/desi.fixed_population.core_preset.json` is the old base configuration byte for byte).
+
+## Amendment (26 Oct 2026): independent review, round 3
+
+An independent multi-agent review of the consumer repo (desi_darksirens_selection; report
+`darksirens-core-data/reviews/consumer-2026-10-24/out/REVIEW.md`) confirmed the findings cited in parentheses below.
+The amendment of 25 Oct 2026 above covers the fix packages merged first. This one covers five more, merged on 26 Oct
+2026 after a third fix round and an independent check of each: the 12AQ readings and mock (consumer PR #32, merge
+97ec978), the 12AO ladder (PR #27, merge ebb12ff), the GW inputs (PR #26, merge a152bed), the variance guard and
+estimator noise (PR #33, merge 901bb54) and catalog version 2 (PR #24, merge 402c947). The consumer's main is now
+402c947. `./ci.sh` passed on the merged tree in all three record environments (HENON, CPU;
+`ci_logs/20261026T124516Z_133bc47f981f_<env>.log`: consumer_e7c3007_cuda12 1568 passed, consumer_e7c3007batch_cuda12
+1577, consumer_1022429_lss57afebe_cuda12 1592; none failed). On 26 Oct 2026 the owner decided that catalog version 2
+vetoes the bright-star masks, BRIGHT and MEDIUM (Legacy Survey maskbits 2050), not the large-galaxy bit, and that the
+injections stay at the support gate for now (decision 4D; the replacement of the O3 campaign, 4A, is deferred and no
+new injection product is made). Location-free throughout. Unless an item says otherwise, no number of record changes.
+Still open and not amended here: resume markers and fingerprints (consumer PR #25) and the follow-ups of consumer PR
+#35, among them the refusal of a delta outside its prior's bounds.
+
+**GW inputs (consumer PR #26, merge a152bed; findings G1.1, G1.2, G8.5).** The Product A PE file (P12.2 to P12.4)
+holds the same samples as the exact rebuilds, so it carries the same 1,168 rows above the spin ceiling. Since the
+merge the input stage reads `spin_ceiling_cut_applied` and accepts this file through its declared spin-support status
+(decision 5B). The record's inputs and numbers are unchanged. See the GW inputs addendum
+(`phases/12_gw_inputs_addendum_2026-10-26.md`).

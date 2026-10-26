@@ -107,6 +107,9 @@ same freedom (5.5 to 5.7 against 5.77), and wider than the fixed-index one.
   realisations) has complete-catalog posteriors narrower than the spectral
   ones on the same events (sd 5.4 against 8.5). There the catalog covers the
   events' volume.
+  *(26 Oct 2026: in that mock the broad-photo-z catalog posteriors also sit low by about a third of their sd (complete
+  −0.42 ± 0.10, Q = 1 −0.35 ± 0.10); the narrow-photo-z twins are calibrated (record 12AQ, amendment 4 of 26 Oct 2026;
+  consumer review findings G7.1, G7.2).)*
 - The value of H0 quoted from a catalog analysis must state how the rate
   evolution is treated: 64.5 with the GWTC-5 index, 70.7 with it free.
 

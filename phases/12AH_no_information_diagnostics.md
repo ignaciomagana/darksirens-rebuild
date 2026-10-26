@@ -1708,3 +1708,29 @@ commit of the code that wrote them (the commit is in the job logs and the record
 a `writer` block: the writing script, its checkout's commit, branch and changed-file count, and, where it reads a
 short list of files, their sha256 (here, the overall reading hashes the part summaries). The stored summaries are
 unchanged; a summary rewritten from main carries the block.
+
+## Amendment (26 Oct 2026): independent review, round 3
+
+An independent multi-agent review of the consumer repo (desi_darksirens_selection; report
+`darksirens-core-data/reviews/consumer-2026-10-24/out/REVIEW.md`) confirmed the findings cited in parentheses below.
+The amendment of 25 Oct 2026 above covers the fix packages merged first. This one covers five more, merged on 26 Oct
+2026 after a third fix round and an independent check of each: the 12AQ readings and mock (consumer PR #32, merge
+97ec978), the 12AO ladder (PR #27, merge ebb12ff), the GW inputs (PR #26, merge a152bed), the variance guard and
+estimator noise (PR #33, merge 901bb54) and catalog version 2 (PR #24, merge 402c947). The consumer's main is now
+402c947. `./ci.sh` passed on the merged tree in all three record environments (HENON, CPU;
+`ci_logs/20261026T124516Z_133bc47f981f_<env>.log`: consumer_e7c3007_cuda12 1568 passed, consumer_e7c3007batch_cuda12
+1577, consumer_1022429_lss57afebe_cuda12 1592; none failed). On 26 Oct 2026 the owner decided that catalog version 2
+vetoes the bright-star masks, BRIGHT and MEDIUM (Legacy Survey maskbits 2050), not the large-galaxy bit, and that the
+injections stay at the support gate for now (decision 4D; the replacement of the O3 campaign, 4A, is deferred and no
+new injection product is made). Location-free throughout. Unless an item says otherwise, no number of record changes.
+Still open and not amended here: resume markers and fingerprints (consumer PR #25) and the follow-ups of consumer PR
+#35, among them the refusal of a delta outside its prior's bounds.
+
+**Catalog model (consumer PR #24, merge 402c947; findings C019, G2.1, G2.4, G3.1).** Part B's spectroscopic cells use
+the 12U spectroscopic arm's luminosity medians as fixed calibration; that fit ignores the floor (C019, see 12U's
+amendment of this date). The scaled-ZERR diagnostic also moves the kernel centre: the mean pull is +0.0080 at scale 1,
++0.0021 at 0.5 and +0.0006 at 0.25, so its axis removes 74-92% of the volume-prior offset along with the width (G2.1).
+The kernel-width and photo-z hole paragraphs of 12AG's amendment of this date apply (G2.4, G3.1).
+
+**GW inputs (consumer PR #26, merge a152bed; findings C047, C057, G1.1).** See the GW inputs addendum
+(`phases/12_gw_inputs_addendum_2026-10-26.md`). No number of this record changes.

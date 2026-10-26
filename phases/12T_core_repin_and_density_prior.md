@@ -242,3 +242,30 @@ Slurm rules of 18-19 Oct 2026 (7-day limits; rita GPU jobs at 128 CPUs and 120G;
 wrapper) and break them. They are kept unchanged in what they launch, as the record of how the record ran, and from
 the merge they refuse to run unless PHASE12_ALLOW_HISTORICAL names them (slurm/historical_launch_files.txt lists
 them). The B1 and B2 pipelines' HENON fallback now clears every SLURM_* variable first.
+
+## Amendment (26 Oct 2026): independent review, round 3
+
+An independent multi-agent review of the consumer repo (desi_darksirens_selection; report
+`darksirens-core-data/reviews/consumer-2026-10-24/out/REVIEW.md`) confirmed the findings cited in parentheses below.
+The amendment of 25 Oct 2026 above covers the fix packages merged first. This one covers five more, merged on 26 Oct
+2026 after a third fix round and an independent check of each: the 12AQ readings and mock (consumer PR #32, merge
+97ec978), the 12AO ladder (PR #27, merge ebb12ff), the GW inputs (PR #26, merge a152bed), the variance guard and
+estimator noise (PR #33, merge 901bb54) and catalog version 2 (PR #24, merge 402c947). The consumer's main is now
+402c947. `./ci.sh` passed on the merged tree in all three record environments (HENON, CPU;
+`ci_logs/20261026T124516Z_133bc47f981f_<env>.log`: consumer_e7c3007_cuda12 1568 passed, consumer_e7c3007batch_cuda12
+1577, consumer_1022429_lss57afebe_cuda12 1592; none failed). On 26 Oct 2026 the owner decided that catalog version 2
+vetoes the bright-star masks, BRIGHT and MEDIUM (Legacy Survey maskbits 2050), not the large-galaxy bit, and that the
+injections stay at the support gate for now (decision 4D; the replacement of the O3 campaign, 4A, is deferred and no
+new injection product is made). Location-free throughout. Unless an item says otherwise, no number of record changes.
+Still open and not amended here: resume markers and fingerprints (consumer PR #25) and the follow-ups of consumer PR
+#35, among them the refusal of a delta outside its prior's bounds.
+
+**Union leak (consumer PR #24, merge 402c947; findings G2.3, C002).** The union's spectra come from a match cut at z
+<= 0.30, so 518,466 Legacy Survey galaxies that DESI measured above 0.30 (2.28% of the union, 3.12% of photometric
+rows; 65,910 with photo-z <= 0.245) are photometric hosts in the window. Record 12AO documented and built the
+leak-fixed union; Phase 12 has not adopted it. Catalog version 2 uses the z <= 0.5 match. The floor paragraph of 12R's
+amendment of this date applies here too (C002).
+
+**GW inputs (consumer PR #26, merge a152bed; findings C047, C057, G1.1).** The last stage of this record reads the
+gwcat 8263ae9 exact-prior rebuilds; see the GW inputs addendum (`phases/12_gw_inputs_addendum_2026-10-26.md`). No
+number of this record changes.

@@ -204,6 +204,9 @@ Per chain, per H0 part and for the combination, as 12AF ("What is reported"), an
 `compare/compare.json` holds the location-free numbers; `compare/compare_absolute.json` the absolute ones. No band,
 threshold or verdict is attached. A difference is stated with its size and direction, beside B2's own seed scatter
 (B2's two upper-part seeds and the lower-part weights of its two matched pairs).
+*(26 Oct 2026: added: the paired-bootstrap estimator error of every 12AP-against-B2 number, the comparison at a common
+guard and without the guard with the walled share, per-part readings and the guard sample's fractions (findings G6.1,
+G6.2, C013, C068); see "Amendment (26 Oct 2026): independent review, round 3".)*
 
 ## Compute
 
@@ -250,6 +253,9 @@ $B/run_12ap.sh status             # any time, reads only
 - **The selection noise at nside 128.** Under the stock per-pixel target the nside-128 cells carried more selection
   Monte-Carlo variance than nside 64 (12AL). At limit 4 with the smooth guard this can change the fraction of
   penalised samples against B2's. It is reported.
+  *(26 Oct 2026: measured: at this cell the wall lands on about a fifth (upper part) and two fifths (lower part) of
+  B2's posterior draws, against under 1% at B2; the walled fraction and the guard-free comparison are reported instead
+  of the penalised fraction (findings G6.2, C068); see "Amendment (26 Oct 2026): independent review, round 3".)*
 - **The estimate assumes B2's iteration counts.**
 
 ## Results: before the chains (2026-10-21)
@@ -310,6 +316,8 @@ aabf05b, clean) ran 12:33 to 13:04 UTC: pin and start check 343 s, the tie's val
 - **The full suite at 2c06a3d** was resubmitted as a confirmation: HENON jobs 1391084 (batch env) and 1391085
   (e7c3007 env), `logs/pytest-<job>.out`. It is recorded when it ends. Against aabf05b's full run, the only changes
   are the wrapper's help path and the combine step's srun.
+  *(26 Oct 2026: it passed: job 1391084 502 passed, 2 skipped; job 1391085 493 passed, 11 skipped; exit 0 in both
+  (finding C067); see "Amendment (26 Oct 2026): independent review, round 3".)*
 
 ### 2. The pin on the new target (js2h100 H100) — passed
 
@@ -363,6 +371,8 @@ prior centres.
 - Both pins give the same flags and the same variances (to 1e-16).
 - The selection variance is larger at nside 128, as 12AL measured. It is largest in the lower part, where it is
   1.47 against B2's 1.33 in total. Both parts start unpenalised.
+  *(26 Oct 2026: like for like, the lower part's total variance is 1.82 here against B2's 1.33 (selection alone 1.47;
+  B2 recorded no selection part) (finding C067); see "Amendment (26 Oct 2026): independent review, round 3".)*
 
 ### 5. GPU timing and memory on js2h100 — measured
 
@@ -460,6 +470,8 @@ Each chain also adds about 0.12 h of setup and finish.
 
 Checks 1 to 6 pass, and both H0 parts are allowed. **The launch commit is 2c06a3d.** The full-suite confirmation at
 2c06a3d (jobs 1391084 and 1391085) is recorded when it ends.
+*(26 Oct 2026: it passed in both environments (finding C067); see "Amendment (26 Oct 2026): independent review, round
+3".)*
 
 **How it is launched** (the chains in tmux on js2h100; the watcher as a HENON job, so that it outlives the MIKO
 holder, which ends 2026-10-25 06:19 UTC, inside the estimate):
@@ -494,3 +506,107 @@ before further production chains).
 **The results of this record wait for both.** No results amendment is written, and no difference between this record
 and B2 is read as the effect of the finer cell, until the estimator error and the guard-free comparison are attached.
 Location-free; no number of record is stated or changed here.
+
+## Amendment (26 Oct 2026): independent review, round 3
+
+An independent multi-agent review of the consumer repo (desi_darksirens_selection; report
+`darksirens-core-data/reviews/consumer-2026-10-24/out/REVIEW.md`) confirmed the findings cited in parentheses below.
+The amendment of 25 Oct 2026 above covers the fix packages merged first. This one covers five more, merged on 26 Oct
+2026 after a third fix round and an independent check of each: the 12AQ readings and mock (consumer PR #32, merge
+97ec978), the 12AO ladder (PR #27, merge ebb12ff), the GW inputs (PR #26, merge a152bed), the variance guard and
+estimator noise (PR #33, merge 901bb54) and catalog version 2 (PR #24, merge 402c947). The consumer's main is now
+402c947. `./ci.sh` passed on the merged tree in all three record environments (HENON, CPU;
+`ci_logs/20261026T124516Z_133bc47f981f_<env>.log`: consumer_e7c3007_cuda12 1568 passed, consumer_e7c3007batch_cuda12
+1577, consumer_1022429_lss57afebe_cuda12 1592; none failed). On 26 Oct 2026 the owner decided that catalog version 2
+vetoes the bright-star masks, BRIGHT and MEDIUM (Legacy Survey maskbits 2050), not the large-galaxy bit, and that the
+injections stay at the support gate for now (decision 4D; the replacement of the O3 campaign, 4A, is deferred and no
+new injection product is made). Location-free throughout. Unless an item says otherwise, no number of record changes.
+Still open and not amended here: resume markers and fingerprints (consumer PR #25) and the follow-ups of consumer PR
+#35, among them the refusal of a delta outside its prior's bounds.
+
+### Before the results: the rule, what is reported, and three corrections (consumer PR #33, merge 901bb54; owner decisions 6B, 7A)
+
+This record still has no results text: it waits for the estimator error and the guard-free comparison (design 4 of the
+review's fixes, not yet run). The items below change no number and state no result.
+
+**The rule for the results amendment (findings G6.1, G6.2, C001).** B2 and this cell share one PE build and one
+injection campaign, and the chain seed drives only the sampler, so the PE and injection noise that differs between the
+two cells is in no seed scatter; and at this cell the limit-4 variance guard walls off part of the posterior B2
+sampled. The 12AP results amendment is written only after (a) the paired bootstrap of PE samples and injections at
+stored draws of both cells has attached an estimator error to every 12AP-against-B2 number, and (b) the comparison has
+been made at a common guard and without the guard, with the share of the posterior the wall removes. Until then no
+12AP-against-B2 difference (median shift, sd or width ratio, lower-part weight, parameter shift) is read as the effect
+of the finer cell, and none is written into this record. The tool is `scripts/phase12_5_estimator_noise.py` (capture,
+compare), now on the consumer's main: it gives every H0 number and every other sampled parameter's shift and sd ratio
+(the `parameters_against_B2` of `compare.json`) its error, and refuses capture sets that do not share one PE file and
+one injection file. Its outputs record the commit that wrote them. The run is declared separately (its design states
+the draws, the gates and the compute).
+
+**What is reported, added (findings G6.1, G6.2, C013, C068).** Beside each 12AP-against-B2 number, H0's and every
+other sampled parameter's, its paired-bootstrap estimator error (sd and 5/50/95% quantiles over replicates, with the
+PE-only and selection-only parts), the same comparison at a common guard (either cell's guard on both) and without the
+guard on B2's draws, and the share of the guard-free fine-cell posterior the wall removes; per H0 part, the
+conditional shift and sd and width ratios, the lower-part weight with its pairing range, and the member mixed at B2's
+part weights; and per chain, the guard sample's fractions below the wall and within 5% above it (N_eff from 1 to 1.05
+times its threshold; the rows below the wall are not counted again) with sds that count the nested sample's effective
+size (`phase12ap_compare.py --readings`, `compare_parts.json`). B2's seed scatter is reported as a yardstick for the
+sampler only; it cannot contain the estimator noise that differs between the cells.
+
+**The selection noise at nside 128, measured (findings G6.2, C068).** The last two sentences of this item under
+"Limits, stated in advance" now read: at limit 4 with the smooth guard the wall then moves into the posterior B2
+sampled: at this cell it lands on about a fifth (upper part) and two fifths (lower part) of B2's posterior draws,
+against under 1% at B2 (a penalty below -1 nat on 0.05 to 0.15% of B2's own guard samples; N_eff lies just under its
+threshold on 3 to 4% of them, with penalties under 1 nat) (consumer review, measured at both cells on 72 stored B2
+draws and again on B2's 240 stored guard-sample draws: 19% upper, 39 to 42% lower). The fraction of penalised samples
+counts only the thin layer at the wall and cannot show how much posterior the wall removed; the walled fraction and
+the guard-free comparison are reported instead.
+
+**Check 4 (finding C067).** The bullet "The selection variance is larger at nside 128 ..." compared this cell's
+selection part with B2's total. Like for like, the lower part's total variance is 1.82 here against B2's 1.33
+(selection alone 1.47 here; B2 recorded no selection part), and the selection N_eff over its threshold 2.48 against
+3.6. Both parts start unpenalised.
+
+**The full-suite confirmation (finding C067).** The full suite at 2c06a3d passed: HENON job 1391084 (batch env) 502
+passed, 2 skipped, exit 0; job 1391085 (e7c3007 env) 493 passed, 11 skipped, exit 0. The skips are the expected ones
+(2 in the batch env, 11 core-pool cases in the e7c3007 env). Check 1 and "The gate" said it was recorded when it ends.
+
+### Catalog model and GW inputs
+
+**Catalog model (consumer PR #24, merge 402c947; findings C002, C091, C003, G3.1, C018, G2.1, G2.3, G2.4, G3.3,
+G3.2).** Three properties of the catalog model behind this result were found by the review; their H0 effect is not
+measured. (1) The catalog's absolute-magnitude floor is in no selection model (C002), and with m_lim 21 the Gaussian
+luminosity function makes the union at least 99.7% complete to z_depth, so the sampled M0hat and sigma_M are inert and
+the completeness is f_p alone (C091). (2) The footprint fraction is not the catalog's coverage: masked sources stay in
+the catalog while f_p removes them (galaxies per unit f_p are 19, 5 and 2 times the median at f_p < 0.05, 0.05-0.2 and
+0.2-0.5 at nside 128; C003), and covered sky without r-band or photo-z is read as voids and underdensities (G3.1,
+C018); about 5% of PE samples sit in hole pixels. (3) The photometric kernel counts the volume prior twice (G2.1).
+Smaller: 2.3% of rows are galaxies DESI measured above 0.30 (G2.3); spectroscopic redshifts are heliocentric (coherent
+H0 effect about -0.12%, G2.4); about 5.8k rows under medium-bright-star masks are spurious halo fragments (G3.3); the
+photo-z retention rule loses 0.84% of hosts averaged over the window (0.04% to 1.45%, rising with z), about one eighth
+of the n0 prior width, with no completeness model (G3.2). The owner's decisions (1C: the hosts are the galaxies above
+the floor, complete below the depth; 2A: a footprint built from the catalog's own construction, with the bright-star
+mask veto BRIGHT and MEDIUM, maskbits 2050, chosen on 26 Oct; 3B: a re-centred photometric kernel) define catalog
+version 2, which the merge adds as opt-in code: no record path changes. Its sizing step, one fixed-calibration H0 grid
+pair at the fiducial cell, measures the effect before any chain is rerun; it waits for the owner's go. The
+large-galaxy mask is not vetoed: it marks the low-redshift hosts themselves (in a smoke on about 1% of the rows it
+removed 93% of the rows at z 0.02-0.03 against a footprint share of 7%).
+
+**n0 window (consumer PR #24, merge 402c947; finding C020).** At delta fixed at 0 the n0 prior centre is matched over
+[0.02, 0.30], but the likelihood uses the catalog only to z_depth 0.245; matching within the depth moves the centre by
+-0.028 dex (0.78 prior sd). Record 12AB measured the in-depth centre (H0 shifts 0.000, -0.082 and -0.099 posterior sd
+in its three parts, inside its declared band). `phase12u_calibrate.py --ridge-z-max 0.245` now gives the in-depth
+ridge; the default window is unchanged.
+
+**Photo-z mock of the count ridge (consumer PR #24, merge 402c947; finding C070).** The nside-128 count ridge of this
+record (`phase12ap_count_ridge.py`, driver `slurm/phase12ap_count_ridge_henon.sbatch`) runs the 12U calibration, whose
+photo-z mock took about half the galaxies' ZERR from the next 0.01 bin up. The finding shows that lookup is wrong, so
+the galaxy's own bin is now the default of `phase12u_calibrate.py`; the driver passes `--zerr-lookup
+legacy_next_centre`, which reproduces the record's ridge bit for bit. With each galaxy's own bin the luminosity prior
+centres move by about 1% (M0hat) and 4% (sigma_M) of their widths. The chains used the preset
+count_ridge_union_delta0, which the ridge matched at the preset's precision.
+
+**GW inputs (consumer PR #26, merge a152bed; findings C047, G1.1).** See the GW inputs addendum
+(`phases/12_gw_inputs_addendum_2026-10-26.md`). This record reads the LAL-cosmology PE build (822b3181...), which
+holds the same rows as the exact build, so it carries the same PE items. The addendum's numbers were measured on the
+fixed-population spectral-only target, not on this record's DESI target. This record's chains carry the O3-support
+bias and the PE items; their size at the DESI target has not been measured.

@@ -79,13 +79,22 @@ submitted after this commit.
   - Q = 1 is mildly preferred over every table: ln B on [20, 140] is -0.067 for the primary (paired-replicate
     accuracy 0.034) and -0.065 for the estimand, down to -0.163 for the rougher-field table (known Laplace bias). The
     values on [50, 100] are the same to 3e-4.
+    *(26 Oct 2026: against the candidate completions; against the four placement controls ln B ranges from -0.117 to
+    +0.012, one shuffle being preferred over Q = 1 (amendment 4, correction 1); see "Amendment (26 Oct 2026):
+    independent review, round 3".)*
   - The real placement is not preferred over four stratified shuffles: ln B of the primary against them averages
     -0.023, with a spread of 0.054.
 - **Size.** The Q effect is 12-15% of the catalog's own ln L structure, as declared. The selection part is the larger
   in the primary. No event moves by 0.1 nat over the window.
+  *(26 Oct 2026: the Q effect is at its Monte-Carlo noise, so 12-15% is not a measured size; with the noise removed
+  the event part is the larger (amendment 4, correction 2); see "Amendment (26 Oct 2026): independent review, round
+  3".)*
 - **Mock.** Part 1 (100 seeds): radial Q gains +0.026 nat at the truth over Q = 1 (seed sd 0.135), against the
   oracle's +0.049. Part 2 (all 30 seeds, DESI-like): the gain ratio is 0.030 in log score and 0.23 in width, an upper
   bound for DESI. The mock ran the first-declared per-seed Laplace rule; the real tables use the amended one.
+  *(26 Oct 2026: paired gain ratios with seed-bootstrap intervals, under ideal inputs and not a bound for DESI; the
+  broad-photo-z catalog arms sit low by about a third of a posterior sd (amendment 4, correction 3); see "Amendment
+  (26 Oct 2026): independent review, round 3".)*
 - Details under "Amendments".
 
 **Amendment, the independent review's gates, checks and provenance (25 Oct 2026; location-free; no number of record
@@ -96,6 +105,18 @@ density of every fitted store row) on all ten map tables the arms of record cons
 **pass**, worst relative difference 4.4e-14 (tolerance 1e-10). Check 4's identity block now reads the stock target's
 own decode: equal exactly. Errata on provenance (the "archives" block), the clip statement, the inherited stamps of
 the derived tables and the member variance are under "Amendments", "Amendment (25 Oct 2026): independent review".
+
+**Amendment 4, the readings with their Monte-Carlo spread (26 Oct 2026; independent review, owner decision 9B;
+location-free):** every posterior comparison now carries the spread of the 8 paired replicates. The primary Q table
+moves the median by -0.024 ± 0.024 of the Q = 1 sd and the sd by a factor 1.007 ± 0.013. Q = 1 is mildly preferred
+over the candidate completions (ln B -0.067 ± 0.034 for the primary, -0.065 ± 0.035 for the estimand); against the
+four placement controls ln B ranges from -0.117 to +0.012. The size of the Q effect is at its Monte-Carlo noise, so
+the declared "12-15% of the catalog's structure" is not a measured size. The catalog against spectral only: no change
+resolved (median shift -0.001 ± 0.24 sd, sd ratio 1.07 ± 0.10). The mock, under ideal inputs: paired gain ratios 0.53
+(Part 1; seed bootstrap 5-95%: 0.18 to 0.90) and 0.030 (Part 2; -0.37 to +0.20, a numerator consistent with zero), not
+a bound for DESI; every broad-photo-z catalog arm of the mock sits low by about a third of a posterior sd. The bullets
+above that these numbers correct are marked in place; the catalog-version-2 caveats and the GW inputs addendum also
+apply. See "Amendment (26 Oct 2026): independent review, round 3" under "Amendments".
 
 **Blinding: location-free.** No H0 location appears here, in commit messages or in the logs agents read: no median,
 interval, MAP or shift in km/s/Mpc. The H0 values in this record are fixed a priori: the grid ([20, 140] step 0.5;
@@ -160,6 +181,8 @@ Everything else is the fiducial cell of the stored grids:
     certificate margins and the sha256 of `q_scans/cv/choice.json`.
 - **Rougher-field arm:** ell_grid 2, sigma 1.0, declared in advance: the builder's Laplace check fails there (the
   table overstates a row's missing hosts by up to 8-14%). A sensitivity with a known numerical bias, labelled so.
+  *(26 Oct 2026: as declared; the production build measured +5.8% to +16.9% over the 64 checked rows (amendment 4,
+  correction 5); see "Amendment (26 Oct 2026): independent review, round 3".)*
 - **Members:** 16 exact Laplace draws (seed 3304), doubled once to 32 if the member Monte-Carlo noise of ln L at the
   member-count points exceeds a tenth of the size of the Q effect there (with a floor).
 - **Placement controls:** the primary table with its fitted rows permuted within 20 f_p quantile strata, seeds
@@ -280,6 +303,8 @@ fallback.
     log posterior density at the true H0 and the paired shift against Q = 1. The mock has no sub-pixel structure,
     so its DESI-like Part 2 (shallow depth, a 36% footprint cap, sub-pixel masks with f_p 0.875) is an upper bound
     for DESI.
+    *(26 Oct 2026: as declared; the reading "an upper bound for DESI" is withdrawn (amendment 4, corrections 12 and
+    13); see "Amendment (26 Oct 2026): independent review, round 3".)*
 
 ## What is reported
 
@@ -1030,8 +1055,13 @@ surveys f_p, sha256 `27174bdcbef3a36b21032d589fe969ac75758cb316313ca4c939308c488
 
 - No fitted cell is at the clip in any table. The primary's numbers equal the rehearsal's. The shuffles keep most
   of the f_p coupling and remove the correlation with imaging depth, as designed.
+  *(26 Oct 2026: they keep the coupling of log Q to f_p between the 20 strata and remove it within each stratum, so
+  they keep only part of it (amendment 4, correction 4); see "Amendment (26 Oct 2026): independent review, round 3".)*
 - The full covered-sky Laplace evidence of the counts, relative to the primary: runner-up -0.0039 nat per galaxy,
   rougher field +0.0107 nat per galaxy. The rougher field's Laplace approximation is biased, as declared.
+  *(26 Oct 2026: the preference is real within the model; the declared Laplace bias is a bias of the table, not of the
+  evidence, whose Laplace error is under 1% of the preference (amendment 4, correction 4); see "Amendment (26 Oct
+  2026): independent review, round 3".)*
 
 **Bookkeeping.** The check's and the builds' "archives" block repeats `q_scans/src/ARCHIVES.txt`, the pre-T0 pin's
 archive list with lss `881fce6`. The lss they import is the env's, at `57afebe` (the "packages" block; no frozen
@@ -1172,7 +1202,7 @@ over the 8 paired replicates, measured for `q-map` only (below).
 | `q-marg` (16 members marginalised; the estimand) | -0.065 | -0.065 | -0.026 | 1.007 | 1.012 | 0.019 | 1.3e-6 |
 | `q-mean` (member posterior mean) | -0.066 | -0.066 | -0.026 | 1.007 | 1.012 | 0.019 | 1.3e-6 |
 | `q-runnerup` (ell_grid 4) | -0.147 | -0.147 | -0.025 | 1.019 | 1.020 | 0.015 | 1.4e-6 |
-| `q-rough` (rougher field, Laplace table biased high 8-14%) | -0.163 | -0.163 | +0.022 | 1.037 | 1.033 | 0.035 | 1.6e-6 |
+| `q-rough` (rougher field, Laplace table biased high 8-14%; *26 Oct 2026: +5.8% to +16.9% over the 64 checked rows, amendment 4, correction 5*) | -0.163 | -0.163 | +0.022 | 1.037 | 1.033 | 0.035 | 1.6e-6 |
 | `q-shuffled-1` (seed 3305) | -0.117 | -0.117 | -0.026 | 0.993 | 0.991 | 0.020 | 1.3e-6 |
 | `q-shuffled-2` (seed 3306) | +0.012 | +0.012 | +0.012 | 0.994 | 0.988 | 0.010 | 1.0e-6 |
 | `q-shuffled-3` (seed 3307) | -0.038 | -0.038 | +0.027 | 0.996 | 0.992 | 0.011 | 1.2e-6 |
@@ -1198,6 +1228,9 @@ H0 20-45 8.0e-7 for spectral.
   advance: at most about 15%.
 - In the primary, its member versions and the four shuffles, the selection part moves more than the event part.
   In the runner-up (window) and the rougher field (both ranges) the event part is the larger.
+  *(26 Oct 2026: neither ratio is a measured size: on the window both peak-to-peaks are at their Monte-Carlo noise,
+  and with the noise removed the event part of q-map - Q = 1 is the larger (amendment 4, correction 6); see "Amendment
+  (26 Oct 2026): independent review, round 3".)*
 - Per event, no event's ln Z_Q - ln Z_(Q=1) spreads by 0.1 or more over the window (mean removed). The largest spread
   is 0.040 (GW231226_101520). The 20 largest are 0.014-0.040. The top-ranked events are catalog-dominated at the
   a-priori value 50: catalog share 0.38-0.92 of the host weight, fitted-row completion share 0.05-0.20.
@@ -1214,11 +1247,16 @@ replicate, here the whole of both ranges; the nominal ln B on that range equals 
   mean is removed). The shape of the Q effect is at the level of its Monte-Carlo noise.
 - `q-marg`: the `q-map` spread combined with the member variance (V_mem at most 3.2e-4 per point, 1.0e-4 inside the
   90% interval) gives about 0.04 for ln B. This is an approximation; the members are not replicated.
+  *(26 Oct 2026: computed by the summary: 0.035, and 0.038 with the largest member variance on the grid (amendment 4,
+  correction 7); see "Amendment (26 Oct 2026): independent review, round 3".)*
 - Replicates were run for `q-map` only. The other tables' Bayes factors have no measured accuracy of their own; the
   `q-map` value is indicative.
 
 **4. Placement: `q-map` against the four stratified shuffles** (same statistics and f_p coupling, rows permuted
 within 20 f_p strata).
+*(26 Oct 2026: the strata are equal-count; the coupling to f_p between strata is kept and within a stratum removed, so
+ln B against the shuffles reads the placement together with that within-stratum coupling (amendment 4, correction 8);
+see "Amendment (26 Oct 2026): independent review, round 3".)*
 - ln B of `q-map` against each shuffle on [20, 140]: +0.050, -0.078, -0.029, -0.036. Mean -0.023, sd over the four
   seeds 0.054. The window values are the same to 3e-4.
 - Against Q = 1, `q-map` (-0.067) is second lowest of the five placements: the four shuffles read -0.117, +0.012,
@@ -1229,9 +1267,14 @@ within 20 f_p strata).
 **5. Setting sensitivity, and plug-in against marginal** (`q-map` against each, ln B on [20, 140]).
 - Against `q-runnerup`: ln B +0.080; median shift +0.000 sd; sd ratio 0.988. Doubling ell_grid lowers the evidence by
   0.08 nat and widens the posterior by 1.2%; the median does not move.
+  *(26 Oct 2026: neither pair has replicates; against the q-map - Q = 1 spreads that stand in, the width change is at
+  the noise (amendment 4, correction 9); see "Amendment (26 Oct 2026): independent review, round 3".)*
 - Against `q-rough`: ln B +0.096; median shift -0.044 sd; sd ratio 0.971. The rougher field lowers the evidence by
   0.10 nat, moves the median up by 0.044 of its sd and widens the posterior by 2.9%. Its Laplace table has a known
   bias (high by 8-14%), so the size is not a data preference.
+  *(26 Oct 2026: the median shift of q-map against it is -0.044 sd and the sd ratio 0.971, about two of the stand-in
+  spreads; the table is biased high by +5.8% to +16.9%, so these numbers belong to that biased table, not to the
+  data-preferred prior (amendment 4, correction 9); see "Amendment (26 Oct 2026): independent review, round 3".)*
 - Against `q-marg`: ln B -0.0016, median shift +0.002 sd. Against `q-mean`: -0.0006. The 16 members change nothing
   that the map table does not.
 
@@ -1256,6 +1299,9 @@ bound each arm's own ln L, not the differences (item 3). The supplemental roughn
 - The f_p-coupled share is the part of the budget-weighted variance of log Q that lies between 20 f_p strata. It is
   3.5% for the primary. In the lowest f_p tercile Q adds 5.7% more missing hosts than Q = 1, and 6-7% fewer in the
   other two. The shuffles keep most of this coupling (2.2%; 1.02 in the lowest tercile).
+  *(26 Oct 2026: finer strata resolve more of the coupling (5.4% with 100 strata, 6.4% with 400), so the declared
+  figure understates it by a factor 1.5-1.7; the shuffles stay at 2.2-2.6% (amendment 4, correction 10); see
+  "Amendment (26 Oct 2026): independent review, round 3".)*
 - Every certificate margin is thin: 0.005-0.024 against a tolerance of 0.10.
 
 **8. The mock** (mock values; `q_scans/mock/summary/part1.json` and `part2.json`). Read over seeds, paired, as the mean
@@ -1274,12 +1320,21 @@ failures (91 seeds).
 | spectral | -0.477 (0.691) | | +0.108 | 1.577 | 0.60 / 0.91 |
 | unit (reference) | — | | — | — | 0.66 / 0.89 |
 
+*(26 Oct 2026: every broad-photo-z catalog arm of this table sits low by about a third of a posterior sd; the
+narrow-photo-z twins are calibrated (table "Mock Part 1" and amendment 4, correction 11); see "Amendment (26 Oct
+2026): independent review, round 3".)*
+
 - Gain ratio of Part 1, radial over oracle, each against unit, as a ratio of seed-means: 0.53 in log score and 0.55
   in width.
+  *(26 Oct 2026: from paired per-seed differences, 0.53 (seed bootstrap 5-95%: 0.18 to 0.90) and 0.55 (0.48 to 0.64)
+  (amendment 4, correction 11); see "Amendment (26 Oct 2026): independent review, round 3".)*
 - The narrow-photo-z pair: narrow-radial minus narrow-unit has median +0.008 over the 100 seeds; radial minus unit
   has median +0.020. The seed-means of the narrow arms (-20.6 for narrow-radial minus narrow-unit) are carried by a
   few seeds whose truth lies where the narrow posterior is zero (log density at the floor of the code, -690.8).
   Narrow-unit sits above unit (median +0.60). The narrow arms are walled at low H0 in 57 of the 100 seeds.
+  *(26 Oct 2026: walled-truth seeds now have no log score (the code's floor, -690.8, entered the means): narrow-radial
+  minus narrow-unit is +0.014 ± 0.013 (95 seeds), the narrow gain minus the broad gain -0.013 ± 0.011 (amendment 4,
+  correction 11); see "Amendment (26 Oct 2026): independent review, round 3".)*
 - The chosen setting is sigma 0.3, ell_grid 16 in 96 of 100 seeds; sigma 0.45, ell_grid 16 in 2; sigma 0.3,
   ell_grid 8 in 2.
 - Against the expectations stated in advance:
@@ -1287,6 +1342,8 @@ failures (91 seeds).
   - antipodal is not above unit: it sits at unit (+0.0015, seed sd 0.126).
   - radial-marg is close to radial: -0.001.
   - narrow-radial's gain is at least radial's: not in the medians (+0.008 against +0.020); the means cannot say.
+    *(26 Oct 2026: not seen; the paired per-seed difference of the two gains is -0.013 ± 0.011 (95 seeds) (amendment
+    4, correction 11); see "Amendment (26 Oct 2026): independent review, round 3".)*
   - complete is read beside, not as a target.
 
 Part 2 (30 seeds; DESI-like). The depth is z 0.104, where the median detected event's below-depth share is 0.040.
@@ -1303,8 +1360,14 @@ A contiguous cap with f_p = 0 covers 36% of the sky, and 8 of the 64 children ar
 - **Gain ratio of Part 2 (ratio of seed-means): 0.030 in log score and 0.23 in width** (27 seeds: 0.050 and 0.22).
   Part 1's is 0.53 and 0.55. Declared in advance: a small fraction of Part 1's gain, and **an upper bound for
   DESI**, because the mock has no sub-pixel structure and an exact f_p.
+  *(26 Oct 2026: from paired per-seed differences, 0.030 in log score (seed bootstrap 5-95%: -0.37 to +0.20; the
+  numerator +0.002 ± 0.007 nat is consistent with zero) and 0.23 in width (0.14 to 0.37); the reading "an upper bound
+  for DESI" is withdrawn (amendment 4, correction 12); see "Amendment (26 Oct 2026): independent review, round 3".)*
 - The coverage of Part 2 is low for every arm, Q = 1 included. That is a property of the shallow mock catalog, and Q
   does not change it.
+  *(26 Oct 2026: the 68% coverage of Part 2 equals Part 1's on the same 30 seeds, so it belongs to these GW
+  realisations, not to the shallow catalog; only the 90% coverage drops, 0.83 to 0.73 (amendment 4, correction 12);
+  see "Amendment (26 Oct 2026): independent review, round 3".)*
 - The chosen setting is sigma 0.3 with ell_grid 4 in 20 of 30 seeds; sigma 0.3, ell_grid 8 in 9; sigma 0.45,
   ell_grid 4 in 1.
 
@@ -1320,26 +1383,51 @@ The mock tie shows that the final lss head reproduces the pre-T0 values of unit 
 - **Q = 1 is mildly preferred over every Q table.** The Bayes factors range from 0.94 (`q-marg`, ln B -0.065) to
   0.85 (`q-rough`, -0.16). For the primary, ln B is -0.067 with a paired-replicate accuracy of 0.034. The low-H0
   weight is about 1e-6 in every arm, so no Bayes factor is carried by the low-H0 tail.
+  *(26 Oct 2026: over the candidate completions; the placement controls range from 0.89 to 1.01, one shuffle being
+  preferred over Q = 1 (amendment 4, correction 13); see "Amendment (26 Oct 2026): independent review, round 3".)*
 - **The real placement is not preferred over scrambled placements.** ln B of `q-map` against the shuffles averages
   -0.023 with a spread of 0.054 over four seeds.
 - **The size is as declared:** 12-15% of the catalog's own ln L structure. The selection part carries more than the
   event part in the primary. No event moves by 0.1 nat or more over the window. The shape of the Q effect is at the level of its
   Monte-Carlo noise.
+  *(26 Oct 2026: the size of the Q effect is at its Monte-Carlo noise, so its declared ratio to the catalog's own
+  structure is not measured; with the noise removed the event part is the larger (amendment 4, correction 13); see
+  "Amendment (26 Oct 2026): independent review, round 3".)*
 - **The catalog itself still carries no H0 information at this cell:** ln B against spectral only is -0.019, with
   accuracy 0.32. The catalog widens the posterior by 7%.
+  *(26 Oct 2026: against spectral only the median moves by -0.001 ± 0.24 sd and the sd ratio is 1.07 ± 0.10 (8 paired
+  replicates): no change is resolved, the 7% widening included; ln B compares the two host models and is not the
+  evidence for this reading (amendment 4, correction 13); see "Amendment (26 Oct 2026): independent review, round
+  3".)*
 - **The mock agrees.** Without sub-pixel structure (Part 1), the cross-validated radial table recovers about half of
   the oracle's gain, which is itself small (+0.05 nat at the truth). In the DESI-like geometry (Part 2) it recovers
   3% of a +0.065-nat oracle gain. That fraction is an upper bound for DESI.
+  *(26 Oct 2026: under ideal inputs; not a bound for DESI: the mock does not test the real-data departures, and its
+  galaxy density and the absence of spectroscopic rows argue the other way (amendment 4, correction 13); see
+  "Amendment (26 Oct 2026): independent review, round 3".)*
 
 **Caveats.**
 - Part of Q is the pixel's coupling to f_p. The f_p-coupled share is 3.5%, and Q adds 5.7% more missing hosts in the
   lowest f_p tercile.
 - Every certificate margin is thin (0.005-0.024 against 0.10).
 - The mock has no sub-pixel structure and an exact f_p, so Part 2's gain ratio is an upper bound for DESI.
+  *(26 Oct 2026: the mock analyses itself with ideal inputs and its broad-photo-z catalog arms sit low by about a
+  third of a posterior sd; its gain ratios are not a bound for DESI (amendment 4, correction 14); see "Amendment (26
+  Oct 2026): independent review, round 3".)*
 - The per-seed rule of the mock differs from the amended rule of the real tables (above).
 - The rougher-field table has a known Laplace bias (high by 8-14% of a row's missing hosts).
+  *(26 Oct 2026: +5.8% to +16.9% of a checked row's missing hosts, largest k-hat 0.70 (amendment 4, correction 14);
+  see "Amendment (26 Oct 2026): independent review, round 3".)*
 - Paired replicates exist for `q-map` only.
+  *(26 Oct 2026: and for Q = 1 against spectral only; every other comparison's spread is a stand-in, which the summary
+  names in `accuracy_source` (amendment 4, correction 14); see "Amendment (26 Oct 2026): independent review, round
+  3".)*
 - One cell, one fixed calibration, one PE build, one variance limit, 16 members.
+- *(Added 26 Oct 2026, amendment 4, correction 14.)* The H0 reading is conditional on a table at sigma 0.5, set by the
+  table-accuracy filter; the galaxy counts prefer more structure (+0.0107 nat per galaxy for the rougher field; within
+  the model, and part of it may be selection systematics). No arm has an unbiased table at that prior.
+- *(Added 26 Oct 2026, amendment 4, correction 14.)* The placement control removes the within-stratum coupling to f_p
+  as well as the placement (item 4).
 
 **Files (sha256).**
 - `q_scans/summary/summary.json` (location-free, through the location guard):
@@ -1443,9 +1531,15 @@ step that named the same script was untouched).
 #### Gates, checks and provenance (consumer PR #34, merge 009257d)
 
 The review found that several checks of this record could not fail on what they name, and that some provenance fields
-named code that did not run. Each fix has a test that fails when its defect is put back, at the helper and at the
-command that calls it (a sweep of 52 such mutations, at least one per finding, catches all but one, which is
-equivalent: check 6's ratio and its budget compare the same equality). What follows changes no number of record.
+named code that did not run. Each fix has a test that fails when its defect is put back. The independent check of the
+pull request (at its head a11755d) put back 76 such defects, at least one for every finding and including the commands
+that call the checks, and the tests caught 71. Of the other five, one is equivalent (check 6's ratio and its budget
+compare the same equality). Four are secondary paths that no test on the consumer's main covers: the holder chain
+reusing a gate 6 pass after a table is rebuilt, the fitted-row refusals of the Laplace-robustness driver and of the
+cross-validation's full-sky step on the production grid, and the amendment step reading a gate 6 file that records a
+miss (it is tested only with a passing file). The code of all four is correct; tests for them are on consumer PR #35,
+which is not merged. *(Reworded 26 Oct 2026; see "Amendment (26 Oct 2026): independent review, round 3".)* What
+follows changes no number of record.
 
 **Check 6, the gauge at consumption (finding C006, decision 10C).** Check 8 is an identity of lss's moments-gauge
 formula: the ratio it divides by is algebraically sum(wQ)/sum(w) with w = 1 - f_p C, built on the same rows, f_p and
@@ -1543,3 +1637,338 @@ arrays close to the ln L difference (in this record q-map's close to 4.9e-13 and
 against 1e-10, so the ranking of record stands). In the run of record every arm ran once and complete, every value
 check passed (worst 0.0), every reference matched its sha256, every DONE matches its scan, and the mock tie had all 10
 seeds and both arms: the record's checks stand as stated, with the wording above.
+
+### Amendment (26 Oct 2026): independent review, round 3
+
+An independent multi-agent review of the consumer repo (desi_darksirens_selection; report
+`darksirens-core-data/reviews/consumer-2026-10-24/out/REVIEW.md`) confirmed the findings cited in parentheses below.
+The amendment of 25 Oct 2026 above covers the fix packages merged first. This one covers five more, merged on 26 Oct
+2026 after a third fix round and an independent check of each: the 12AQ readings and mock (consumer PR #32, merge
+97ec978), the 12AO ladder (PR #27, merge ebb12ff), the GW inputs (PR #26, merge a152bed), the variance guard and
+estimator noise (PR #33, merge 901bb54) and catalog version 2 (PR #24, merge 402c947). The consumer's main is now
+402c947. `./ci.sh` passed on the merged tree in all three record environments (HENON, CPU;
+`ci_logs/20261026T124516Z_133bc47f981f_<env>.log`: consumer_e7c3007_cuda12 1568 passed, consumer_e7c3007batch_cuda12
+1577, consumer_1022429_lss57afebe_cuda12 1592; none failed). On 26 Oct 2026 the owner decided that catalog version 2
+vetoes the bright-star masks, BRIGHT and MEDIUM (Legacy Survey maskbits 2050), not the large-galaxy bit, and that the
+injections stay at the support gate for now (decision 4D; the replacement of the O3 campaign, 4A, is deferred and no
+new injection product is made). Location-free throughout. Unless an item says otherwise, no number of record changes.
+Still open and not amended here: resume markers and fingerprints (consumer PR #25) and the follow-ups of consumer PR
+#35, among them the refusal of a delta outside its prior's bounds.
+
+#### Amendment 4: the readings with their Monte-Carlo spread (consumer PR #32, merge 97ec978; owner decision 9B; findings C005, C032, C033, C035, C036, C106, C110, C113, C145, G7.1, G7.2, G7.3)
+
+The consumer review found three readings of amendment 3 that the run's own replicates do not support (C005), a mock
+gain ratio stated as a bound (C036, G7.2), and mock tables that leave out the declared bias readings (G7.1). The
+summary code now writes the replicate spread of every posterior comparison and noise-only curve statistics, names the
+replicate block behind each comparison, computes q-marg's accuracy (C113), forms the rougher-field label from the
+table's stamp (C145), and labels the placement control (C032); the mock summary scores a walled truth as None (C110),
+computes the gain ratio from paired seeds with a seed bootstrap (None for a missing arm; C036), and writes
+truth-quantile, bias, Jeffreys coverage intervals, the narrow twins, the narrow gain minus the broad gain and Part 1's
+coverage on Part 2's seeds (G7.1, C106). A truth deep in a finite tail keeps its log score in log space.
+
+Recomputed from the stored outputs, without rerunning anything (12AQ environment, CPU; nothing under `q_scans`
+written): every number the stored summary.json and part2.json hold is unchanged (summary.json bit for bit, part2.json
+to 1e-12); in part1.json only the narrow arms' log-score means and their counts change, because walled-truth seeds no
+longer enter at the code's floor. The numbers were computed at consumer e78ff9c and are identical, leaf by leaf, at
+the round-3 code head 9fef296, which is the code merged (only creation times, run times, the scratch path and the
+provenance blocks differ; no arm or replicate is refused by main's arm checks). The owner-only absolute files of the
+summary were deleted unread. Files: `<notes>/recompute/out/summary.json` (sha256 54e58835...), `part1.json`
+(c5d4d360...), `part2.json` (068ab45d...), the round-3 recompute in `<notes>/round3/`, with `<notes>` =
+`darksirens-core-data/reviews/consumer-2026-10-24/fix/notes/p09-qreadings`. The tables follow; the readings and
+caveats of amendment 3 and of the status block are corrected below (corrections 1 to 14) and marked in place, with the
+text of record kept.
+
+**A. Posterior comparisons with their replicate spread** (8 paired replicates; coarse grid [20, 140]).
+
+| pair | median shift (ref sd) | sd ratio | 68% width ratio | 90% width ratio | Hellinger (replicate mean) |
+|---|---|---|---|---|---|
+| `q-map` against Q = 1 | -0.024 ± 0.024 | 1.007 ± 0.013 | 1.011 ± 0.028 | 1.005 ± 0.008 | 0.018 (0.022, spread 0.006) |
+| catalog (Q = 1) against spectral only | -0.001 ± 0.237 | 1.072 ± 0.101 | 1.153 ± 0.217 | 1.072 ± 0.066 | 0.139 (0.204, spread 0.018) |
+
+The ± is the sd over the 8 replicates. The Hellinger distance is a distance: noise raises it, so the replicate mean
+sits above a noise-free value and its spread is not an accuracy around the nominal. On the window [50, 100] (the
+window rule holds for every replicate) the values and spreads differ from these by at most 0.005.
+
+Stand-in comparisons (no replicates of their own; the q-map - Q = 1 spreads above stand in): q-map against the
+runner-up: shift +0.000, sd ratio 0.988, ln B +0.080; against the rougher field: shift -0.044, sd ratio 0.971, ln B
++0.096; against the shuffles: shift +0.002, -0.037, -0.052, -0.027, sd ratio 1.005-1.015.
+
+**B. The curves against their noise** (window [50, 100]; coarse in brackets).
+
+| pair, part | nominal peak-to-peak | noise-only peak-to-peak: median (range) | nominal rms | noise rms | nominal rms with the noise removed |
+|---|---|---|---|---|---|
+| `q-map` - Q = 1, total | 0.274 [0.483] | 0.200 (0.137-0.384) [0.322] | 0.0528 [0.0648] | 0.0583 [0.0665] | 0.0000 [0.0000] |
+| `q-map` - Q = 1, event part | 0.106 [0.203] | 0.075 (0.057-0.092) [0.117] | 0.0270 [0.0332] | 0.0170 [0.0198] | 0.0210 [0.0266] |
+| `q-map` - Q = 1, selection part | 0.192 [0.303] | 0.185 (0.122-0.366) [0.293] | 0.0451 [0.0522] | 0.0540 [0.0652] | 0.0000 [0.0000] |
+| catalog - spectral, total | 2.199 [3.281] | 2.054 (1.748-2.965) [3.614] | 0.3773 [0.6898] | 0.4497 [0.5352] | 0.0000 [0.4351] |
+| catalog - spectral, event part | 2.353 [6.566] | 0.782 (0.511-0.886) [1.346] | 0.6728 [1.6106] | 0.1546 [0.1860] | 0.6548 [1.5998] |
+| catalog - spectral, selection part | 2.989 [8.761] | 1.963 (1.410-2.810) [3.306] | 0.8016 [2.0863] | 0.4020 [0.5006] | 0.6934 [2.0254] |
+
+Noise-only curve: (replicate - replicate mean) x sqrt(8/7), mean over H0 removed. Noise rms: rms over points of the
+per-point replicate sd of the mean-removed curves. Removed: sqrt(max(rms^2 - noise rms^2, 0)). The catalog's event and
+selection parts are each well above their noise but largely cancel in the total.
+
+q-marg ln B accuracy (computed): 0.035 (q-map spread 0.034, posterior-weighted member term 0.0082); 0.038 with the
+largest member variance on the grid.
+
+**Mock Part 1 (100 seeds): calibration columns** (mean ± seed error).
+
+| arm | truth quantile | truth above the median | bias (posterior mean - truth, posterior sd) | 68% coverage [68% interval] | 90% coverage [68% interval] | log score - unit's (seeds) |
+|---|---|---|---|---|---|---|
+| unit | 0.600 ± 0.027 | 70 of 100 | -0.35 ± 0.10 | 0.66 [0.61, 0.71] | 0.89 [0.86, 0.92] | — |
+| radial | 0.595 ± 0.028 | 68 of 100 | -0.32 ± 0.10 | 0.66 [0.61, 0.71] | 0.89 [0.86, 0.92] | +0.0259 ± 0.0135 (100) |
+| oracle | 0.598 ± 0.028 | 68 of 100 | -0.34 ± 0.10 | 0.69 [0.64, 0.73] | 0.88 [0.84, 0.91] | +0.0489 ± 0.0220 (100) |
+| antipodal | 0.612 ± 0.027 | 70 of 100 | -0.38 ± 0.10 | 0.66 [0.61, 0.71] | 0.91 [0.88, 0.93] | +0.0015 ± 0.0126 (100) |
+| radial_marg | 0.549 ± 0.110 | 7 of 10 | -0.17 ± 0.42 | 0.60 [0.44, 0.74] | 0.80 [0.65, 0.89] | +0.0638 ± 0.0322 (10) |
+| complete_stored | 0.622 ± 0.027 | 70 of 100 | -0.42 ± 0.10 | 0.67 [0.62, 0.71] | 0.89 [0.86, 0.92] | -0.0071 ± 0.0188 (100) |
+| spectral | 0.537 ± 0.030 | 58 of 100 | -0.14 ± 0.11 | 0.60 [0.55, 0.65] | 0.91 [0.88, 0.93] | -0.4767 ± 0.0691 (100) |
+| narrow_unit | 0.507 ± 0.027 | 55 of 100 | +0.02 ± 0.10 | 0.71 [0.66, 0.75] | 0.90 [0.87, 0.93] | +0.6203 ± 0.0879 (98) |
+| narrow_radial | 0.499 ± 0.029 | 54 of 100 | +0.09 ± 0.11 | 0.68 [0.63, 0.72] | 0.89 [0.86, 0.92] | +0.6297 ± 0.0939 (95) |
+| narrow_complete_stored | 0.506 ± 0.029 | 55 of 100 | +0.10 ± 0.12 | 0.70 [0.65, 0.74] | 0.89 [0.86, 0.92] | +0.6178 ± 0.0949 (95) |
+
+Coverage intervals: the 68% central interval of the Jeffreys posterior Beta(k + 1/2, n - k + 1/2). The log-score
+column leaves out walled-truth seeds (narrow arms: 2, 5, 5); until amendment 4 these entered at the code's floor.
+
+Broad photo-z against the narrow twin on the same galaxies and events (paired, mean ± seed error):
+
+| pair | truth quantile broad / narrow | broad - narrow | bias broad / narrow | broad - narrow |
+|---|---|---|---|---|
+| complete_stored / narrow_complete_stored | 0.622 / 0.506 | +0.116 ± 0.022 | -0.42 / +0.10 | -0.51 ± 0.10 |
+| radial / narrow_radial | 0.595 / 0.499 | +0.096 ± 0.023 | -0.32 / +0.09 | -0.42 ± 0.09 |
+| unit / narrow_unit | 0.600 / 0.507 | +0.094 ± 0.022 | -0.35 / +0.02 | -0.37 ± 0.07 |
+
+Gain ratio of radial over oracle, Part 1, paired per seed (seed bootstrap, 20,000 resamples, seed 3399):
+
+| seeds | which | n | ratio | 5% | 16% | 50% | 84% | 95% | numerator ± se | denominator ± se | resamples with the denominator's sign flipped |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| all seeds | log score | 100 | 0.529 | +0.18 | +0.36 | +0.53 | +0.70 | +0.90 | +0.0259 ± 0.0135 | +0.0489 ± 0.0220 | 0.011 |
+| all seeds | width | 100 | 0.555 | +0.48 | +0.51 | +0.55 | +0.60 | +0.64 | -0.0240 ± 0.0038 | -0.0433 ± 0.0069 | 0.000 |
+| without failed gate seeds | log score | 91 | 0.589 | +0.22 | +0.42 | +0.59 | +0.79 | +1.06 | +0.0271 ± 0.0143 | +0.0460 ± 0.0231 | 0.021 |
+| without failed gate seeds | width | 91 | 0.569 | +0.50 | +0.53 | +0.57 | +0.62 | +0.65 | -0.0244 ± 0.0039 | -0.0429 ± 0.0070 | 0.000 |
+
+**Mock Part 2 (30 seeds): calibration columns** (mean ± seed error).
+
+| arm | truth quantile | truth above the median | bias (posterior mean - truth, posterior sd) | 68% coverage [68% interval] | 90% coverage [68% interval] | log score - unit's (seeds) |
+|---|---|---|---|---|---|---|
+| unit | 0.582 ± 0.060 | 21 of 30 | -0.29 ± 0.27 | 0.53 [0.44, 0.62] | 0.73 [0.65, 0.80] | — |
+| radial | 0.582 ± 0.060 | 21 of 30 | -0.29 ± 0.27 | 0.53 [0.44, 0.62] | 0.73 [0.65, 0.80] | +0.0020 ± 0.0073 (30) |
+| oracle | 0.578 ± 0.059 | 20 of 30 | -0.27 ± 0.27 | 0.60 [0.51, 0.68] | 0.73 [0.65, 0.80] | +0.0648 ± 0.0355 (30) |
+| complete | 0.588 ± 0.060 | 20 of 30 | -0.31 ± 0.28 | 0.50 [0.41, 0.59] | 0.73 [0.65, 0.80] | -0.0198 ± 0.0445 (30) |
+
+Gain ratio of radial over oracle, Part 2, paired per seed (seed bootstrap, 20,000 resamples, seed 3399):
+
+| seeds | which | n | ratio | 5% | 16% | 50% | 84% | 95% | numerator ± se | denominator ± se | resamples with the denominator's sign flipped |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| all seeds | log score | 30 | 0.030 | -0.37 | -0.10 | +0.04 | +0.12 | +0.20 | +0.0020 ± 0.0073 | +0.0648 ± 0.0355 | 0.033 |
+| all seeds | width | 30 | 0.226 | +0.14 | +0.17 | +0.23 | +0.30 | +0.37 | -0.0060 ± 0.0017 | -0.0267 ± 0.0078 | 0.000 |
+| without failed gate seeds | log score | 27 | 0.050 | -0.34 | -0.07 | +0.06 | +0.15 | +0.27 | +0.0033 ± 0.0080 | +0.0660 ± 0.0393 | 0.045 |
+| without failed gate seeds | width | 27 | 0.220 | +0.12 | +0.16 | +0.22 | +0.31 | +0.41 | -0.0052 ± 0.0017 | -0.0237 ± 0.0080 | 0.002 |
+
+Part 1 (deep, full-sky catalog) on Part 2's seeds 1-30, against Part 2:
+
+| arm | Part 1 68% / 90% | Part 2 68% / 90% |
+|---|---|---|
+| spectral | 0.57 / 0.87 | — |
+| unit | 0.53 / 0.83 | 0.53 / 0.73 |
+| radial | 0.53 / 0.83 | 0.53 / 0.73 |
+| oracle | 0.60 / 0.83 | 0.60 / 0.73 |
+| complete_stored | 0.53 / 0.83 | 0.50 / 0.73 |
+
+**The f_p-coupled share at finer strata** (stored tables; `<notes>/recompute/coupled_share.json`; its rebuilt budget
+weights reproduce the stored declared share of every table to rounding).
+
+| table | 20 equal-count (declared) | 100 | 400 | 20 equal-budget | noise floor 20 / 100 / 400 |
+|---|---|---|---|---|---|
+| primary map | 0.035 | 0.054 | 0.064 | 0.054 | 0.0002 / 0.0009 / 0.0033 |
+| runner-up | 0.048 | 0.076 | 0.092 | 0.076 | 0.0002 / 0.0009 / 0.0032 |
+| rougher field | 0.039 | 0.064 | 0.079 | 0.063 | 0.0002 / 0.0009 / 0.0033 |
+| shuffles 3305-3308 | 0.022-0.023 | 0.022-0.023 | 0.025-0.026 | 0.022-0.023 | 0.0001-0.0002 / 0.0008-0.0009 / 0.0033-0.0035 |
+
+**What the mock does not test (finding G7.2).** The likelihood uses the mock's generating selection and n0, delta 0,
+sigma_kde 0, an exact f_p (Part 2: 0 or exactly 0.875), unbiased Gaussian photo-z with exactly known widths, its own
+injections covering the population, and the guard never binds (N_eff/4N at least 105 on every seed). It cannot show
+the catalog's absolute-magnitude floor applied on photo-z, f_p against the catalog's own coverage, the photo-z holes,
+photo-z bias or outliers, the guard as an active edge, mixed PE priors or the O3 injection mass cap. Its galaxy
+density is about 44 times below DESI's within the depth and it has no spectroscopic rows (DESI 27%). Part 2 keeps
+catalog rows on observed redshift up to its depth exactly, where DESI keeps rows beyond its depth (G7.3); keeping rows
+to three photo-z widths beyond the depth leaves the aggregates in place (review measurement) but moves single seeds by
+a median 0.29 posterior sd.
+
+**Not done (decision 9 option C, not chosen):** finer-strata shuffles rerun, an exact-posterior Q arm at the
+data-preferred prior, a mock with the DESI-like departures.
+
+**Corrections of the readings.** Each is marked in place by a short pointer; the text of record is kept.
+
+**Correction 1 (Status block, "Posteriors and Bayes factors", second bullet).** Against the candidate completions Q =
+1 is mildly preferred: ln B on [20, 140] is -0.067 for the primary (paired-replicate accuracy 0.034), -0.065 for the
+estimand (accuracy 0.035, computed), -0.147 for the runner-up and -0.163 for the rougher-field table (biased Laplace
+table; neither has replicates of its own). Against the four placement controls ln B ranges from -0.117 to +0.012: one
+shuffle is preferred over Q = 1 (C035). The values on [50, 100] are the same to 3e-4.
+
+**Correction 2 (Status block, "Size.").** The Q effect is at its Monte-Carlo noise: its window rms is 0.053 against a
+noise rms of 0.058 from the paired replicates. The catalog's own ln L_cat - ln L_spec is at its noise on the window
+(rms 0.377 against 0.450) and partly resolved on the coarse grid (0.690 against 0.535; 0.435 with the noise removed).
+The declared "12-15% of the catalog's structure" therefore has a numerator at its noise and is not a measured size.
+With the noise removed, the event part of the Q effect is the larger (0.021 nat rms; the selection part is noise). No
+event moves by 0.1 nat over the window (C005).
+
+**Correction 3 (Status block, "Mock.").** Mock results under ideal inputs ("What the mock does not test", above). Part
+1 (100 seeds): radial Q gains +0.026 ± 0.014 nat at the truth over Q = 1, against the oracle's +0.049 ± 0.022; the
+paired gain ratio is 0.53 (seed bootstrap 5-95%: 0.18 to 0.90). Part 2 (all 30 seeds, DESI-like geometry): radial
+gains +0.002 ± 0.007 nat against the oracle's +0.065 ± 0.036; the gain ratio is 0.030 in log score (5-95%: -0.37 to
++0.20) and 0.23 in width (0.14 to 0.37). The log-score numerator is consistent with zero. Every broad-photo-z catalog
+arm of Part 1 sits low by about a third of a posterior sd (Q = 1: -0.35 ± 0.10); the narrow-photo-z twins are
+calibrated. The mock ran the first-declared per-seed Laplace rule; the real tables use the amended one (C036, G7.1,
+G7.2).
+
+**Correction 4 (Amendment 1, systematics bullets).** The shuffles remove the correlation with imaging depth, as
+designed. They keep the coupling of log Q to f_p between the 20 strata and remove it within each stratum; the lowest
+stratum spans f_p from below 0.001 to 0.745 and holds much of the primary's coupling, so they keep only part of it
+(C032). The rougher field's lower evidence is a real preference of the galaxy counts for more structure: the Laplace
+bias declared for the rougher field is a bias of the table (the Laplace mean of a row's missing hosts), not of the
+evidence, whose Laplace error the review measured by importance sampling at under 1% of the preference. The preference
+holds within the model: the rougher field's log Q correlates more with imaging depth (0.085 against 0.055), so part of
+the extra variance may absorb selection systematics rather than structure. The primary's sigma 0.5 is set by the
+table-accuracy filter, not by the data (C033).
+
+**Correction 5 (Amendment 3, table 1, the `q-rough` row label).** `q-rough` (rougher field; Laplace table biased high:
+relative excess +5.8% to +16.9% over the 64 checked rows; C145).
+
+**Correction 6 (Amendment 3, item 2, the two bullets under the table).** The Q effect's peak-to-peak is 15% (coarse
+grid) and 12% (window) of that of ln L_cat - ln L_spec, as declared. Neither ratio is a measured size (table B). On
+the window both peak-to-peaks are at their Monte-Carlo noise: the noise-only peak-to-peak from the paired replicates
+is 0.20 (0.14-0.38 over replicates) for q-map - Q = 1 against its nominal 0.27, and 2.05 (1.75-2.97) for the catalog
+against its nominal 2.20. On the coarse grid the catalog's is too (3.61, 2.96-4.43, against 3.28), and q-map - Q = 1's
+nominal 0.48 sits just above its noise-only range (0.32, 0.27-0.45). By rms, q-map - Q = 1 is at its noise on both
+ranges (window 0.053 against a noise rms of 0.058, coarse 0.065 against 0.066); the catalog's curve is at its noise on
+the window (0.377 against 0.450) and partly resolved on the coarse grid (0.690 against 0.535; 0.435 with the noise
+removed). The split: the selection part of q-map - Q = 1 (window rms 0.045) is at its noise rms (0.054); the event
+part (0.027 against 0.017) is partly resolved, 0.021 rms with the noise removed. So in the primary the event part is
+the larger once the noise is removed, the reverse of the nominal reading. The other tables have no replicates (C005).
+
+**Correction 7 (Amendment 3, item 3, the `q-marg` bullet).** `q-marg`: computed by the summary
+(`accuracy.q_marg_combined`): the q-map spread of ln B (0.034) combined in quadrature with the posterior-weighted
+member sd (0.008; it bounds the member term at any correlation between points) gives 0.035; with the largest member
+variance on the grid instead, 0.038. An approximation: the members are not replicated (C113).
+
+**Correction 8 (Amendment 3, item 4, heading).** Rows permuted within 20 equal-count f_p strata: the same rows and
+per-stratum statistics; the coupling to f_p between strata is kept, the coupling within a stratum is removed, so ln B
+against them reads the placement together with that within-stratum coupling, not the placement alone (C032).
+
+**Correction 9 (Amendment 3, item 5, the runner-up and rougher-field bullets).** Doubling ell_grid lowers the evidence
+by 0.08 nat; q-map against the runner-up: sd ratio 0.988 and median shift +0.000 sd. Neither pair has replicates;
+against the q-map - Q = 1 spreads that stand in (sd ratio 0.013, shift 0.024 sd), the width change is at the noise.
+The rougher field lowers the GW evidence by 0.10 nat; median shift -0.044 sd and sd ratio 0.971 (q-map against it),
+about two of the stand-in spreads (0.024 and 0.013). Its Laplace table is biased high (+5.8% to +16.9% over the
+checked rows), so these numbers belong to that biased table, not to the data-preferred prior (C005, C033, C145).
+
+**Correction 10 (Amendment 3, item 7, first bullet).** The f_p-coupled share is the part of the budget-weighted
+variance of log Q that lies between f_p strata. With the declared 20 equal-count strata it is 3.5% for the primary;
+the lowest of them spans f_p below 0.001 to 0.745, and finer strata resolve more of the coupling: 5.4% with 100
+strata, 6.4% with 400, 5.4% with 20 strata of equal missing-host budget, against a noise floor of 0.02%, 0.09% and
+0.33% (rows permuted across the sky). So the declared figure understates the coupling by a factor 1.5-1.7. The
+shuffles stay at 2.2-2.6% at every resolution. In the lowest f_p tercile Q adds 5.7% more missing hosts than Q = 1,
+and 6-7% fewer in the other two; the shuffles 2.2-2.5% (budget ratio 1.022-1.025) (C032).
+
+**Correction 11 (Amendment 3, item 8, Part 1).** Gain ratio of Part 1, radial over oracle, each against unit, from
+paired per-seed differences: 0.53 in log score (seed bootstrap 5-95%: 0.18 to 0.90) and 0.55 in width (0.48 to 0.64)
+(C036). The narrow-photo-z pair: a seed whose truth sits on a wall of the hard guard now has no log score and is
+counted (until amendment 4 the code wrote its floor, -690.8, into the means; C110): 2 seeds for narrow-unit, 5 for
+narrow-radial and for narrow-complete. Without them, narrow-radial minus narrow-unit is +0.014 ± 0.013 (95 seeds;
+median +0.011), against radial minus unit +0.026 ± 0.014; per seed, the narrow gain minus the broad gain is -0.013 ±
+0.011 (95 seeds; -0.017 ± 0.012 without the failed-gate seeds; the summary writes it as
+`narrow_gain_minus_broad_gain`). Narrow-unit sits above unit by +0.62 ± 0.09 (98 seeds). The narrow arms are walled at
+low H0 in 57-58 of the 100 seeds, and 4 seeds of each narrow arm have a wall band inside the finite range. The
+expectation "narrow-radial's gain is at least radial's": not seen; the paired per-seed difference of the two gains is
+-0.013 ± 0.011 (95 seeds), consistent with zero and with a small negative value. Calibration of the same arms (table
+"Mock Part 1"): every broad-photo-z catalog arm puts its posterior below the truth on average: truth quantile 0.600 ±
+0.027 for Q = 1 (truth above the median in 70 of 100 seeds), bias (posterior mean - truth) -0.35 ± 0.10 posterior sd;
+radial -0.32, oracle -0.34, antipodal -0.38, the stored complete catalog -0.42 ± 0.10. The narrow-photo-z twins on the
+same galaxies and events are calibrated (+0.02 to +0.10 ± 0.10-0.12; truth quantile 0.50-0.51); broad minus narrow,
+paired: truth quantile +0.094 ± 0.022 (Q = 1), bias -0.37 ± 0.07. Spectral only: 0.537 ± 0.030, -0.14 ± 0.11. A
+0.35-sd bias covers 0.65 / 0.88 in expectation, inside the binomial noise of 100 seeds, so the coverage column cannot
+show it. The bias comes from the broad photo-z kernel's volume prior (the review's double-counting finding, decision
+3). The mean log-score gains above are measured against this biased Q = 1 baseline (G7.1).
+
+**Correction 12 (Amendment 3, item 8, Part 2).** Gain ratio of Part 2, from paired per-seed differences: 0.030 in log
+score (seed bootstrap 5-95%: -0.37 to +0.20; the oracle denominator's mean changes sign in 3.3% of resamples) and 0.23
+in width (0.14 to 0.37). Without the 3 seeds with recorded gate failures: 0.050 (-0.34 to +0.27) and 0.22 (0.12 to
+0.41). The numerator, +0.002 ± 0.007 nat, is consistent with zero; the denominator is +0.065 ± 0.036. Part 1's is 0.53
+(0.18 to 0.90) and 0.55. As declared, a small fraction of Part 1's gain. The declared reading "an upper bound for
+DESI" is withdrawn: the mock analyses itself with ideal inputs, and its galaxy density and spectroscopic share argue
+the other way (C036, G7.2). The 68% coverage of Part 2 (0.53 for Q = 1) equals Part 1's on the same 30 seeds (0.53;
+spectral only 0.57), so it belongs to these 30 GW realisations, not to the shallow catalog. Only the 90% coverage
+drops, from 0.83 to 0.73 (a net three seeds; 22 of 30 has the 68% interval 0.65-0.80). Q does not change it (C106).
+
+**Correction 13 (Amendment 3, "Reading").** Q = 1 is mildly preferred over the candidate completions. The Bayes
+factors of the primary, the members, the runner-up and the rougher field range from 0.94 (`q-marg`, ln B -0.065 ±
+0.035) to 0.85 (`q-rough`, -0.16). For the primary, ln B is -0.067 with a paired-replicate accuracy of 0.034. The
+placement controls range from 0.89 to 1.01 (one shuffle is preferred over Q = 1). The low-H0 weight is about 1e-6 in
+every arm, so no Bayes factor is carried by the low-H0 tail (C035). The size of the Q effect is at its Monte-Carlo
+noise, so its declared ratio to the catalog's own ln L_cat - ln L_spec is not measured (the catalog's curve is itself
+at its noise on the window and partly resolved on the coarse grid). With the noise removed, the event part of the Q
+effect is the larger. No event moves by 0.1 nat or more over the window (C005). The catalog does not change the
+posterior at this cell, to the accuracy of the replicates: against spectral only the median moves by -0.001 ± 0.24 sd,
+the sd ratio is 1.07 ± 0.10 and the 68% width ratio 1.15 ± 0.22 (8 paired replicates). The 7% widening is not
+resolved. ln B against spectral only (-0.019 ± 0.32) compares the two host models; it is not the evidence for this
+reading (C035). The mock, under ideal inputs (the generating selection and n0, an exact f_p, unbiased Gaussian photo-z
+of known width and a guard that never binds): without sub-pixel structure (Part 1) the cross-validated radial table
+recovers about half of the oracle's gain (0.53; 0.18 to 0.90), which is itself small (+0.05 nat at the truth); in the
+DESI-like geometry (Part 2) it recovers 0.03 (-0.37 to +0.20) of a +0.065-nat oracle gain, a numerator consistent with
+zero. These are what a Q table recovers under these inputs, not a bound for DESI: the mock does not test the real-data
+departures (the absolute-magnitude floor applied on photo-z, f_p against the catalog's coverage, photo-z holes,
+photo-z bias and outliers, the guard as an active edge, the O3 injection mass cap), and its galaxy density (about 44
+times below DESI's within the depth) and the absence of spectroscopic rows argue the other way. The reading that the Q
+tables leave the DESI posterior where Q = 1 puts it rests on the real paired differences alone (C036, G7.2).
+
+**Correction 14 (Amendment 3, "Caveats").** The mock analyses itself with ideal inputs and its broad-photo-z catalog
+arms sit low by about a third of a posterior sd; its gain ratios are not a bound for DESI. The rougher-field table has
+a known Laplace bias: high by +5.8% to +16.9% of a checked row's missing hosts (largest k-hat 0.70; the design-stage
+estimate was 8-14%). Added: the H0 reading is conditional on a table at sigma 0.5, set by the table-accuracy filter;
+the galaxy counts prefer more structure (+0.0107 nat per galaxy for the rougher field; within the model, and part of
+it may be selection systematics); no arm has an unbiased table at that prior. The placement control removes the
+within-stratum coupling to f_p as well as the placement (item 4). Replicates exist for `q-map` and for Q = 1 against
+spectral only; every other comparison's spread is a stand-in (the summary names it in `accuracy_source`).
+
+The declarations are kept as declared and marked in place: the design-stage "8-14%" estimate of the rougher field
+("The Q tables", the rougher-field arm) and "its DESI-like Part 2 ... is an upper bound for DESI" (check 13 of "Checks
+before the go") are superseded by corrections 5, 9, 12 and 13.
+
+#### Catalog version 2 and GW inputs
+
+**Footprint systematics in the tables (consumer PR #24, merge 402c947; findings C003, G3.1).** The f_p-coupled part of
+the Q tables is a footprint systematic, not large-scale structure. In heavily masked pixels f_p under-predicts the
+counts (masked sources stay in the catalog), and the primary table adds missing hosts there: budget-weighted Q 1.445
+for f_p < 0.667 against 1.035 above, Q 2 to 3.3 at the lowest f_p; about 64k spurious missing hosts sit in the 1,267
+occupied pixels with f_p < 0.5 under Q = 1 and the table adds 65.5k more. In photo-z holes the table removes missing
+hosts exactly where hosts are missing: budget-weighted Q 0.84, 0.61 and 0.48 in the partial-hole classes against 1.016
+in clean rows. Pixels with f_p < 2/3 hold 9.8% of the fitted missing-host budget, and rows with at least 10% of
+candidates without a photo-z 4.4%. The main reading (the Q map leaves the posterior where Q = 1 puts it) is not
+affected; the tables are to be rebuilt on the version-2 footprint.
+
+**Catalog model (findings C002, G2.1, G2.3, G3.2).** The catalog-model paragraph of 12AF's amendment of this date
+applies.
+
+**GW inputs (consumer PR #26, merge a152bed; findings C047, C057, G1.1).** See the GW inputs addendum
+(`phases/12_gw_inputs_addendum_2026-10-26.md`). This record's spectral-only grid is the one the O3-support correction
+was measured on: -0.012 posterior sd, sd ratio 0.999. The exact-prior build of its input table carries the gwcat
+review's PE items; on the spectral-only grid they stay within the addendum's bound. Its catalog grids carry the PE
+items and the O3-support bias too; their size there has not been measured.
+
+#### Correction to the 25 Oct amendment: what the tests of consumer PR #34 cover
+
+The section "Gates, checks and provenance (consumer PR #34, merge 009257d)" of the 25 Oct amendment said: "Each fix
+has a test that fails when its defect is put back, at the helper and at the command that calls it (a sweep of 52 such
+mutations, at least one per finding, catches all but one, which is equivalent: check 6's ratio and its budget compare
+the same equality)." That overstated the tests. The fixer's 52 mutations had none for finding C103 (the pre-check's
+fallback); and the independent check of the pull request (round 2, at its head a11755d;
+`darksirens-core-data/reviews/consumer-2026-10-24/fix/notes/verify-p08-qgates/round2/mut/`) put back 76 defects: the
+first check's 44, the fixer's 8 of the second round and 24 new ones, at least one for each of the package's 23
+findings (C103's is caught). The tests caught 71. The five left: one equivalent (the gate 6 reference ratio copied
+from lss with the budget check left in place: check 6's ratio and its budget compare the same equality), and four
+secondary paths with no failing test: the holder chain's gate 6 mark naming no tables, so a pass made before a table
+rebuild would be reused (C006); the fitted-row count not enforced by the Laplace-robustness driver, and not by the
+cross-validation's full-sky step on the production grid (C101); and the amendment step reporting a gate 6 pass from a
+file that records a miss, since it is tested only with a passing file (C006). The code of these paths is correct on
+the consumer's main; their tests are on consumer PR #35, which is not merged. The sentence is reworded in place; no
+number of record and no check result changes.
