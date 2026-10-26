@@ -920,6 +920,9 @@ All four chains converged (convergence "verified", the start check met): MIKO H1
 and seed 42 of the upper; Jetstream2 ran seed 41 of the upper part (and its lower seed 31 copy; files copied back,
 identical by sha256). Combined at 2026-10-21 10:39 UTC (`B2/runs/combined/combined.json`, `B2/runs/compare.json`),
 commit 78b84f9, 40,000 pooled samples.
+*(26 Oct 2026: corrected: MIKO's H100 NVL ran upper seed 42 and lower seed 32; the Jetstream2 H100 ran upper seed 41
+and lower seed 31 (files copied back, identical by sha256), as declared at launch (finding C144); see "Amendment (26
+Oct 2026): independent review, round 3".)*
 
 **H0 (absolute; owner page only, never to the clean-room):**
 
@@ -940,9 +943,16 @@ Fraction of samples the variance limit penalises: 0.178 to 0.191.
 reported as they are): d_med = +1.46 (+0.11 B1 sd, +0.12 A1 sd), d_sd = +0.35 (width ratio 1.03). The two upper-part
 seeds differ by 1.0 in their medians, so the difference is of the size of B2's own seed scatter. μ1 and γ agree: μ1
 10.01 [9.64, 10.34] against B1's 10.04 [9.67, 10.37]; γ 2.47 [2.03, 2.93] against 2.45 [2.00, 2.92].
+*(26 Oct 2026: restated: the difference is not seed scatter but an unresolved difference between the direct chains and
+the reweighting, 2.8 to 3.2 chain-scatter errors in the upper part (finding C012); see "Amendment (26 Oct 2026):
+independent review, round 3".)*
 
 **2. The catalog's effect, against A1:** Δ = (median_B2 − median_A1) / sd_A1 = +0.20; R = sd_B2 / sd_A1 = 1.06; 68%
 widths 26.7 against 24.7 (ratio 1.08). B1's were +0.08 and 1.03 (12AD).
+*(26 Oct 2026: restated: about +0.08 of the +0.20 sd is the variance guard and about +0.12 the unresolved gap to the
+reweighting; at A1's low-H0 weight the sd ratio is 1.022; against A1's combination the 68% width ratio is 1.06, the
+1.08 being against B1's resample of A1 (findings C001, C012, C013, C014); see "Amendment (26 Oct 2026): independent
+review, round 3".)*
 
 **Every sampled parameter** (median [68%]; B1 and A1 shown where their summaries carry the parameter):
 
@@ -1057,3 +1067,109 @@ Slurm rules of 18-19 Oct 2026 (7-day limits; rita GPU jobs at 128 CPUs and 120G;
 wrapper) and break them. They are kept unchanged in what they launch, as the record of how the record ran, and from
 the merge they refuse to run unless PHASE12_ALLOW_HISTORICAL names them (slurm/historical_launch_files.txt lists
 them). The B1 and B2 pipelines' HENON fallback now clears every SLURM_* variable first.
+
+## Amendment (26 Oct 2026): independent review, round 3
+
+An independent multi-agent review of the consumer repo (desi_darksirens_selection; report
+`darksirens-core-data/reviews/consumer-2026-10-24/out/REVIEW.md`) confirmed the findings cited in parentheses below.
+The amendment of 25 Oct 2026 above covers the fix packages merged first. This one covers five more, merged on 26 Oct
+2026 after a third fix round and an independent check of each: the 12AQ readings and mock (consumer PR #32, merge
+97ec978), the 12AO ladder (PR #27, merge ebb12ff), the GW inputs (PR #26, merge a152bed), the variance guard and
+estimator noise (PR #33, merge 901bb54) and catalog version 2 (PR #24, merge 402c947). The consumer's main is now
+402c947. `./ci.sh` passed on the merged tree in all three record environments (HENON, CPU;
+`ci_logs/20261026T124516Z_133bc47f981f_<env>.log`: consumer_e7c3007_cuda12 1568 passed, consumer_e7c3007batch_cuda12
+1577, consumer_1022429_lss57afebe_cuda12 1592; none failed). On 26 Oct 2026 the owner decided that catalog version 2
+vetoes the bright-star masks, BRIGHT and MEDIUM (Legacy Survey maskbits 2050), not the large-galaxy bit, and that the
+injections stay at the support gate for now (decision 4D; the replacement of the O3 campaign, 4A, is deferred and no
+new injection product is made). Location-free throughout. Unless an item says otherwise, no number of record changes.
+Still open and not amended here: resume markers and fingerprints (consumer PR #25) and the follow-ups of consumer PR
+#35, among them the refusal of a delta outside its prior's bounds.
+
+### What the comparisons with A1 and B1 show (consumer PR #33, merge 901bb54; owner decisions 6B, 7A, 8C)
+
+**Reading 2, the catalog's effect against A1, restated (findings C001, C013).** The direct chains move the median by
++0.20 A1 sd against A1. That number is not the catalog's information. About +0.08 A1 sd is the limit-4 variance guard:
+the spectral likelihood with only the DESI target's guard penalty, reweighted from A1, moves the median by +0.076 A1
+sd (93% of 12AD's +0.082), while the DESI likelihood with the spectral target's guard moves it by -0.007. The rest,
+about +0.12 A1 sd, is the unresolved gap between the direct chains and the reweighting (next item). In the upper H0
+part the unguarded galaxy likelihood ratio has no H0 trend (correlation -0.007 across A1's draws). "Six percent wider"
+is mostly the low-H0 part's weight (0.053 here against A1's 0.0365): mixed at A1's low-H0 weight the sd ratio is 1.022
+(68% width ratio 1.017), and the upper part alone gives 1.019 (0.999); so the posterior is about 2% wider at equal
+low-H0 weight, not 6%. The widening does not come from the guard (the guard alone narrows the posterior slightly). The
+median shift depends little on that weight (+0.199 pooled, +0.221 at A1's weight, +0.238 in the upper part alone).
+
+**Reading 1, against B1, restated (finding C012).** The direct and the reweighted posteriors target the same
+likelihood, priors, guard and PE build (the review re-evaluated both targets: equal bit for bit). Their medians differ
+by +0.12 A1 sd (+0.11 B1 sd). In the upper part the difference is +0.129 A1 sd with a chain-scatter error of 0.041 to
+0.047, 2.8 to 3.2 errors; both direct seeds lie above all four reweighted chains, and the probability that the true
+difference is at or below zero is about 0.02 (flat priors on the two means, a Jeffreys prior on a common scatter).
+This is an unresolved difference between the two methods, of the size of the effects being read, not seed scatter: the
+earlier sentence set a difference of means beside the spread of two single seeds. Until the closure checks of decision
+8C have run (these chains and A1 each reweighted to the spectral likelihood with the DESI guard, a target both reach
+within their draws; the DESI target at A1's nested points; a third upper-part seed), both population-free values are
+quoted, with this gap.
+
+**The A1 row and the 68% width ratio (finding C014).** The table's A1 row gave the 68% interval of B1's resample of
+the A1 proposal, not A1's combination; the row should carry A1's combination as 12AA quotes it. Against A1's
+combination the 68% width ratio is 1.06 (1.062); the 1.08 of reading 2 is against B1's resample. From now on the
+direct-chain `compare` writes the 68% and 90% width ratios from code; rerun on this record's inputs it gives the 68%
+width ratio 1.062 against A1's combination (90%: 1.065), with the record's shift and sd ratio unchanged bit for bit.
+
+**`B2/runs/compare.json` band (finding C015).** The file was written on 21 Oct, after the owner's no-bands rule of 20
+Oct, and still carries the band "robust" (shift 0.1987 A1 sd, at the old band edge of 0.2, which Monte-Carlo noise
+alone could cross). The band is superseded and not part of this record; the `compare` command no longer writes bands.
+
+**Which GPU ran which chain (finding C144).** MIKO's H100 NVL ran upper seed 42 and lower seed 32; the Jetstream2 H100
+ran upper seed 41 and lower seed 31 (files copied back, identical by sha256), as declared at launch and as 12AP
+states. The first sentence of "Results: the chains" said otherwise; it is marked in place.
+
+**The guard sample's sd (finding C068).** `fraction_penalised_binomial_sd` in each chain's result treats the 4,000
+equal-weighted rows as the sample; with the nested sample's effective size behind them the sd is 1.10 to 1.12 times
+larger. No number of this record uses it. New chains also write the effective-size-aware sds and, as separate numbers,
+the fractions below the wall (N_eff under its threshold, measured: 3.1 to 3.6% of these chains' guard samples, almost
+all with a penalty under 1 nat; 0.05 to 0.15% have a penalty below -1 nat) and within 5% above it (N_eff from 1 to
+1.05 times its threshold: 6.1 to 6.9%).
+
+**What changes in the reading (decisions 6A, 6B, 7A, 8C).** None of the +0.20 sd is shown to be galaxy information,
+and no claim of a catalog effect rests on this record until the comparison is made at a common guard with an estimator
+error (decisions 6B and 7A) and the direct-minus-reweighted gap is resolved (decision 8C). The catalog's effect at a
+common guard from these chains (each chain against its own draws reweighted to the spectral likelihood with the DESI
+guard) comes with the first closure check. Before further production chains are read as a catalog or cell effect, the
+injection set is enlarged so that the wall leaves the posterior (decision 6A). That needs a new injection product,
+which the owner deferred on 26 Oct 2026 (decision 4: the injections stay at the support gate for now); until then
+every such reading is made at a common guard and without the guard (decision 6B). The code for these readings
+(`scripts/phase12_5_estimator_noise.py`, the direct-chain `compare`) is on the consumer's main; the closure checks and
+the estimator error have not been run (their designs wait for the owner's go).
+
+### Catalog model and GW inputs
+
+**Catalog model (consumer PR #24, merge 402c947; findings C002, C091, C003, G3.1, C018, G2.1, G2.3, G2.4, G3.3,
+G3.2).** Three properties of the catalog model behind this result were found by the review; their H0 effect is not
+measured. (1) The catalog's absolute-magnitude floor is in no selection model (C002), and with m_lim 21 the Gaussian
+luminosity function makes the union at least 99.7% complete to z_depth, so the sampled M0hat and sigma_M are inert and
+the completeness is f_p alone (C091). (2) The footprint fraction is not the catalog's coverage: masked sources stay in
+the catalog while f_p removes them (galaxies per unit f_p are 19, 5 and 2 times the median at f_p < 0.05, 0.05-0.2 and
+0.2-0.5 at nside 128; C003), and covered sky without r-band or photo-z is read as voids and underdensities (G3.1,
+C018); about 5% of PE samples sit in hole pixels. (3) The photometric kernel counts the volume prior twice (G2.1).
+Smaller: 2.3% of rows are galaxies DESI measured above 0.30 (G2.3); spectroscopic redshifts are heliocentric (coherent
+H0 effect about -0.12%, G2.4); about 5.8k rows under medium-bright-star masks are spurious halo fragments (G3.3); the
+photo-z retention rule loses 0.84% of hosts averaged over the window (0.04% to 1.45%, rising with z), about one eighth
+of the n0 prior width, with no completeness model (G3.2). The owner's decisions (1C: the hosts are the galaxies above
+the floor, complete below the depth; 2A: a footprint built from the catalog's own construction, with the bright-star
+mask veto BRIGHT and MEDIUM, maskbits 2050, chosen on 26 Oct; 3B: a re-centred photometric kernel) define catalog
+version 2, which the merge adds as opt-in code: no record path changes. Its sizing step, one fixed-calibration H0 grid
+pair at the fiducial cell, measures the effect before any chain is rerun; it waits for the owner's go. The
+large-galaxy mask is not vetoed: it marks the low-redshift hosts themselves (in a smoke on about 1% of the rows it
+removed 93% of the rows at z 0.02-0.03 against a footprint share of 7%).
+
+**n0 window (consumer PR #24, merge 402c947; finding C020).** At delta fixed at 0 the n0 prior centre is matched over
+[0.02, 0.30], but the likelihood uses the catalog only to z_depth 0.245; matching within the depth moves the centre by
+-0.028 dex (0.78 prior sd). Record 12AB measured the in-depth centre (H0 shifts 0.000, -0.082 and -0.099 posterior sd
+in its three parts, inside its declared band). `phase12u_calibrate.py --ridge-z-max 0.245` now gives the in-depth
+ridge; the default window is unchanged.
+
+**GW inputs (consumer PR #26, merge a152bed; findings C047, G1.1).** See the GW inputs addendum
+(`phases/12_gw_inputs_addendum_2026-10-26.md`). This record reads the LAL-cosmology PE build (822b3181...), which
+holds the same rows as the exact build, so it carries the same PE items. The addendum's numbers were measured on the
+fixed-population spectral-only target, not on this record's DESI target. This record's chains carry the O3-support
+bias and the PE items; their size at the DESI target has not been measured.

@@ -1354,6 +1354,9 @@ part's evidence moves with its samples.
 - **The reweighting to limit 2 is confirmed** by the declared rule. The
   median's agreement is marginal: 1.7 combined errors, and 3.1 with the
   other pairing. The difference is 1.0 km/s/Mpc, or 0.08 limit-4 sd.
+  *(26 Oct 2026: read together with the gap between 12AF's direct chains and 12AD's reweighting, this is one
+  unresolved difference between direct chains and reweighting, not seed scatter; "confirmed" holds only with the
+  declared pairing (finding C012); see "Amendment (26 Oct 2026): independent review, round 3".)*
 - **H0 does not depend on the limit on the stricter side.** The direct
   result is in the robust band against limit 4 (shift +0.02 sd, ratio
   1.08).
@@ -1534,3 +1537,50 @@ each chain's ln Z from its reported error, as declared, so no number changes.
   in the limit-2 section's cost estimate ("The limit-4 chains took 5.9 to 6.3 hours each") is corrected the same way;
   the estimate does not change.
 - σ_chi's median at limit 4 is 0.109 (0.1095), not 0.110 (its mean is 0.1099); the interval [0.099, 0.121] is right.
+
+## Amendment (26 Oct 2026): independent review, round 3
+
+An independent multi-agent review of the consumer repo (desi_darksirens_selection; report
+`darksirens-core-data/reviews/consumer-2026-10-24/out/REVIEW.md`) confirmed the findings cited in parentheses below.
+The amendment of 25 Oct 2026 above covers the fix packages merged first. This one covers five more, merged on 26 Oct
+2026 after a third fix round and an independent check of each: the 12AQ readings and mock (consumer PR #32, merge
+97ec978), the 12AO ladder (PR #27, merge ebb12ff), the GW inputs (PR #26, merge a152bed), the variance guard and
+estimator noise (PR #33, merge 901bb54) and catalog version 2 (PR #24, merge 402c947). The consumer's main is now
+402c947. `./ci.sh` passed on the merged tree in all three record environments (HENON, CPU;
+`ci_logs/20261026T124516Z_133bc47f981f_<env>.log`: consumer_e7c3007_cuda12 1568 passed, consumer_e7c3007batch_cuda12
+1577, consumer_1022429_lss57afebe_cuda12 1592; none failed). On 26 Oct 2026 the owner decided that catalog version 2
+vetoes the bright-star masks, BRIGHT and MEDIUM (Legacy Survey maskbits 2050), not the large-galaxy bit, and that the
+injections stay at the support gate for now (decision 4D; the replacement of the O3 campaign, 4A, is deferred and no
+new injection product is made). Location-free throughout. Unless an item says otherwise, no number of record changes.
+Still open and not amended here: resume markers and fingerprints (consumer PR #25) and the follow-ups of consumer PR
+#35, among them the refusal of a delta outside its prior's bounds.
+
+### The limit-2 reweighting check and the guard sample's sd (consumer PR #33, merge 901bb54; findings C012, C068)
+
+**The limit-2 reweighting check, restated (finding C012).** The direct limit-2 chains sit above the limit-4 chains
+reweighted to limit 2 by +0.08 limit-4 sd in the median, all of it in the upper H0 part (the lower part agrees): 1.7
+combined errors with the declared pairing of seeds and 3.1 with the other. This has the sign and about the size of the
+gap between the direct DESI chains (12AF) and the reweighted DESI result (12AD) on one target, +0.12 A1 sd, also in
+the upper part, about three chain-scatter errors. Read together they are one unresolved difference between direct
+chains and reweighting, not seed scatter; "confirmed by the declared rule" holds only with the declared pairing, and
+the owner's rule of 20 Oct reads the gap itself instead of a pass mark. The closure checks declared for 12AF and 12AD
+(decision 8C) test where the gap comes from; until they have run, the limit-2 comparison is quoted as the direct and
+the reweighted values with this gap. The direct limit-2 chains read against limit 4 are not affected by this item.
+
+**The guard sample's sd (finding C068).** The penalised shares of this record (the "posterior penalised" columns and
+the penalised-share bullets) are read on 4,000 equal-weighted rows per chain. The binomial sd stored beside them
+(`fraction_penalised_binomial_sd` in each chain's result) treats repeated equal-weighted rows as independent; with the
+effective size of the nested sample behind the rows the sd is 1.10 to 1.11 times larger at limit 4 and 1.11 to 1.12
+times at limit 2 (measured on each chain's guard sample and nested weights). No number of this record quotes that sd.
+New chains also write the effective-size-aware sds and, as separate numbers, the fractions below the wall (N_eff under
+its threshold: 1.1 to 1.7% of the guard samples at limit 4, 1.1 to 1.6% at limit 2) and within 5% above it (N_eff from
+1 to 1.05 times its threshold: 7.3 to 8.6% at limit 4, 8.3 to 10.0% at limit 2).
+
+### GW inputs
+
+**GW inputs (consumer PR #26, merge a152bed; findings C047, C057, G1.1).** See the GW inputs addendum
+(`phases/12_gw_inputs_addendum_2026-10-26.md`). The O3-support bias acts most on the high-mass slope. A first-order
+correction over 800 A1 draws moves alpha2's mean by +0.22 ± 0.01 sd (median +0.20 ± 0.03 sd) and H0's mean by -0.019 ±
+0.008 sd (median -0.038 ± 0.016 sd). The resampled events' variance inflation (2.205, 3.066) enters the variance limit
+through their per-event variances. In the stored grids those carry under 1% of the PE variance sum; the chains store
+none, so the share at the chain's points is not measured.

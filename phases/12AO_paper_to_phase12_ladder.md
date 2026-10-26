@@ -115,6 +115,8 @@ an exact subset: every kept event's block is copied bitwise and the event-set at
 - beta_S (44): `experiment_loa_rebuild/inputs/selection_betaS_v2_loaFaint_marg_s0495_noom.h5`, the paper's own beta_S
   for the 44 (union footprint, threshold 0.495); used only in H (the beta_S analogue of C);
 - the paper's all-sky detected injections: `selection_systematics/betaS/selection_o3o4ab_allsky_snr.h5`;
+  *(26 Oct 2026: gwcat-selection-1.0 with the chi_eff-swap draw density that 12F superseded, as both beta_S files
+  (amendment B3.6); see "Amendment (26 Oct 2026): independent review, round 3".)*
 - the trusted all-sky injections: `phase12t/gwcat_exact/A_sel_chieffref_o3o4ab_v20_exact.h5` (Phase 12's).
 
 **Step A's population.** The pin's mass normaliser was a coarse grid; core's is exact. Passing λ0 = 0.393274 and
@@ -159,6 +161,8 @@ catalog's own mean density", with core's options at e7c3007:
 and is removed by the z <= 0.30 cut, instead of staying a photometric row. The build is this branch's copy of the
 paper's script (`scripts/phase12ao_build_loa_rebuild.py`): outputs go to `--out-dir`, `--match-file` is a path, no
 `__pycache__` is written into the paper repo; every catalog rule is the paper's (a test checks the copy line by line).
+*(26 Oct 2026: the test now compares the copy's diff with the exact list of its marked changes; the check of record
+was looser (amendment B3.7); see "Amendment (26 Oct 2026): independent review, round 3".)*
 The fixed flat table is pixelated in the paper's store layout (`scripts/phase12ao_pixelate.py`: the legacy
 `darksirens.cli.pixelate` arithmetic, vectorised), all in the new directory `paper_ladder/union_rebuild/`. HENON CPU
 Slurm job; nothing existing is overwritten.
@@ -178,6 +182,8 @@ treatment as a whole), as the question defines it.
 
 Paths: R = `/hildafs/projects/phy230014p/magana/desi_darksirens_selection` (read only), D =
 `/hildafs/projects/phy230054p/magana/darksirens-core-data`, L = `R/final/experiments/experiment_loa_rebuild`.
+*(26 Oct 2026: the paper population and the Phase 12 configuration were read without that check in this record's jobs;
+both match (amendment B3.7); see "Amendment (26 Oct 2026): independent review, round 3".)*
 
 | input | path | sha256 |
 |---|---|---|
@@ -241,6 +247,10 @@ beside the numbers; nothing is withheld. The summary always writes its numbers a
   nodes (with no z² law below the first node), the volume prior log-linearly. Tolerances (amended in B1, before any
   job; the first declaration, 1e-6 in ln mu, came from a wrong estimate of that difference): |Δ ln mu| <= 2e-3,
   each event's |Δ ln Z| <= 1e-4, |Δ ln L| <= N (1e-4 + 2e-3).
+  *(26 Oct 2026: amendment B3.1: this version compared empty pixels at zero with empty pixels at the volume prior, not
+  two interpolations; the misses and the relaxed tolerances do not measure interpolation. The consumer's G-T1 now uses
+  C = 0 at every redshift with bounds computed in the job; see "Amendment (26 Oct 2026): independent review, round
+  3".)*
 - **F's seed and build (entry gate on F and F2).** Seed 20261020; ngals, dzgals, wgals and padding bitwise unchanged;
   the sorted redshift multiset bitwise unchanged; the permutation reproduces bitwise from the seed; more than 90% of the
   galaxies' redshifts change.
@@ -370,6 +380,8 @@ location-free; Lane A's own files under `lane_a/` for I, absolute), `lanes/`, `s
   are not a population-level H0 measurement; only the differences between paired grids are read.
 - **A and B keep the paper's cut PE** (cut at dL 1601.9 Mpc in the PE cosmology) with injections that are not cut;
   C removes the cut and nothing else.
+  *(26 Oct 2026: C also redraws the PE, 20,000 → 4,096 samples per event, partly overlapping (amendment B3.5); see
+  "Amendment (26 Oct 2026): independent review, round 3".)*
 - **G changes the pixel weights too** (core's per-row normalisation); G0 separates the two effects only up to the
   fill's departure from pure count weighting (at most about 2% per pixel).
 - **G's fill extends to core's grid top (z 5)** and covers the whole sky above 0.30, empty pixels included.
@@ -385,6 +397,9 @@ location-free; Lane A's own files under `lane_a/` for I, absolute), `lanes/`, `s
   widths) is common to each pair, not removed.
 - **One event (GW200129_065458) was resampled with replacement upstream**; its PE variance is understated (12AJ).
 - **CPU smoke ≠ GPU numerics bit for bit**; the GPU grids are the record's.
+- *(Added 26 Oct 2026, amendment B3.6.)* **The paper's selection files (both beta_S and the paper's all-sky) use the
+  chi_eff-swap spin draw density that record 12F superseded**; every beta_S entry carries it, and D → D2 is that
+  change alone.
 
 ## Decisions for the owner before launch
 
@@ -423,6 +438,8 @@ submitted commit (`paper_ladder/worktrees/<sha>/`).
   differs). This is U1's check on the smaller catalog; U1 itself (the union) runs in the HENON job.
 - **The build copy.** The test checks that every line of the paper's `build_loa_rebuild.py` is in the copy except the
   five output and match-file lines, and that every added line is marked or is the new path handling.
+  *(26 Oct 2026: the check of record was looser than this: it accepted any added line starting with "if " and compared
+  sets (amendment B3.7); see "Amendment (26 Oct 2026): independent review, round 3".)*
 
 ### B1.3 The CPU smoke (two events, the 13 smoke points; plumbing, not results)
 
@@ -453,6 +470,9 @@ checks): every smoke entry reported, none withheld, no guard violation.
   the fill (linear between grid nodes, no z² law below the first node) and core's volume prior (log-linear), which
   the injections in empty pixels carry into ln mu. Amended before any job to |Δ ln mu| <= 2e-3, each event's
   |Δ ln Z| <= 1e-4, |Δ ln L| <= N (1e-4 + 2e-3) (code: `G_T1_TOL`). G-T1 is a mark; G is gated by G-T2.
+  *(26 Oct 2026: amendment B3.1: the cause given here is wrong. The smoke's misses were the volume prior's share in
+  empty pixels, which the saturated selection sets to zero; the relaxed tolerances therefore rest on a wrong cause;
+  see "Amendment (26 Oct 2026): independent review, round 3".)*
 - **Memory and the row chunks.** Core builds the complete catalog's kernels without chunking when rows × slots is
   below 2^25 (v2's compact view: 152,147 × 145). The first C smoke ran that way and reached 25 GB of resident memory
   for about four minutes (above this node's 8 GB guidance; no harm, the holder's limit is 250 GB). The smoke then
@@ -502,6 +522,10 @@ every entry. G-T2 ok. **G-T1 (mark) misses its tolerance on G and G2**: per-even
 1e-4) on both; |Δ ln mu| up to 5e-4 on G (within 2e-3) and 0.016 to 0.040 on G2 (outside); |Δ ln L| 0.007 to 0.010 on
 G, 0.32 to 0.83 on G2 at the three control points. U0 and U1: the branch's build reproduces the paper's as-is union
 exactly (22,787,835 rows, every column; every pixel); the leak-fixed union has 22,269,369 rows (518,466 fewer).
+*(26 Oct 2026: the per-event ln Z bound of A0 is 2.9e-5, not 2.4e-5 (amendment B3.8); this version of G-T1 did not
+test interpolation (B3.1); the settings table did not cover the kernel layout, the missing density or core's commit,
+and G and G2 ran with the gathered missing density, the same arithmetic (B3.7); see "Amendment (26 Oct 2026):
+independent review, round 3".)*
 
 **Per entry against its spectral pair** (R = catalog over spectral-only; shift in spectral sd; H = Hellinger; V_tot =
 ln L MC variance, maximum over the entry's own central 90%, nats; the pair's V_tot in brackets):
@@ -533,29 +557,39 @@ location written):**
 - **G2 is not a width.** Its ln L is monotone over the whole grid (about 23 nats end to end) and its posterior piles
   against one edge of the grid; R and shift above are those of a truncated posterior (bracketed). G-T1 also misses on
   G2 by 0.3 to 0.8 nat. G2 is reported, not read.
+  *(26 Oct 2026: G2's edge comes mostly from the empty sky, which holds no hosts below 0.30 and all its host mass
+  above it (amendment B3.3); G-T1's miss on G2 says nothing about G2's machinery (B3.1); see "Amendment (26 Oct 2026):
+  independent review, round 3".)*
 - **The 21-event spectral pairs under all-sky selection (E_D, E_D2) are bounded by one grid edge**: their ln L is flat
   within 0.1 nat over about a third of the grid. Their medians and sd depend on the grid's bound, so the shifts of D,
   D2, F2 and G0_2 (in E_D2's sd) are measured against a prior-bounded reference; the catalog curves themselves are
   not edge-bounded (they fall by about 23 nats toward that edge). The 44-event pairs (E_HD, E_HD2, E_I) and the
   beta_S pairs fall on both sides inside the grid.
+  *(26 Oct 2026: amendment B3.2: D's shift is in E_D's sd, not E_D2's; the R68, R90 and sd-ratio denominators of D,
+  D2, F2 and G0_2, and every transition measured in E_D's or E_D2's sd (C → D, C → D2, D → D2, D2 → F2, D2 → G0_2,
+  G0_2 → G2), are also measured against a prior-bounded reference. The 44-event and beta_S pairs keep 2.6% to 9.1% of
+  the peak density at one end, so their widths depend on the bound at the percent level; see "Amendment (26 Oct 2026):
+  independent review, round 3".)*
 
 **Per transition** (shift in the destination's spectral sd; ΔR68, ΔR90; H between the two posteriors):
 
 | from → to | change | shift | ΔR68 | ΔR90 | H |
 |---|---|---|---|---|---|
 | A → B | exact mass normaliser | +0.01 | −0.004 | −0.001 | 0.004 |
-| B → C | trusted uncut PE | −0.23 | +0.013 | +0.064 | 0.13 |
+| B → C | trusted uncut PE (*26 Oct 2026, amendment B3.5: cut removed and samples redrawn*) | −0.23 | +0.013 | +0.064 | 0.13 |
 | C → D | beta_S → paper all-sky | +1.38 | −0.228 | −0.158 | 0.62 |
 | C → D2 | beta_S → trusted all-sky | +1.46 | −0.190 | −0.170 | 0.61 |
-| D → D2 | all-sky: paper → trusted | +0.08 | +0.038 | −0.012 | 0.09 |
+| D → D2 | all-sky: paper → trusted (*26 Oct 2026, amendment B3.6: the superseded spin draw density alone*) | +0.08 (*+0.07; stored 0.075, B3.6*) | +0.038 | −0.012 | 0.09 |
 | C → F | radial null (beta_S) | +0.28 | −0.191 | −0.062 | 0.24 |
 | D2 → F2 | radial null (all-sky) | −0.28 | −0.058 | +0.001 | 0.19 |
 | C → G0 | pixel weights by count | −0.11 | +0.005 | +0.029 | 0.08 |
-| G0 → G | soft edge (beta_S) | +0.38 | +0.488 | +0.362 | 0.29 |
+| G0 → G | soft edge (beta_S; *26 Oct 2026, amendment B3.4: empty pixels also get the fill above 0.30*) | +0.38 | +0.488 | +0.362 | 0.29 |
+| C → G | pixel weights and soft edge together, as built (*26 Oct 2026, amendment B3.8: added*) | +0.27 | +0.493 | +0.391 | 0.30 |
 | D2 → G0_2 | pixel weights (all-sky) | +0.02 | −0.065 | −0.018 | 0.07 |
-| G0_2 → G2 | soft edge (all-sky) | (−4.06) | (−0.463) | (−0.484) | 1.00 |
+| G0_2 → G2 | soft edge (all-sky; *26 Oct 2026, amendment B3.3: mostly the empty-sky gap*) | (−4.06) | (−0.463) | (−0.484) | 1.00 |
 | H_asis → H_fix (bS / D / D2) | spectra leak fixed | −0.05 / −0.06 / −0.07 | −0.027 / +0.002 / +0.002 | −0.018 / +0.003 / −0.000 | 0.02 / 0.03 / 0.04 |
 | H_asis_bS → H_asis_D | union: beta_S → all-sky | +2.37 | −0.218 | −0.161 | 0.81 |
+| H_asis_D → H_asis_D2 | union: the paper's all-sky → the trusted all-sky selection (*26 Oct 2026, amendment B3.8: added*) | −0.04 | +0.022 | +0.002 | 0.03 |
 | H_asis_D2 → I_0245 | Phase 12's treatment (bundle) | −3.84 | +0.164 | +0.255 | 0.97 |
 | I_0245 → I_030 | depth 0.245 → 0.30 | −0.05 | −0.044 | −0.033 | 0.03 |
 
@@ -566,14 +600,25 @@ location written):**
 **What the numbers say, and no more.**
 1. Core reproduces the paper's likelihood (A0 4.6e-5 nat). The mass normaliser moves nothing; the uncut PE moves the
    result by −0.23 spectral sd and widens R90 by 0.06.
+   *(26 Oct 2026: the step also redraws the PE; the redraw alone moves the shift and R90 by about 0.00 and −0.01,
+   inside its scatter of about 0.02 (amendment B3.5); see "Amendment (26 Oct 2026): independent review, round 3".)*
 2. The selection is the largest single step on the paper's catalog: beta_S → all-sky moves the catalog posterior by
    +1.4 to +1.5 spectral sd (H 0.61 to 0.62); with all-sky selection the catalog posterior sits +2.6 to +2.7 E_D2 sd
    from spectral-only (against a prior-bounded reference, above), and +3.7 to +3.8 sd on the union's 44.
+   *(26 Oct 2026: amendment B3.2: the unit of the +1.4 to +1.5 and of the +2.6 to +2.7, the sd of the all-sky spectral
+   pairs E_D and E_D2, is set by the grid's bound (both are edge-piled), so only the direction and the Hellinger
+   distances are read; see "Amendment (26 Oct 2026): independent review, round 3".)*
 3. The paper-mode catalog's width and location survive the radial null (F: R68 0.59, R90 0.69; F2: R 0.54 to 0.58,
    F2 within 0.3 sd of D2): in complete mode with the hard edge, galaxy redshift structure carries little of it.
+   *(26 Oct 2026: F2's R values and its distance to D2 are against E_D2's prior-bounded sd (amendment B3.2); see
+   "Amendment (26 Oct 2026): independent review, round 3".)*
 4. The soft edge removes it under beta_S (G: R 1.14 to 1.28, catalog wider than spectral-only, shift +0.05), and it
    removes most of both the PE and the selection parts of ln L_cat − ln L_spec (C 8.5 / 8.2 → G 1.9 / 2.3 nats ptp).
    Under all-sky selection the soft edge gives the edge-bounded G2 (not read).
+   *(26 Oct 2026: G's soft edge comes with a whole-sky fill above 0.30, empty pixels included (amendment B3.4). Under
+   all-sky selection G2 is edge-piled, mostly because the empty sky holds no hosts below 0.30 and all its host mass
+   above it, not because of the soft edge (amendment B3.3; not read); see "Amendment (26 Oct 2026): independent
+   review, round 3".)*
 5. The catalog-construction changes tested move little: pixel weights by count H 0.07 to 0.08; the spectra-leak fix
    at most 0.07 sd and 0.03 in R; depth 0.245 → 0.30 0.05 sd.
 6. Phase 12's treatment on the 44 (I) sits at −0.01 to −0.06 spectral sd from its spectral pair, R68 0.77 to 0.81,
@@ -650,3 +695,198 @@ block.
 holder's CPUs with no memory check; its first C smoke held 25 GB resident there. From the merge
 slurm/phase12ao_cpu_smoke.sh is a HENON CPU job (the job's cgroup caps it) and refuses to run outside a Slurm job or
 inside the holder. The smoke's results are unchanged.
+
+## Amendment (26 Oct 2026): independent review, round 3
+
+An independent multi-agent review of the consumer repo (desi_darksirens_selection; report
+`darksirens-core-data/reviews/consumer-2026-10-24/out/REVIEW.md`) confirmed the findings cited in parentheses below.
+The amendment of 25 Oct 2026 above covers the fix packages merged first. This one covers five more, merged on 26 Oct
+2026 after a third fix round and an independent check of each: the 12AQ readings and mock (consumer PR #32, merge
+97ec978), the 12AO ladder (PR #27, merge ebb12ff), the GW inputs (PR #26, merge a152bed), the variance guard and
+estimator noise (PR #33, merge 901bb54) and catalog version 2 (PR #24, merge 402c947). The consumer's main is now
+402c947. `./ci.sh` passed on the merged tree in all three record environments (HENON, CPU;
+`ci_logs/20261026T124516Z_133bc47f981f_<env>.log`: consumer_e7c3007_cuda12 1568 passed, consumer_e7c3007batch_cuda12
+1577, consumer_1022429_lss57afebe_cuda12 1592; none failed). On 26 Oct 2026 the owner decided that catalog version 2
+vetoes the bright-star masks, BRIGHT and MEDIUM (Legacy Survey maskbits 2050), not the large-galaxy bit, and that the
+injections stay at the support gate for now (decision 4D; the replacement of the O3 campaign, 4A, is deferred and no
+new injection product is made). Location-free throughout. Unless an item says otherwise, no number of record changes.
+Still open and not amended here: resume markers and fingerprints (consumer PR #25) and the follow-ups of consumer PR
+#35, among them the refusal of a delta outside its prior's bounds.
+
+### Amendment B3: corrected causes, units and controls (consumer PR #27, merge ebb12ff; owner decision 11A; no number changes)
+
+The independent review re-read 12AO's code, outputs and text (findings named in parentheses). Every number in
+"Results" is computed correctly for the declared flat [20, 140] prior. The new summary code, run on this record's own
+outputs, gives every number of `summary/summary.json` and `summary/controls.json` bit for bit when run on the same
+machine as the old code (and to 3e-12 relative against the stored files, written on a HENON node), withholds nothing,
+and only adds the marks below. What changes is what some steps and controls are said to show. The owner chose to
+correct the text and add a containment mark, with no new variant (decision 11A). The sentences of record that B3
+corrects are marked in place; their text is kept.
+
+**B3.1 The fill-off plumbing control (G-T1) did not test interpolation (C024).** G-T1 built step G's fill
+machinery with step G's own saturated selection (C = 1.0 exactly at every grid node below z 2.6), the fill
+switched off and no depth. Under that selection an empty pixel's prior is zero at every redshift where PE
+samples or injections sit, so G-T1 compared "empty pixels zero" with "empty pixels carry the volume prior", not
+two interpolations of the same density. Its misses (per-event |Delta ln Z| up to 4.5e-3; |Delta ln mu| 4e-4 to
+5e-4 on G and 0.016 to 0.040 on G2; |Delta ln L| 0.007 to 0.010 on G and 0.32 to 0.83 on G2) measure the share
+of the volume prior that sits in empty pixels, not interpolation. Three statements rest on the wrong cause and
+are withdrawn: amendment B1's reason for the relaxed tolerances (2e-3 in ln mu, 1e-4 per event), the code's
+tolerance note, and the Results sentence "G-T1 also misses on G2 by 0.3 to 0.8 nat", which is not information
+about G2's machinery. Step G's numbers were never affected: they are gated by G-T2, which tests the
+configuration that ran. The consumer's G-T1 now uses a selection with C = 0 at every redshift (m_lim -100) and
+n0 = 1e-200 h^3 Mpc^-3, so an occupied pixel is N_obs p_C and an empty pixel carries dN_exp / N_exp, the volume
+prior up to interpolation. Its bounds are computed in the job from the interpolation difference delta(z) between
+the two empty-pixel priors at the binding's own sample and injection redshifts: each event's |Delta ln Z| at
+most the largest |delta| over its samples in empty pixels, |Delta ln mu| at most the largest |delta| over the
+injections in empty pixels, and |Delta ln L| at most their sum plus the change of the N_eff term. These bounds
+are worst cases: the largest |delta| sits at the few samples and injections nearest z = 0 in empty pixels, so a
+small wrong density elsewhere would pass them. G-T1 therefore also compares the fill-off binding exactly with
+the model it should equal, built without the fill machinery (the complete catalog's prior in occupied pixels and
+a one-row fill-off prior in empty ones, through core's own reduction): each event's ln Z, ln mu and ln L must
+agree to float64 rounding (1e-9, 1e-9 and 1e-8 nat). G-T1 passes only when both parts do. On this record's
+inputs it passes on G and G2 (B3.10). G-T1's result is now written beside G and G2 in `summary.json`, as A0's is
+beside A.
+
+**B3.2 Containment (C025).** No posterior was checked for containment in [20, 140]. The consumer's summary now writes
+a side-free mark for every catalog entry, its spectral pair and the four posteriors behind each transition (its two
+catalog posteriors and both spectral pairs): the larger of the two end densities over the peak, "edge-bounded" above
+1% and "edge-piled" above 50% (the half maximum lies beyond the grid's end). On this record's outputs:
+
+- edge-piled: E_D (0.87) and E_D2 (0.89), the spectral pairs of D, D2, F2 and G0_2, and G2's catalog posterior (1.00);
+- edge-bounded (end density 1.8% to 9.1% of the peak): the catalog posteriors of A, B, C, G0, G (1.8% to 4.5%), I_0245
+  and I_030 (8.3%, 7.3%), and the pairs E_A, E_B, E_C (2.6% to 2.7%), E_HD, E_HD2 (8.5%, 9.1%) and E_I (7.5%). For a
+  Gaussian with the same end density the bound shortens the sd by 1.0% to 2.3% (A to G and the beta_S pairs) and 3.5%
+  to 4.2% (step I and the 44-event all-sky pairs), and moves the median by under 0.02 sd;
+- contained (below 1%): the catalog posteriors of D, D2, F, F2, G0_2 and all six H entries, and the pair E_HbS.
+
+A transition is marked when any posterior behind its numbers is: the two catalog posteriors, the destination's
+spectral pair (the shift's unit) and the origin's (the denominator of the origin's R values, which the R changes
+subtract). So the units of every transition whose destination's pair is E_D or E_D2 (C -> D +1.38, C -> D2 +1.46, D ->
+D2, D2 -> F2, D2 -> G0_2, G0_2 -> G2) and the R68, R90 and sd-ratio denominators of D, D2, F2, G0_2 and G2 are
+prior-bounded, not only their shifts; and D's reference is E_D, not E_D2 as the Results caveat says. Readings 2 and 3
+are amended accordingly (marked in place). "Selection is the largest single step" still stands on the Hellinger
+distances (0.61 to 0.62), which do not use these units. The 44-event pairs and the beta_S pairs do fall on both sides
+inside the grid, but are not fully contained: their widths and shifts depend on the grid's bound at the percent level.
+
+**B3.3 The empty-sky gap, not the soft edge, makes G2 edge-piled (C084).** Step G passes no row fraction, so C = 1
+below 0.30 holds in every pixel of the sky. Of the 196,608 nside-128 pixels only 68,309 (34.7%) hold galaxies; the
+other 65.3% (mostly outside the footprint) hold no hosts below 0.30 and all their host mass in the fill above it. In C
+and D2 empty pixels are zero at every redshift, so under all-sky injections they only scale mu by a factor that does
+not depend on H0. In G2 they are zero below 0.30 and full above it: a redshift edge that the map z(d_L, H0) turns into
+an H0 trend in ln mu. Measured by the review (selection term only): this gap moves N ln mu by 18.8 nat end to end over
+[20, 140] (5.0 over the window), most of G2's about 23 nat of monotone ln L; with a per-pixel coverage fraction (1 in
+occupied pixels, 0 in empty ones) the selection term matches spectral-only to within 0.024 in ln mu at every grid
+point. Under beta_S (step G) the same gap moves N ln mu by 1.3 nat end to end (0.44 over the window). Its effect on
+the event numerators was not measured. G2 stays reported and not read; its stated cause is corrected (reading 4). No
+G2 variant with the footprint row fraction is run (decision 11A).
+
+**B3.4 G0 -> G also gives every empty pixel hosts above 0.30 (C085).** Core normalises every row of G by itself, so an
+empty pixel's prior is the fill alone above 0.30, with the same total weight as an occupied pixel; G0 gives empty
+pixels no hosts. G0 -> G therefore changes two things: the edge in the occupied pixels and new hosts above 0.30 in
+every empty pixel that a sample or an injection reaches (at least 86,256 of G's 154,565 compact rows are empty).
+"Known limits" already said the fill covers empty pixels; reading 4 did not. Under beta_S the empty-pixel part is a
+minority of the weight above the edge (about 14% to 21% of the PE samples above 0.30, depending on H0, and about 5% of
+the injection weight above 0.30), so reading 4 holds in substance; under all-sky selection empty pixels carry about
+two thirds of the injection weight above 0.30 (G2, not read).
+
+**B3.5 B -> C is the cut plus a PE redraw (C087).** C's trusted file is a different, partly overlapping draw from the
+same release sample sets: 4,096 samples per event against the paper's 20,000, of which 1,862 to 4,096 per event are
+shared. The review split the step on the trusted draw with the paper's cut applied ("C_cut"): the redraw alone (B ->
+C_cut) moves the catalog posterior by -0.001 spectral sd, R90 by -0.009 and R68 by -0.115 (Hellinger 0.10); the cut
+alone (C_cut -> C) by -0.232 sd, +0.073 in R90 and +0.129 in R68 (Hellinger 0.12). Six 4,096-sample redraws of the
+paper's own samples scatter the catalog shift by 0.023 sd rms, R90 by 0.023 rms, R68 by 0.08 rms (at most 0.18) and
+give a Hellinger floor of about 0.07. So the shift and the R90 change that reading 1 reads belong to the cut; the
+step's Delta R68 (+0.013) is the net of two opposing parts of about 0.12 and lies within redraw noise, and its
+Hellinger distance (0.13) includes a redraw floor of about 0.07 to 0.10.
+
+**B3.6 The paper's selection files carry the superseded spin draw density (C134).** All three of the paper's selection
+files used here (beta_S for 21 and for 44, and the paper's all-sky file) are gwcat-selection-1.0 with the chi_eff-swap
+draw density that record 12F replaced. The paper's all-sky file has the trusted file's detected rows in the same order
+with the same kinematic columns; only pdraw differs (paper over trusted 0.10 to 32, median 0.70; on the O4 rows its
+log runs from -1.5 to +1.0 at 5-95%, on the O3 rows it is nearly constant, ln 0.011 to 0.017), and the trusted file
+gives zero weight to 6,462 rows with a component spin above 0.99 (1,333 O3, 5,129 O4) that the paper's keeps. Both
+beta_S files inherit the density (their pdraw times p_pass is the all-sky pdraw). So every beta_S entry (A, B, C, F,
+G0, G, H_asis_bS, H_fix_bS and their pairs) carries the superseded density, and D -> D2 (+0.07 spectral sd, Hellinger
+0.09) is that density change alone. (The stored shift is 0.075 sd; the record's table rounds it to +0.08.) Entry A
+uses it on purpose (it must reproduce the paper, and A0 shows it does); each catalog step is paired with spectral-only
+on the same file.
+
+**B3.7 Gates that did not bite, now fixed in the consumer; none was hit in this record's run.**
+
+- The subsets' prep gate (C027): prep wrote inputs.json with the subsets' sha256 whether or not its check passed,
+  consumers checked only that sha256, the lanes start afterany prep, and the summary never read the check; a per-event
+  attribute left at the source's length was skipped. In this run inputs.json has ok true, both subsets are bitwise and
+  no attribute was left unfiltered.
+- The settings table (C080) did not cover the kernel layout, the missing-density form or core's commit, although the
+  record says it does. Every A-to-H entry ran with the padded layout and core e7c3007; G and G2 ran with core's
+  gathered missing density (`missing_density="gather"`, the same arithmetic in bounded memory), which the record did
+  not state (it declared "grid" for A to H). The step-I entries recorded no core commit in entry.json (Lane A's
+  scan.json records e7c3007).
+- Fixed inputs (C081): the paper population JSON was read without its sha256 check and the Phase 12 configuration was
+  read directly, although the record says every job checks them; both match their declared sha256 (4559b22e...,
+  b79ad777...). An --input override (the CPU smoke only) skipped the check; production passed none.
+- U1's store comparison (C082) did not require equal z_depth or dtypes; both stores are float64 with z_depth 0.3.
+- The window rule of the transitions (C026) did not cover the destination's spectral pair; every grid of this run was
+  the coarse one, so nothing was cut.
+- --fresh (C079) kept the stored rows and was not passed to Lane A; no job of this record used it. The consumer now
+  re-evaluates every point under --fresh and passes it to Lane A. Before the first point it removes DONE and moves the
+  old entry.json and scan.npz aside, so a --fresh run that dies part way cannot leave a partial scan that reads as
+  complete. The summary also reads an entry only when its scan.npz holds the points and the fingerprint that its
+  entry.json records. Every entry of this run passes that check.
+- The subset files embed their creation time and the worktree path (C083), so a rerun of prep cannot reproduce their
+  sha256 (the datasets are bitwise either way); the consumer now keeps these in inputs.json.
+- The build-copy check (C086) accepted any added line starting with "if " and compared sets; the copy's diff from the
+  paper's file was checked by hand and is exactly the five marked hunks. The test now compares the diff with that
+  exact list.
+
+**B3.8 Corrections to "Results" (G4.7).** The per-event ln Z bound of A0 is 2.9e-5 (GW240413_022019), not 2.4e-5. Two
+declared transitions were missing from the per-transition table; they are added there, marked:
+
+| from -> to | change | shift | ΔR68 | ΔR90 | H |
+|---|---|---|---|---|---|
+| C -> G | pixel weights and soft edge together (as built) | +0.27 | +0.493 | +0.391 | 0.30 |
+| H_asis_D -> H_asis_D2 | union: the paper's all-sky -> the trusted all-sky selection | −0.04 | +0.022 | +0.002 | 0.03 |
+
+**B3.9 Code.** Consumer PR #27, merge ebb12ff:
+`scripts/phase12ao_{common,scan,summary,prep,subset_events,pixelate}.py`, `tests/test_phase12ao.py`. The changed
+labels of the transitions B -> C, D -> D2, G0 -> G and G0_2 -> G2 in `summary.json` name everything each step changes.
+ci.sh at the package's round-3 code head 581c328 (consumer main 6d0f800 merged in, a clean tree, HENON CPU, 0 failed;
+`tests/test_phase12ao.py` 33 of 33 in each): `ci_logs/20261026T074039Z_581c328423e8_consumer_e7c3007_cuda12.log` (this
+record's environment; 1360 passed), `ci_logs/20261026T074039Z_581c328423e8_consumer_e7c3007batch_cuda12.log` (1369
+passed) and `ci_logs/20261026T074039Z_581c328423e8_consumer_1022429_lss57afebe_cuda12.log` (1384 passed); the 12AO
+code of the consumer's main 402c947 is that of 581c328. The summary at 581c328, run read-only on this record's
+outputs, gives every number of the earlier re-summary exactly and lists no incomplete entry.
+
+**B3.10 G-T1 as corrected, and G-T2, on this record's inputs.** The consumer's `phase12ao_scan.py controls` (step G's
+controls alone, no grid) was run for G and G2 on the record's inputs (the trusted 21-event subset, beta_S (21) or the
+trusted all-sky injections, the v2 store), on HENON CPU (8 cores; about 5 minutes and 5 to 6 GB each; consumer commit
+e1d5ce9 on a clean tree, core e7c3007), at the control points 50, 75 and 100 (`controls_G_e1d5ce9.json` and
+`controls_G2_e1d5ce9.json` in `darksirens-core-data/reviews/consumer-2026-10-24/fix/notes/p10-12ao/`). G-T2 passes
+again on both. The corrected G-T1 passes on both at all three points, in both parts:
+
+- exact: the fill-off binding equals the model it should be (the complete catalog's prior in occupied pixels, the
+  one-row fill-off prior in empty ones) to 2e-15 per event in ln Z, bit for bit in ln mu and to 7e-15 nat in ln L;
+- bounds: against the complete catalog with the volume prior in empty pixels, each event's |Delta ln Z| is at most
+  3.4e-6 (at most 0.04% of its own bound, which is 0.008 to 0.031); |Delta ln mu| is at most 8e-8 on G and 8e-7 on G2
+  (bound 0.22 to 0.28); |Delta ln L| is at most 4e-6 on G and 1.2e-5 on G2 (bound 4.6 to 5.9 nat).
+
+The bounds are worst cases, set by the samples and injections nearest z = 0 in empty pixels; on their own they would
+also pass a wrong but non-zero empty-pixel density that moved ln Z, ln mu and ln L as much as the misses of the
+version of record did (only their clause on zero densities catches that version). The evidence is the exact part and
+the measured differences: with the fill switched off, the fill machinery is the predicted model to float64 rounding,
+and it differs from the complete catalog with the volume prior by about 1e-5 nat in ln L (the interpolation difference
+between the two empty-pixel priors), not the 0.007 to 0.8 nat that the version of record measured. 14% of the PE
+samples fall in empty pixels, and 42% (G) and 66% (G2) of the injections. (A first run at consumer commit 4b2cb04 was
+on a tree with uncommitted changes and had only the bounds; the review's independent rerun at b01946c on a clean tree,
+and this run, give the same bound values field for field. A rerun at the round-3 commit 581c328, on a clean clone on
+HENON CPU, gives every value of this run field for field: `controls_G_581c328.json` and `controls_G2_581c328.json` in
+the same notes, `round3/`.)
+
+### Catalog model and GW inputs
+
+**Catalog model (consumer PR #24, merge 402c947; findings G3.1, C003, G2.3).** The union entries carry the photo-z
+holes and the masked-pixel excess of the production footprint (G3.1, C003). This record's leak-fixed union is the
+match that catalog version 2 adopts (G2.3).
+
+**GW inputs (consumer PR #26, merge a152bed; findings C047, C057, G1.1).** See the GW inputs addendum
+(`phases/12_gw_inputs_addendum_2026-10-26.md`). No number of this record changes.

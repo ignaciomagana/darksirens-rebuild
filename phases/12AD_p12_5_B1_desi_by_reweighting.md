@@ -448,3 +448,79 @@ Slurm rules of 18-19 Oct 2026 (7-day limits; rita GPU jobs at 128 CPUs and 120G;
 wrapper) and break them. They are kept unchanged in what they launch, as the record of how the record ran, and from
 the merge they refuse to run unless PHASE12_ALLOW_HISTORICAL names them (slurm/historical_launch_files.txt lists
 them). The B1 and B2 pipelines' HENON fallback now clears every SLURM_* variable first.
+
+## Amendment (26 Oct 2026): independent review, round 3
+
+An independent multi-agent review of the consumer repo (desi_darksirens_selection; report
+`darksirens-core-data/reviews/consumer-2026-10-24/out/REVIEW.md`) confirmed the findings cited in parentheses below.
+The amendment of 25 Oct 2026 above covers the fix packages merged first. This one covers five more, merged on 26 Oct
+2026 after a third fix round and an independent check of each: the 12AQ readings and mock (consumer PR #32, merge
+97ec978), the 12AO ladder (PR #27, merge ebb12ff), the GW inputs (PR #26, merge a152bed), the variance guard and
+estimator noise (PR #33, merge 901bb54) and catalog version 2 (PR #24, merge 402c947). The consumer's main is now
+402c947. `./ci.sh` passed on the merged tree in all three record environments (HENON, CPU;
+`ci_logs/20261026T124516Z_133bc47f981f_<env>.log`: consumer_e7c3007_cuda12 1568 passed, consumer_e7c3007batch_cuda12
+1577, consumer_1022429_lss57afebe_cuda12 1592; none failed). On 26 Oct 2026 the owner decided that catalog version 2
+vetoes the bright-star masks, BRIGHT and MEDIUM (Legacy Survey maskbits 2050), not the large-galaxy bit, and that the
+injections stay at the support gate for now (decision 4D; the replacement of the O3 campaign, 4A, is deferred and no
+new injection product is made). Location-free throughout. Unless an item says otherwise, no number of record changes.
+Still open and not amended here: resume markers and fingerprints (consumer PR #25) and the follow-ups of consumer PR
+#35, among them the refusal of a delta outside its prior's bounds.
+
+### The catalog's effect at a common guard, and the gap to the direct chains (consumer PR #33, merge 901bb54; owner decisions 6B, 8C)
+
+**At a common guard (finding C001).** Beside the declared result (+0.08 of the spectral sd) and the record's
+diagnostic (the DESI likelihood with the spectral target's guard: -0.007 sd), the third reading is the spectral
+likelihood with only the DESI target's guard penalty, no galaxy term: +0.076 sd, 93% of the declared shift. The
+catalog's shift is the DESI guard's, as this record already says; at a common guard the galaxies move the
+population-free H0 by -0.007 sd (both readings at the spectral target's guard) or +0.006 sd (both at the DESI target's
+guard: the declared +0.082 against +0.076). The B1 summary now writes this third reading
+(`diagnostic_spectral_with_the_desi_guard`, with its shift and the declared shift in the proposal's sd); rerun on this
+record's evaluations it gives +0.0758 against the declared +0.0819, and every declared number of this record's summary
+is unchanged (bit for bit).
+
+**The direct chains (12AF) on the same target (finding C012).** They sit +0.12 A1 sd above this result (upper part
++0.129 A1 sd, 2.8 to 3.2 chain-scatter errors). The gap is unresolved; until the closure checks of decision 8C have
+run, the population-free DESI result is quoted as both values with this gap, not as either alone.
+
+**Without any guard (finding C001; decision 6B).** The fourth reading takes both guards off: the DESI likelihood
+without its guard against the spectral likelihood without its own, both reweighted from A1's draws. Rerun on this
+record's evaluations, the galaxies move the population-free H0 by -0.018 sd of the guard-free spectral posterior, with
+sd ratio 1.04 (68% width ratio 1.08, 90% 1.03), the width set mostly by a larger low-H0 weight (ratio 1.28). Per part,
+in each part's own sd: -0.074 in the lower part (sd ratio 0.78) and -0.002 in the upper part (1.03). The DESI guard
+walls off 23% of the guard-free DESI posterior (30% of the lower part, 23% of the upper), the spectral guard 2.4% of
+the guard-free spectral one; the guard-free DESI reweighting keeps a Kish ESS of about 2,900 of the 32,768 draws. A1's
+draws stop at the spectral wall, so mass beyond it is missing from both. The B1 summary now writes this reading
+(`diagnostic_guard_free`, with `catalog_effect` and per-point weights); every declared number of the summary is
+unchanged (bit for bit). None of the three readings beside the declared one carries an estimator error yet. On the
+merged code the B1 summary rerun on this record's evaluations reproduces every value of the stored summary.json and
+every array of summary.npz exactly, and gives these readings to the last digit.
+
+### Catalog model and GW inputs
+
+**Catalog model (consumer PR #24, merge 402c947; findings C002, C091, C003, G3.1, C018, G2.1, G2.3, G2.4, G3.3,
+G3.2).** Three properties of the catalog model behind this result were found by the review; their H0 effect is not
+measured. (1) The catalog's absolute-magnitude floor is in no selection model (C002), and with m_lim 21 the Gaussian
+luminosity function makes the union at least 99.7% complete to z_depth, so the sampled M0hat and sigma_M are inert and
+the completeness is f_p alone (C091). (2) The footprint fraction is not the catalog's coverage: masked sources stay in
+the catalog while f_p removes them (galaxies per unit f_p are 19, 5 and 2 times the median at f_p < 0.05, 0.05-0.2 and
+0.2-0.5 at nside 128; C003), and covered sky without r-band or photo-z is read as voids and underdensities (G3.1,
+C018); about 5% of PE samples sit in hole pixels. (3) The photometric kernel counts the volume prior twice (G2.1).
+Smaller: 2.3% of rows are galaxies DESI measured above 0.30 (G2.3); spectroscopic redshifts are heliocentric (coherent
+H0 effect about -0.12%, G2.4); about 5.8k rows under medium-bright-star masks are spurious halo fragments (G3.3); the
+photo-z retention rule loses 0.84% of hosts averaged over the window (0.04% to 1.45%, rising with z), about one eighth
+of the n0 prior width, with no completeness model (G3.2). The owner's decisions (1C: the hosts are the galaxies above
+the floor, complete below the depth; 2A: a footprint built from the catalog's own construction, with the bright-star
+mask veto BRIGHT and MEDIUM, maskbits 2050, chosen on 26 Oct; 3B: a re-centred photometric kernel) define catalog
+version 2, which the merge adds as opt-in code: no record path changes. Its sizing step, one fixed-calibration H0 grid
+pair at the fiducial cell, measures the effect before any chain is rerun; it waits for the owner's go. The
+large-galaxy mask is not vetoed: it marks the low-redshift hosts themselves (in a smoke on about 1% of the rows it
+removed 93% of the rows at z 0.02-0.03 against a footprint share of 7%).
+
+**n0 window (consumer PR #24, merge 402c947; finding C020).** At delta fixed at 0 the n0 prior centre is matched over
+[0.02, 0.30], but the likelihood uses the catalog only to z_depth 0.245; matching within the depth moves the centre by
+-0.028 dex (0.78 prior sd). Record 12AB measured the in-depth centre (H0 shifts 0.000, -0.082 and -0.099 posterior sd
+in its three parts, inside its declared band). `phase12u_calibrate.py --ridge-z-max 0.245` now gives the in-depth
+ridge; the default window is unchanged.
+
+**GW inputs (consumer PR #26, merge a152bed; findings C047, C057, G1.1).** See the GW inputs addendum
+(`phases/12_gw_inputs_addendum_2026-10-26.md`). No number of this record changes.

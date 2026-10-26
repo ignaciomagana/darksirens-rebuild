@@ -139,3 +139,25 @@ diagnostic. Proposal:
    record, a new core pin, re-validation and a consumer repin. The generic
    binding gains an h-scaled count normalization. The legacy convention stays
    available, because the frozen parity gates compare against it.
+
+## Amendment (26 Oct 2026): independent review, round 3
+
+An independent multi-agent review of the consumer repo (desi_darksirens_selection; report
+`darksirens-core-data/reviews/consumer-2026-10-24/out/REVIEW.md`) confirmed the findings cited in parentheses below.
+The fix packages merged first (25-26 Oct 2026) did not touch this record. This one covers five more, merged on 26 Oct
+2026 after a third fix round and an independent check of each: the 12AQ readings and mock (consumer PR #32, merge
+97ec978), the 12AO ladder (PR #27, merge ebb12ff), the GW inputs (PR #26, merge a152bed), the variance guard and
+estimator noise (PR #33, merge 901bb54) and catalog version 2 (PR #24, merge 402c947). The consumer's main is now
+402c947. `./ci.sh` passed on the merged tree in all three record environments (HENON, CPU;
+`ci_logs/20261026T124516Z_133bc47f981f_<env>.log`: consumer_e7c3007_cuda12 1568 passed, consumer_e7c3007batch_cuda12
+1577, consumer_1022429_lss57afebe_cuda12 1592; none failed). On 26 Oct 2026 the owner decided that catalog version 2
+vetoes the bright-star masks, BRIGHT and MEDIUM (Legacy Survey maskbits 2050), not the large-galaxy bit, and that the
+injections stay at the support gate for now (decision 4D; the replacement of the O3 campaign, 4A, is deferred and no
+new injection product is made). Location-free throughout. Unless an item says otherwise, no number of record changes.
+Still open and not amended here: resume markers and fingerprints (consumer PR #25) and the follow-ups of consumer PR
+#35, among them the refusal of a delta outside its prior's bounds.
+
+**K(z) refit (consumer PR #24, merge 402c947; finding C072).** The scope lists a K(z) refit at Om0 0.3089. It was not
+done: every calibration from 12Q on reads the legacy coefficients (1.13465, -4.88963, 8.58828), fitted at Om0 0.3075.
+The distance-modulus difference between the two Om0 is at most 7e-4 mag for z <= 0.3, and the magnitude-limited
+completeness changes by at most 5e-5 (relative). The refit is negligible and is not done.
