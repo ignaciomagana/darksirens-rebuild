@@ -1229,10 +1229,11 @@ The record's text is right: no variant was flagged, Part C ran for d200 only, an
 `scripts/phase12_5_n0_depth.py merge` (consumer commits 9a76252 and a883683, merged with PR #23), which reads B1's
 summary where Part C reads it, carries Part C's summary and status, and lists Part C's variants as flagged by Part B
 or run by rule. It refuses to write when any number of the location-free file equals an H0 location of the absolute
-part files. It writes new names beside the as-run files, which are kept as written. The merged file after Part C
-(`n0_depth/summary_combined_location_free.json`) is not written yet: run outputs are read-only to the fix agents, and
-the merge (`phase12_5_n0_depth.py merge --require-part-c` from a clean checkout of consumer main, seconds of CPU) is
-the owner's step. A preview written to a scratch directory on 25 Oct 2026 gave: missing none; Part C "done"; variants
+part files. It writes new names beside the as-run files, which are kept as written. The merged file after Part C is
+`n0_depth/summary_combined_location_free.json` (written 2026-10-26 17:33 UTC by `phase12_5_n0_depth.py merge
+--require-part-c` from a clean checkout of consumer main at 402c947; sha256 3893c4c2d8f6...): missing none; Part C
+"done"; variants run ['d200'], flagged by Part B [], run by rule only ['d200']. Its absolute counterpart is
+`n0_depth/summary_combined_absolute.json`. A preview written to a scratch directory on 25 Oct 2026 gave: missing none; Part C "done"; variants
 run ['d200'], flagged by Part B [], run by rule only ['d200']; its Part A, Part B, north/south and step blocks equal
 the part files and the as-run merged file's; its Part C summary equals `C/summary.json`; and none of its numbers
 equals any of the 142 H0 locations of the absolute part files.
