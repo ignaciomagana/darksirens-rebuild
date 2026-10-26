@@ -2,6 +2,11 @@
 
 ## Status
 
+**ERRATA (independent review, 25 Oct 2026).** Four corrections to the limit-4 and limit-2 results; no number of record
+changes. σ2's GWTC-5 value also lies outside its 68% interval (marginally, at limit 4 only); σ1 (r = +0.19) belongs
+among the upper part's H0 correlates; limit 2's ln Z errors use another definition than limit 4's; the chain times and
+σ_chi's median are corrected. See "Amendment (25 Oct 2026): independent review" at the end.
+
 **RESULTS APPENDED (2026-10-18). Owner decision 2026-10-18: the limit-4
 run is the reference full-population spectral result.** Read "Results" at
 the end first.
@@ -953,7 +958,7 @@ branch 0934239 for limit 8 and the comparison).
 
 ### Limit 4: the eight chains (rita job 1376492, 9 to 11 October)
 
-Every chain converged and met its gate, in 5.9 to 6.3 hours on one A100.
+Every chain converged and met its gate, in 5.9 to 6.3 hours on one A100. *(25 Oct 2026: 5.73 to 6.45 hours of sampling; 5.9 and 6.3 are the per-part means. See the errata in "Amendment (25 Oct 2026): independent review".)*
 
 | H0 part | seed | H0 median [68%] | ln Z | posterior penalised |
 |---|---|---|---|---|
@@ -969,6 +974,7 @@ Every chain converged and met its gate, in 5.9 to 6.3 hours on one A100.
 - **Combination** (prior mass times evidence, 40,000 pooled samples):
   ln Z −683.50 ± 0.10 (lower part) and −681.56 ± 0.16 (upper). Weight of
   the lower part 0.037; over the 16 seed pairings 0.021 to 0.065.
+  *(25 Oct 2026: these ln Z errors are the seed scatter's standard error; limit 2 quotes the propagated reported errors. See the errata in "Amendment (25 Oct 2026): independent review", item 3.)*
 - **H0 = 68.0 [55.0, 80.1] km/s/Mpc, sd 12.4; 90% [46.7, 86.6].** The
   population-fixed spectral result with γ free is 67.9 [62.7, 73.4], sd 5.40
   (12Y amendment): the median does not move and the width grows by 2.3.
@@ -979,6 +985,7 @@ Every chain converged and met its gate, in 5.9 to 6.3 hours on one A100.
   corrected fixed values (0.04, 0.10). γ is 2.41 [1.97, 2.88]. The second
   peak's width is 1.8 [0.47, 5.1]: the first attempt's collapse did not
   recur.
+  *(25 Oct 2026: σ2's 68% interval also excludes its GWTC-5 value 5.73 (87th percentile, inside 90%); σ_chi's median is 0.109. See the errata in "Amendment (25 Oct 2026): independent review", items 1 and 4.)*
 
 ### What sets the width
 
@@ -988,7 +995,7 @@ position of the first mass peak:
 - correlation of H0 with μ1: −0.85; a linear fit gives −30.3 km/s/Mpc per
   solar mass and explains 72% of the H0 variance; the residual sd is 5.9;
 - the next correlations: σ2 −0.40, μ2 −0.38, break mass −0.32, γ −0.18;
-  every other parameter |r| ≤ 0.11; a linear fit on all 17 explains 83%;
+  every other parameter |r| ≤ 0.11 *(25 Oct 2026: except σ1, +0.19; see the errata in "Amendment (25 Oct 2026): independent review", item 2)*; a linear fit on all 17 explains 83%;
 - μ1 = 10.04 [9.70, 10.34] (GWTC-5 value 9.91). The lower part sits at
   μ1 ≈ 10.8 (median 10.84).
 
@@ -1153,7 +1160,7 @@ change.
   They are copied back to Hildafs and checked by sha256 at the pause and at
   the end. `A1/runs/` and `A1/runs_var8/` are not touched.
 - **Estimated cost.**
-  - The limit-4 chains took 5.9 to 6.3 hours each on a rita A100 (4.0 to
+  - The limit-4 chains took 5.9 to 6.3 hours *(25 Oct 2026: per-part means; 5.73 to 6.45 hours each)* each on a rita A100 (4.0 to
     4.3 million calls at about 0.006 s).
   - On the Jetstream2 H100, dynesty's single-call path ran at 5.9 ms per
     call (12AF's batching test, from the A1 checkpoint), about the A100's
@@ -1255,6 +1262,7 @@ its evidence, taken from the mean of its seeds' ln Z.
   differ by 0.37) and −683.04 ± 0.14 for the upper. The lower part's weight
   is 0.041 (0.034 and 0.050 over the pairings). Limit 4 gives 0.037 and its
   reweighting to limit 2 gives 0.040.
+  *(25 Oct 2026: ±0.14 is the propagated reported error; the seeds' standard error is ±0.19 (lower) and ±0.02 (upper). See the errata in "Amendment (25 Oct 2026): independent review", item 3.)*
 - **H0 = 68.3 [54.3, 81.0] km/s/Mpc, sd 13.4; 90% [46.1, 89.0].**
 
 #### The reweighting is confirmed
@@ -1378,3 +1386,151 @@ part's evidence moves with its samples.
 - No point gains weight at the stricter limit: the largest change in ln L
   is 0. The evaluated nested points hold at least 0.9999 of each chain's
   weight.
+
+## Amendment (25 Oct 2026): independent review
+
+An independent multi-agent review of the consumer repo (desi_darksirens_selection at the review head 17a65bb, 24-25
+Oct 2026; report `darksirens-core-data/reviews/consumer-2026-10-24/out/REVIEW.md`) confirmed the findings cited in
+parentheses below; only confirmed findings are fixed. The owner took the review's recommended option in every decision
+on 25 Oct 2026. Each item names the consumer pull request that fixes it and its merge commit on the consumer's main
+branch. The final main is 6d0f800 (26 Oct 2026); `./ci.sh` passes there in both record environments (HENON, CPU;
+`ci_logs/20261026T051301Z_7566d8eb6d34_consumer_e7c3007batch_cuda12.log`, 1349 passed, and
+`ci_logs/20261026T051301Z_7566d8eb6d34_consumer_1022429_lss57afebe_cuda12.log`, 1364 passed; none failed).
+Location-free throughout. Unless an item says otherwise, no number of record changes. Findings whose fix packages are
+not merged yet (the catalog model, the GW inputs, the variance guard and estimator noise, resume markers, the 12AQ
+readings and 12AO's causes) are not amended here; the review's per-record table lists them.
+
+**The code and environment of record (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a; findings
+C008, C010, C050, C051, C143, G4.1).** The code of this record is on the consumer's main branch since the
+consolidation (PR #20) and its follow-up (PR #21). The environment it ran in is named, with its full pip freeze and
+sha256, in `config/record_envs/12AA.json`; `scripts/check_frozen_environment.py --record 12AA` checks that an
+environment is exactly it. The consumer commits this record names as code that ran are tagged `record/12AA/<sha7>` on
+GitHub (008e780, 3ebc505, cc5fb8e, a611f51, 16e0062). The full test suite is run by `./ci.sh` in the record
+environments (CPU, HENON); it was green at the follow-up head (`ci_logs/20261025T163303Z_2b5695027bbb_<env>.log`) and
+is green at the final main (above).
+
+**Code of the limit-2 chains (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a; finding G4.1).**
+`phase12.5/spectral-joint-var2` (up to 16e0062: the limit-2 manifest, the pre-flight and js2h100 queue launchers and
+`scripts/phase12_5_a1_confirm_var2.py`) is merged into the consumer's main (merge e01fb02 on the consolidation
+branch); the branch tip is tagged `side-branch/phase12.5/spectral-joint-var2`.
+
+**The guard reweighting's checks (consumer PR #22, merge 84a6b88; code commit 03794e5; finding C117).** The guard
+reweighting (`phase12_5_a1_guard_reweight.py`, outputs `A1/checks4/*/reweight.json`) computed its consistency checks
+without enforcing them. It skipped the code check on a dirty tree at the chain's own commit and did not record core's
+version. From the merge, evaluate refuses any uncommitted change whatever the commit, records core's version and
+refuses a core other than the chain's. Analyse stops (exit 4) on a failed check:
+
+- the stored log-likelihood, tolerance 1e-8;
+- the recomputed selection correction, tolerance 1e-5 relative (it runs at float32);
+- slices that disagree on the limit, the soft guard or the number of events;
+- a slice commit whose target files differ from the chain's;
+- a slice evaluated with another core.
+
+Re-run on the stored evaluations, all eight chains pass. The stored log-likelihood matches to at most 3.9e-12, the
+correction to at most 1.5e-7 relative, and the slice commits 920eade and 0934239 hold the chains' target code
+(cc5fb8e). The evaluation files predate the core record; the chains ran with core e7c3007. The `reweight.json` values
+are reproduced, apart from 16 values at four chains that differ in the last bit (at most 6e-16 relative). Main's own
+script gives the same last-bit differences, both in the record's environment (consumer_e7c3007_cuda12) and in the 12AF
+one, so they predate this change. Since evaluate now refuses a core other than the chain's, a rerun of the evaluations
+uses the record's environment (core e7c3007); the 12AF environment (core 32c6210) is refused.
+
+**Split-prior combination (consumer PR #31, merge b9ec283; findings C016, C120).** From the merge the split-prior
+combination refuses chains that did not run one analysis (one resolved configuration apart from the H0 part and the
+seed, one commit, the same inputs, guard, priors and packages, no seed twice in a part, converged) and needs every
+listed chain's result (`--allow-missing` keeps the earlier behaviour); the A1, limit-2 and limit-8 manifests now
+require all their chains. The compare-limits script checks the chains the same way and files each chain by its
+recorded H0 bounds. Rerun on the stored chains of all three variance limits, the combinations give the same pooled
+samples bit for bit and the compare-limits output is unchanged apart from the low part's weight at the last binary
+digit (a host floating-point effect that main shows identically).
+
+**Unconverged checkpoints (consumer PR #31, merge b9ec283; finding C125).** From the merge a chain driver refuses,
+before the build, a dynesty checkpoint whose run has finished without converging (a resume cannot extend it; restart
+with `--fresh` and, if the call cap stopped it, a larger `sampler.max_samples`). A finished converged checkpoint
+resumes as before, and the smoke chains run with `--allow-unconverged` still resume a finished capped run and write
+its result. The production checkpoints of this record all finished converged (checked on disk), so its chains resume
+as before.
+
+**Core settings at trace time (consumer PR #29, merge 0989df4; findings C054, C055).** Core reads its
+normalisation-grid settings and its missing-density form when a likelihood program is traced, at its first call, not
+when the target is built. From the merge the stock target and the spectral joint target take a snapshot of those
+settings at build and refuse a trace under other ones, as core's own bindings do since core 3cf8df7. Both numerics
+modes now also set the normalisation grid sizes, the pairing m1 grid (off) and the pairing edge rule, and the builder
+refuses a `DARKSIRENS_*` variable core reads as a numerics setting; the values set are the defaults of every record
+core (e7c3007, 32c6210, 1022429) and of the 12S pin, which this record ran with (no launcher set a `DARKSIRENS_GW_*`
+variable), so this record's numbers are unchanged. The target's record and provenance now carry every grid and
+catalog-evaluation setting and core's numerics semantic under `core_numerics.core_settings`. Because the provenance
+enters core's run fingerprint, a checkpoint written by an earlier main is not resumed by this one (it is refused,
+loudly); a run started afresh computes the same numbers.
+
+**Writer commit (consumer PR #29, merge 0989df4; finding G4.10).** The summaries behind this record did not carry the
+commit of the code that wrote them (the commit is in the job logs and the record). From the merge each summary carries
+a `writer` block: the writing script, its checkout's commit, branch and changed-file count, and, where it reads a
+short list of files, their sha256 (here, the A1 limit comparison hashes every chain file it reads, each chain's
+resolved configuration included). The stored summaries are unchanged; a summary rewritten from main carries the block.
+
+**Runner jobs (consumer PR #30, merge 6d0f800; finding C138).** This record's runner jobs ran from shared clones with
+no commit pin. Only 12AE Part 2 mixed commits; this record's runs did not. From the merge the runner job files refuse
+to start without PHASE12_EXPECT_SHA naming the commit of a clean checkout, and the stage runner repeats that check
+before every stage, stopping (exit 3) if the checkout moves.
+
+**Launch files (consumer PR #30, merge 6d0f800; finding C137).** The launch files of this record predate the owner's
+Slurm rules of 18-19 Oct 2026 (7-day limits; rita GPU jobs at 128 CPUs and 120G; holder steps only through the
+wrapper) and break them. They are kept unchanged in what they launch, as the record of how the record ran, and from
+the merge they refuse to run unless PHASE12_ALLOW_HISTORICAL names them (slurm/historical_launch_files.txt lists
+them). The B1 and B2 pipelines' HENON fallback now clears every SLURM_* variable first.
+
+### Errata to the results (consumer PR #23, merge edabeb6; findings G4.2, G4.3, G4.8)
+
+Four corrections to the results above. No number of record changes: the H0 combination, the lower part's weight, the
+reweighting's confirmation and the bands stand. The numbers are recomputed from the stored outputs by
+`scripts/phase12_5_record_errata.py a1` (consumer commit 9a76252, merged with PR #23), which writes no H0 value.
+
+**1. σ2 is a third parameter whose GWTC-5 value lies outside its 68% interval (limit 4).** "Results (2026-10-18)",
+Population, names only σ1 and μ2. The second peak's width σ2 is 1.8 [0.47, 5.1] at limit 4 (pooled samples), and its
+GWTC-5 value 5.73 lies outside that interval:
+
+- the exclusion is marginal: 5.73 sits at the 87th percentile, inside the 90% interval [0.24, 8.2]; only σ1 lies
+  outside its 90% interval;
+- it depends on the limit: at limit 2 σ2 is 2.4 [0.86, 6.0] ("Peak widths and the guard": the direct chains' weighted
+  nested points, `checks_var2/confirm/confirm_var2.json`; the pooled equal-weight samples of `runs_var2/combined` give
+  2.3 [0.86, 5.9]), which contains 5.73. At limit 2 (pooled samples) the values outside their 68% intervals are σ1's
+  and, marginally, σ_chi's (0.10 against 0.111 [0.101, 0.123]); μ2's and σ2's are inside;
+- σ2 is the second-strongest H0 correlate in the upper part (r = −0.40, "What sets the width");
+- every population-fixed rung (12Y, 12AE and the fixed-calibration ladder 12AG to 12AO) holds σ2 at 5.73: a value
+  outside the free fit's 68% interval at limit 4, inside its 90% interval.
+
+At limit 4 the other fourteen parameters' 68% intervals contain their GWTC-5 values.
+
+**2. σ1 belongs among the upper part's H0 correlates.** "What sets the width" lists σ2 −0.40, μ2 −0.38, break mass
+−0.32 and γ −0.18 and says every other parameter has |r| ≤ 0.11. σ1 has r = +0.19 (+0.188), larger in size than γ's
+(−0.178); the largest of the rest is α2's −0.108, and every other is at most 0.063 in size. The corrected list: σ2
+−0.40, μ2 −0.38, break mass −0.32, σ1 +0.19, γ −0.18; every other parameter |r| ≤ 0.11. σ1's correlation runs mostly
+through μ1 (corr(μ1, σ1) = −0.37 in the upper part): with μ1 held fixed its partial correlation with H0 is −0.26, and
+dropping σ1 from the fit on all 17 parameters lowers the explained share of the H0 variance from 83% (0.826) to 82%
+(0.818). σ1 is set by the variance limit; what the limit does to H0 is measured directly by the reweighting to limits
+3 and 2 and by the limit-2 chains, so the omission hides no effect on H0.
+
+**3. The two limits quote different ln Z error definitions.** Limit 4's part errors (±0.10 lower part, ±0.16 upper,
+"Limit 4: the eight chains", Combination) are the standard error of the four seeds' mean (seed sd 0.20 and 0.32), as
+`runs/combined/combined.json` stores them. Limit 2's ±0.14 for both parts ("Results (2026-10-18)" of the limit-2
+section, Combination) is the dynesty-reported errors propagated through the mean of the two seeds, √(e₁² + e₂²)/2 =
+0.143 and 0.144; no output file stores it. On each definition:
+
+| | lower part (20 to 45) | upper part (45 to 140) |
+|---|---|---|
+| limit 4, standard error of the seeds' mean (4 seeds) | 0.10 | 0.16 |
+| limit 4, reported errors propagated | 0.10 | 0.10 |
+| limit 2, standard error of the seeds' mean (2 seeds) | 0.19 | 0.02 |
+| limit 2, reported errors propagated | 0.14 | 0.14 |
+
+With two seeds, the seed-scatter error rests on one difference (0.37 in the lower part, 0.045 in the upper). The lower
+part's weight and the H0 combination use the ln Z means and the seed pairings, and the confirmation's bootstrap draws
+each chain's ln Z from its reported error, as declared, so no number changes.
+
+**4. Two transcriptions.**
+
+- The limit-4 chains sampled for 5.73 to 6.45 hours each (5.75 to 6.47 hours of runner time per stage), not "5.9 to
+  6.3 hours": 5.9 and 6.3 are the per-part means (lower part 5.87, upper 6.33 hours of runner time). The same figure
+  in the limit-2 section's cost estimate ("The limit-4 chains took 5.9 to 6.3 hours each") is corrected the same way;
+  the estimate does not change.
+- σ_chi's median at limit 4 is 0.109 (0.1095), not 0.110 (its mean is 0.1099); the interval [0.099, 0.121] is right.

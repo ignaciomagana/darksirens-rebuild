@@ -1086,3 +1086,90 @@ PE side's resolution effect plus PE-sample noise. 12AJ's PE floor is not availab
    posteriors stay spiky (N2 fails at 9 cells). Their R values sit inside the same 0.98–1.03 band.
 3. **Not tested under D2:** the photometric-redshift scalings, the spectroscopic-only catalog, the well-covered event
    subsets, luminosity weighting, and the real-data null with the catalog moved on the sky.
+
+## Amendment (25 Oct 2026): independent review
+
+An independent multi-agent review of the consumer repo (desi_darksirens_selection at the review head 17a65bb, 24-25
+Oct 2026; report `darksirens-core-data/reviews/consumer-2026-10-24/out/REVIEW.md`) confirmed the findings cited in
+parentheses below; only confirmed findings are fixed. The owner took the review's recommended option in every decision
+on 25 Oct 2026. Each item names the consumer pull request that fixes it and its merge commit on the consumer's main
+branch. The final main is 6d0f800 (26 Oct 2026); `./ci.sh` passes there in both record environments (HENON, CPU;
+`ci_logs/20261026T051301Z_7566d8eb6d34_consumer_e7c3007batch_cuda12.log`, 1349 passed, and
+`ci_logs/20261026T051301Z_7566d8eb6d34_consumer_1022429_lss57afebe_cuda12.log`, 1364 passed; none failed).
+Location-free throughout. Unless an item says otherwise, no number of record changes. Findings whose fix packages are
+not merged yet (the catalog model, the GW inputs, the variance guard and estimator noise, resume markers, the 12AQ
+readings and 12AO's causes) are not amended here; the review's per-record table lists them.
+
+**The code and environment of record (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a; findings
+C008, C010, C050, C051, C143, G4.1).** The code of this record is on the consumer's main branch since the
+consolidation (PR #20) and its follow-up (PR #21). The environment it ran in is named, with its full pip freeze and
+sha256, in `config/record_envs/12AM.json`; `scripts/check_frozen_environment.py --record 12AM` checks that an
+environment is exactly it. The consumer commits this record names as code that ran are tagged `record/12AM/<sha7>` on
+GitHub (729d609, 8a08ae7, 7a86caf, cbb1ae9, 54d9815, 698504a). The full test suite is run by `./ci.sh` in the record
+environments (CPU, HENON); it was green at the follow-up head (`ci_logs/20261025T163303Z_2b5695027bbb_<env>.log`) and
+is green at the final main (above).
+
+**Population of the spectral-only grids (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a; finding
+C052).** The spectral-only grids gave the population as an explicit mapping at the corrected pair (0.04, 0.10). From
+the consolidated main of PR #20 they evaluated the same values but recorded a `population.fixed_values` record (the
+declaration written over equal entries); after the follow-up (PR #21) they resolve and record exactly what they did
+when they ran (no `fixed_values` record; checked on the 12AG spectral reference at three H0 points: ln L difference
+0).
+
+**Inputs: the pinned base configuration (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a).**
+12AM's cell and table stages (`scripts/phase12am_cell.py`, `scripts/phase12am_table.py`), which 12AN's cell, D4 and
+table stages use, check the sha256 of the base configuration against the value 12AM pins (b79ad777...). The
+consolidation's spin declaration changed `config/desi.fixed_population.json`, so from the consolidated main of PR #20
+these stages refused to run ("inputs are not the declared files: [config]"). Since the follow-up (PR #21) they read
+`config/desi.fixed_population.core_preset.json`, which is that file byte for byte
+(`phase12t_stage.DESI_CONFIG_AS_RUN`); the 12AG overrides they apply set the spin pair (0.04, 0.10), so the
+configuration they resolve is the one this record ran. Checked with the record's own inputs in its environment: both
+checks pass at the review head and after the follow-up, and refused at PR #20's main. The input record names the new
+path with the pinned sha256.
+
+**Run fingerprints (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a).** The code digests that the
+12AG to 12AQ drivers put into their run fingerprints cover the consumer code, so a run stored before the consolidation
+(or its follow-up) is evaluated again rather than resumed when it is rerun from main; the values it computes are the
+same.
+
+**The largest change from D0 to D2 (consumer PR #28, merge 8f8a7b2; finding C045).** The verdict sentence's "largest
+change from D0 to D2 is -0.259, at (256, 3e-4)" is taken at a cell where D0 is limited by the selection Monte Carlo
+(D0 is Monte-Carlo-limited at six cells), so its size is set by D0's noise. Over the cells where D0 is read, the
+largest change is -0.140, at (128, 3e-3) (-0.139 at (128, 1e-3)). The declared statistic is kept and both are
+reported; the washout verdict uses neither. Since the merge the sentence says when D0 is not read at the cell and
+gives the read-cell value beside it (summary key `largest_D0_to_D2`). Re-run on the stored grids, the sentence now
+adds: "D0 is not read there (mc_limited, selection Monte Carlo), so that size is set by D0's noise; over the cells
+where D0 is read the largest change is -0.140 at ns128_sk3e-03." Nothing else in the summary changes.
+
+**Control 8's cause (consumer PR #28, merge 8f8a7b2; finding C127).** "From interpolating dV_c/dz on two grids"
+(Controls) and "interpolation on two grids" (Results) should read: one grid, two interpolants (see 12AL's amendment of
+the same date). Only D1's numbers are marked, as recorded.
+
+**Amendment B2.5's formula (consumer PR #28, merge 8f8a7b2; finding C046).** The understatement of the old window rule
+is 0.5 x step x (p(50) + p(100)) = 0.25 x (p(50) + p(100)) on the step-0.5 grid; the text's "0.25 x (p(50) + p(100)) x
+0.5" is a factor of two too small. Its "roughly 10% at the 1e-3 threshold" matches the correct factor.
+
+**`--block-rows` (consumer PR #28, merge 8f8a7b2; finding C131).** The table stage honoured `--block-rows` on the
+24,501-node pass only. No run of record used it (every `table.json` shows the default blocks). Since the merge it
+applies to every pass (the 98,001-node table and control 6's exact sum too), rounded down to each pass's row chunk;
+the block decides memory and speed only.
+
+**Core settings at trace time (consumer PR #29, merge 0989df4; findings C054, C055).** Core reads its
+normalisation-grid settings and its missing-density form when a likelihood program is traced, at its first call, not
+when the target is built. From the merge the stock target and the spectral joint target take a snapshot of those
+settings at build and refuse a trace under other ones, as core's own bindings do since core 3cf8df7. Both numerics
+modes now also set the normalisation grid sizes, the pairing m1 grid (off) and the pairing edge rule, and the builder
+refuses a `DARKSIRENS_*` variable core reads as a numerics setting; the values set are the defaults of every record
+core (e7c3007, 32c6210, 1022429) and of the 12S pin, which this record ran with (no launcher set a `DARKSIRENS_GW_*`
+variable), so this record's numbers are unchanged. The target's record and provenance now carry every grid and
+catalog-evaluation setting and core's numerics semantic under `core_numerics.core_settings`. Because the provenance
+enters core's run fingerprint, a checkpoint written by an earlier main is not resumed by this one (it is refused,
+loudly); a run started afresh computes the same numbers.
+
+**Calibration anchor (consumer PR #29, merge 0989df4; finding C094).** A configured log10n0 outside the calibration
+prior's log10n0 bounds is now refused, and so is an anchor whose sampler coordinate does not decode back to the
+configured log10n0 within 1e-12 (which also happens inside the bounds, far in a conditional normal's tail, where the
+quantile rounds to 0 or 1 and decodes to the bound). Before, such an anchor evaluated at the bound without an error in
+the callers that did not check it themselves (the anchor gate before sampling, the 12U stage, the direct chains'
+anchor and the ladder-cell check). Every record's anchor lies inside its prior's bounds and decodes to within 2.3e-16,
+so this record is not affected.

@@ -203,3 +203,57 @@ The events do not update any of the three.
   mass parameters, so the value is conditional on the fixed mass model.
 - Core main now carries the corrected spin pair in the preset (core #60,
   4b97f4a). This chain used core e7c3007 with the pair passed explicitly.
+
+## Amendment (25 Oct 2026): independent review
+
+An independent multi-agent review of the consumer repo (desi_darksirens_selection at the review head 17a65bb, 24-25
+Oct 2026; report `darksirens-core-data/reviews/consumer-2026-10-24/out/REVIEW.md`) confirmed the findings cited in
+parentheses below; only confirmed findings are fixed. The owner took the review's recommended option in every decision
+on 25 Oct 2026. Each item names the consumer pull request that fixes it and its merge commit on the consumer's main
+branch. The final main is 6d0f800 (26 Oct 2026); `./ci.sh` passes there in both record environments (HENON, CPU;
+`ci_logs/20261026T051301Z_7566d8eb6d34_consumer_e7c3007batch_cuda12.log`, 1349 passed, and
+`ci_logs/20261026T051301Z_7566d8eb6d34_consumer_1022429_lss57afebe_cuda12.log`, 1364 passed; none failed).
+Location-free throughout. Unless an item says otherwise, no number of record changes. Findings whose fix packages are
+not merged yet (the catalog model, the GW inputs, the variance guard and estimator noise, resume markers, the 12AQ
+readings and 12AO's causes) are not amended here; the review's per-record table lists them.
+
+**The code and environment of record (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a; findings
+C008, C010, C050, C051, C143, G4.1).** The code of this record is on the consumer's main branch since the
+consolidation (PR #20) and its follow-up (PR #21). The environment it ran in is named, with its full pip freeze and
+sha256, in `config/record_envs/12Y.json`; `scripts/check_frozen_environment.py --record 12Y` checks that an
+environment is exactly it. The consumer commits this record names as code that ran are tagged `record/12Y/<sha7>` on
+GitHub (0d75b40). The full test suite is run by `./ci.sh` in the record environments (CPU, HENON); it was green at the
+follow-up head (`ci_logs/20261025T163303Z_2b5695027bbb_<env>.log`) and is green at the final main (above).
+
+**Population (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a; finding C052).** This record's runs
+declared `population.fixed_values` (0.04, 0.10) themselves, in their manifests. The base configuration's declaration
+since the consolidation is the same pair, so they resolve the same configuration from main.
+
+**Chains through the 12T stage (consumer PR #31, merge b9ec283; findings C029, C123, C125).** This record's chain
+stages use the 12T chain driver: from the merge their `status.json` and logs are location-free, their `--anchor-from`
+grid must be accepted (theirs is the accepted exact-GW grid of 12T) and a finished unconverged checkpoint is refused
+before the build, except for the smoke chains run with `--allow-unconverged`, whose resume writes the capped result as
+before.
+
+**Core settings at trace time (consumer PR #29, merge 0989df4; findings C054, C055).** Core reads its
+normalisation-grid settings and its missing-density form when a likelihood program is traced, at its first call, not
+when the target is built. From the merge the stock target and the spectral joint target take a snapshot of those
+settings at build and refuse a trace under other ones, as core's own bindings do since core 3cf8df7. Both numerics
+modes now also set the normalisation grid sizes, the pairing m1 grid (off) and the pairing edge rule, and the builder
+refuses a `DARKSIRENS_*` variable core reads as a numerics setting; the values set are the defaults of every record
+core (e7c3007, 32c6210, 1022429) and of the 12S pin, which this record ran with (no launcher set a `DARKSIRENS_GW_*`
+variable), so this record's numbers are unchanged. The target's record and provenance now carry every grid and
+catalog-evaluation setting and core's numerics semantic under `core_numerics.core_settings`. Because the provenance
+enters core's run fingerprint, a checkpoint written by an earlier main is not resumed by this one (it is refused,
+loudly); a run started afresh computes the same numbers.
+
+**Runner jobs (consumer PR #30, merge 6d0f800; finding C138).** This record's runner jobs ran from shared clones with
+no commit pin. Only 12AE Part 2 mixed commits; this record's runs did not. From the merge the runner job files refuse
+to start without PHASE12_EXPECT_SHA naming the commit of a clean checkout, and the stage runner repeats that check
+before every stage, stopping (exit 3) if the checkout moves.
+
+**Launch files (consumer PR #30, merge 6d0f800; finding C137).** The launch files of this record predate the owner's
+Slurm rules of 18-19 Oct 2026 (7-day limits; rita GPU jobs at 128 CPUs and 120G; holder steps only through the
+wrapper) and break them. They are kept unchanged in what they launch, as the record of how the record ran, and from
+the merge they refuse to run unless PHASE12_ALLOW_HISTORICAL names them (slurm/historical_launch_files.txt lists
+them). The B1 and B2 pipelines' HENON fallback now clears every SLURM_* variable first.

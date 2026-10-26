@@ -20,6 +20,10 @@ clean-room session or to a coordinator.
 their differences are reported as numbers (shift in sd, width ratios, the lower part's weight). No bands,
 thresholds, z-scores or verdicts.
 
+**Results wait (independent review, 25 Oct 2026).** The results of this record wait for an estimator error on the
+comparison against B2 and for a guard-free comparison (owner decisions 7A and 6B). See "Amendment (25 Oct 2026):
+independent review" at the end.
+
 ## The question
 
 Stage B2 (12AF) sampled H0, the three catalog nuisances and all seventeen GWTC-5 population parameters directly
@@ -474,3 +478,19 @@ env -u SLURM_JOB_ID sbatch -A phy220048p -p HENON --qos henon -n1 -c 1 --mem 2G 
   writes `runs/<chain>/DONE` there.
 - **The combination:** `logs/run_12ap_combine-<job>.out` ends `AP DONE rc=<rc>`. On success it writes
   `runs/combined/DONE` and `runs/compare/DONE` on Hildafs; on a failure, `FAILED_combine_<step>`.
+
+## Amendment (25 Oct 2026): independent review
+
+An independent multi-agent review of the consumer repo (desi_darksirens_selection at the review head 17a65bb, 24-25
+Oct 2026; report `darksirens-core-data/reviews/consumer-2026-10-24/out/REVIEW.md`) found that this record's comparison
+against B2 cannot yet be read as the effect of the finer cell: both cells share one PE and one injection realisation,
+so the seed scatter does not measure the estimator noise that differs between them (finding G6.1), and at the fine
+cell the variance guard is an active edge of the posterior (findings C001, G6.2). The owner accepted the recommended
+options on 25 Oct 2026: an estimator error on the 12AP-against-B2 comparison from a paired bootstrap of PE and
+injections at stored draws of both cells (decision 7A), and, beside each 12AP-against-B2 number, the spectral
+likelihood with the DESI guard and a guard-free reweighted comparison (decision 6B; more injections, decision 6A,
+before further production chains).
+
+**The results of this record wait for both.** No results amendment is written, and no difference between this record
+and B2 is read as the effect of the finer cell, until the estimator error and the guard-free comparison are attached.
+Location-free; no number of record is stated or changed here.

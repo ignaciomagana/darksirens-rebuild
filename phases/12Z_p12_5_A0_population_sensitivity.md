@@ -231,3 +231,38 @@ shifted or widened beyond the fixed one. With the effective-spin width near
 5. The scans are one parameter at a time. What the joint posterior does, and
    how much of these shifts survives marginalization, is the question of
    stage A1.
+
+## Amendment (25 Oct 2026): independent review
+
+An independent multi-agent review of the consumer repo (desi_darksirens_selection at the review head 17a65bb, 24-25
+Oct 2026; report `darksirens-core-data/reviews/consumer-2026-10-24/out/REVIEW.md`) confirmed the findings cited in
+parentheses below; only confirmed findings are fixed. The owner took the review's recommended option in every decision
+on 25 Oct 2026. Each item names the consumer pull request that fixes it and its merge commit on the consumer's main
+branch. The final main is 6d0f800 (26 Oct 2026); `./ci.sh` passes there in both record environments (HENON, CPU;
+`ci_logs/20261026T051301Z_7566d8eb6d34_consumer_e7c3007batch_cuda12.log`, 1349 passed, and
+`ci_logs/20261026T051301Z_7566d8eb6d34_consumer_1022429_lss57afebe_cuda12.log`, 1364 passed; none failed).
+Location-free throughout. Unless an item says otherwise, no number of record changes. Findings whose fix packages are
+not merged yet (the catalog model, the GW inputs, the variance guard and estimator noise, resume markers, the 12AQ
+readings and 12AO's causes) are not amended here; the review's per-record table lists them.
+
+**The code and environment of record (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a; findings
+C008, C010, C050, C051, C143, G4.1).** The code of this record is on the consumer's main branch since the
+consolidation (PR #20) and its follow-up (PR #21). The environment it ran in is named, with its full pip freeze and
+sha256, in `config/record_envs/12Z.json`; `scripts/check_frozen_environment.py --record 12Z` checks that an
+environment is exactly it. The consumer commits this record names as code that ran are tagged `record/12Z/<sha7>` on
+GitHub (ab226d6). The full test suite is run by `./ci.sh` in the record environments (CPU, HENON); it was green at the
+follow-up head (`ci_logs/20261025T163303Z_2b5695027bbb_<env>.log`) and is green at the final main (above).
+
+**Population given as an explicit mapping (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a;
+finding C052).** These grids ran `scripts/phase12t_stage.py spectral` on `config/baseline.fixed_population.json` with
+the population given as an explicit mapping (`--set population.name="gwtc5_fiducial_bpl2peaks" --set
+population.fixed=<all 17 values>`): 12X at the GWTC-5 values of core e7c3007 (spin 0.0633, 0.3654) with the rate index
+per grid, 12Z with one parameter changed per grid, including the spin scans and the two-dimensional spin grid. In the
+consolidated main of PR #20 the base configuration's new spin declaration was written over the mapping's spin entries,
+so from that main these grids evaluated another population (every spin point at 0.04, 0.10; ln L differences of up to
+about 10^2 nat at the probed points). The follow-up (PR #21) makes an explicit mapping replace the base
+configuration's population as a whole, the declaration included (`scripts/phase12t_common.py`, `apply_overrides`); a
+`population.fixed_values` that a stage sets itself still applies on top of its mapping. From main after the follow-up
+the same commands resolve the configuration they ran and reproduce the stored ln L exactly (checked on a 12X grid, a
+12Z one-parameter grid and a 12Z spin-grid point at three H0 points each, in the record environment
+consumer_e7c3007_cuda12: difference 0). The tagged commit ab226d6 reproduces them as well.

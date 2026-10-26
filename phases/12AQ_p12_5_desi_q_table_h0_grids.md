@@ -88,6 +88,15 @@ submitted after this commit.
   bound for DESI. The mock ran the first-declared per-seed Laplace rule; the real tables use the amended one.
 - Details under "Amendments".
 
+**Amendment, the independent review's gates, checks and provenance (25 Oct 2026; location-free; no number of record
+changes):** check 8 (the budget identity) could not stand in for check 6, the gauge at consumption: it holds for any
+table. Check 6 was therefore untested in the run of record; it has now been run as the owner decided (decision 10C:
+the Q the real lss target consumes, from its own leaves, against the gauge's definition with core's own missing
+density of every fitted store row) on all ten map tables the arms of record consumed, at the five a-priori points:
+**pass**, worst relative difference 4.4e-14 (tolerance 1e-10). Check 4's identity block now reads the stock target's
+own decode: equal exactly. Errata on provenance (the "archives" block), the clip statement, the inherited stamps of
+the derived tables and the member variance are under "Amendments", "Amendment (25 Oct 2026): independent review".
+
 **Blinding: location-free.** No H0 location appears here, in commit messages or in the logs agents read: no median,
 interval, MAP or shift in km/s/Mpc. The H0 values in this record are fixed a priori: the grid ([20, 140] step 0.5;
 [50, 100] step 0.1), the tie points (20, 32.5, 45, 60, 70, 80, 92.5, 110, 125, 140), the member-count points (20, 45,
@@ -246,8 +255,13 @@ fallback.
    asserted, same process, at the ten tie points: 1e-10 (also before the lss head is pushed).
 4. Core's field analysis against the stock target, same process: tiers (also before the lss head is pushed).
 5. Q = 1 through lss against core's field analysis, grid form, same process: tiers.
-6. A constant-per-redshift table through lss against Q = 1 (the gauge at consumption): 1e-10; check 8 stands in if
-   that table cannot be certified.
+6. The gauge at consumption: a constant-per-redshift table through lss against Q = 1, 1e-10. *Amended
+   25 Oct 2026 (decision 10C):* check 8 cannot stand in (it holds for any table). When the constant table cannot be
+   certified, check 6 is `phase12aq_gates.py consumption`: for each map table an arm consumes, at the a-priori points,
+   the consumed Q, the gauge ratio, the consumed missing density and the per-redshift missing-host budget of the real
+   lss target against the gauge's definition with core's own missing density of every fitted store row, 1e-10
+   relative, on every node that holds a missing-host budget. (As declared: "check 8 stands in if that table cannot
+   be certified".)
 7. H0 does not enter the tables: the builder inputs gridded at H0 60, 70 and 80 equal to 1e-13 relative; the tables
    equal to the solver's convergence bound (about 1e-8 in log Q), rounding-size differences recorded.
 8. The consumed primary and placement tables keep the missing-host count per redshift on fitted rows at the
@@ -1336,3 +1350,196 @@ The mock tie shows that the final lss head reproduces the pre-T0 values of unit 
 - Owner only (not read by agents; absolute): `q_scans/summary/summary_absolute.json`, `absolute.npz`,
   `owner_page_numbers_absolute.json` and `plots/` (figures made with the gwcat env's python, which has matplotlib).
 - Logs: `q_scans/logs/summary_run1.out`, `summary_run2.out` and `mock_summary.log`.
+
+### Amendment (25 Oct 2026): independent review
+
+An independent multi-agent review of the consumer repo (desi_darksirens_selection at the review head 17a65bb, 24-25
+Oct 2026; report `darksirens-core-data/reviews/consumer-2026-10-24/out/REVIEW.md`) confirmed the findings cited in
+parentheses below; only confirmed findings are fixed. The owner took the review's recommended option in every decision
+on 25 Oct 2026. Each item names the consumer pull request that fixes it and its merge commit on the consumer's main
+branch. The final main is 6d0f800 (26 Oct 2026); `./ci.sh` passes there in both record environments (HENON, CPU;
+`ci_logs/20261026T051301Z_7566d8eb6d34_consumer_e7c3007batch_cuda12.log`, 1349 passed, and
+`ci_logs/20261026T051301Z_7566d8eb6d34_consumer_1022429_lss57afebe_cuda12.log`, 1364 passed; none failed).
+Location-free throughout. Unless an item says otherwise, no number of record changes. Findings whose fix packages are
+not merged yet (the catalog model, the GW inputs, the variance guard and estimator noise, resume markers, the 12AQ
+readings and 12AO's causes) are not amended here; the review's per-record table lists them.
+
+**The code and environment of record (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a; findings
+C008, C010, C050, C051, C143, G4.1).** The code of this record is on the consumer's main branch since the
+consolidation (PR #20) and its follow-up (PR #21). The environment it ran in is named, with its full pip freeze and
+sha256, in `config/record_envs/12AQ.json`; `scripts/check_frozen_environment.py --record 12AQ` checks that an
+environment is exactly it. The consumer commits this record names as code that ran are tagged `record/12AQ/<sha7>` on
+GitHub (0d45dcb, 77443ab, 2ee6633, 8b59430, 0a2139f, ef77d5d, ffccb39). The full test suite is run by `./ci.sh` in the
+record environments (CPU, HENON); it was green at the follow-up head
+(`ci_logs/20261025T163303Z_2b5695027bbb_<env>.log`) and is green at the final main (above).
+
+**Population of the spectral-only grids (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a; finding
+C052).** The spectral-only grids gave the population as an explicit mapping at the corrected pair (0.04, 0.10). From
+the consolidated main of PR #20 they evaluated the same values but recorded a `population.fixed_values` record (the
+declaration written over equal entries); after the follow-up (PR #21) they resolve and record exactly what they did
+when they ran (no `fixed_values` record; checked on the 12AG spectral reference at three H0 points: ln L difference
+0).
+
+**Environment, convention, inputs and tests (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a;
+findings C009, C010, C053, C066).** `config/record_envs/12AQ.json`: consumer_1022429_lss57afebe_cuda12 (core 1022429,
+lss 57afebe), with the note that runs before the lss head was pushed used the consumer_e7c3007_cuda12 python with
+git-archive copies of core 1022429, lss 881fce6 and darksirens-examples dea180b first on the path. Convention:
+unnormalised under the soft guard (core 1022429 predates PR #70). Inputs: the stock configuration is read from
+`config/desi.fixed_population.core_preset.json`, the file the declared `desi_config` sha256 names (since the
+follow-up; the resolved configuration is unchanged). Tests: the grid driver has an end-to-end test on a tiny fixture
+(`tests/test_phase12aq_scan_e2e.py`), which since the follow-up also shows that the value check evaluates the target's
+own likelihood program; the 12AQ tests skip with a reason in the 12AF/12AP environment instead of erroring.
+
+**Run fingerprints (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a).** The code digests that the
+12AG to 12AQ drivers put into their run fingerprints cover the consumer code, so a run stored before the consolidation
+(or its follow-up) is evaluated again rather than resumed when it is rerun from main; the values it computes are the
+same.
+
+**Core settings at trace time (consumer PR #29, merge 0989df4; findings C054, C055).** Core reads its
+normalisation-grid settings and its missing-density form when a likelihood program is traced, at its first call, not
+when the target is built. From the merge the stock target and the spectral joint target take a snapshot of those
+settings at build and refuse a trace under other ones, as core's own bindings do since core 3cf8df7. Both numerics
+modes now also set the normalisation grid sizes, the pairing m1 grid (off) and the pairing edge rule, and the builder
+refuses a `DARKSIRENS_*` variable core reads as a numerics setting; the values set are the defaults of every record
+core (e7c3007, 32c6210, 1022429) and of the 12S pin, which this record ran with (no launcher set a `DARKSIRENS_GW_*`
+variable), so this record's numbers are unchanged. The target's record and provenance now carry every grid and
+catalog-evaluation setting and core's numerics semantic under `core_numerics.core_settings`. Because the provenance
+enters core's run fingerprint, a checkpoint written by an earlier main is not resumed by this one (it is refused,
+loudly); a run started afresh computes the same numbers.
+
+**Settings record (consumer PR #29, merge 0989df4; finding C054).** The 12AQ settings record
+(`phase12aq_common.settings_record`) now carries every normalisation-grid field (it lacked the pairing edge rule and
+the pairing grid's upper bound), and `set_core_settings` sets every one of them to the stock target's `core_defaults`
+values, which are the values this record ran with. `Built` checks the settings before the first call of the likelihood
+program as well as of the diagnostics program (in this record the check ran only at the first diagnostics call, and no
+arm was evaluated after another arm's settings were set). A 12AQ scan directory written before this change starts
+afresh rather than resuming (its fingerprint holds the settings record); the numbers are the same.
+
+**Calibration anchor (consumer PR #29, merge 0989df4; finding C094).** A configured log10n0 outside the calibration
+prior's log10n0 bounds is now refused, and so is an anchor whose sampler coordinate does not decode back to the
+configured log10n0 within 1e-12 (which also happens inside the bounds, far in a conditional normal's tail, where the
+quantile rounds to 0 or 1 and decodes to the bound). Before, such an anchor evaluated at the bound without an error in
+the callers that did not check it themselves (the anchor gate before sampling, the 12U stage, the direct chains'
+anchor and the ladder-cell check). Every record's anchor lies inside its prior's bounds and decodes to within 2.3e-16,
+so this record is not affected.
+
+**Operations (consumer PR #30, merge 6d0f800; findings C048, C135, C136, C139, C141).** The holder steps of this
+record ran through slurm/phase12aq_miko.sh, which started each step with srun --overlap and no --mem, so the kernel's
+memory limit for a step was the whole holder (250 GiB, shared with the owner's session); the 48 GB cap was a 30 s
+poll, and its kill list was a command-line match that could include unrelated processes of the user. The largest step
+peak was 20.5 GB and the kill never fired, so no step of record was affected. The chain's host steps and table hashing
+ran on the holder without a memory check (peaks 0.37 GB and 43 MB). The q stage waited for the amendment mark without
+a time bound (it waited 30 minutes on the holder; the rita fallback was never submitted). The mock array was sized at
+1.5 times the peak of two smoke seeds (39G); seed 7 ran out of memory and was rerun at 64G, and three tasks that
+failed TaskProlog on unhealthy HENON nodes were resubmitted by hand, all at the same commit, so the mock results are
+complete and consistent. From the merge the wrapper gives every step a kernel memory cap (srun --mem, read back from
+the step's cgroup) and watches only the step's own cgroup; host steps go through the wrapper as CPU steps; the hashing
+runs under an address-space cap; the q stage's wait is bounded and leaves a stop mark (the rita job stops at once);
+the mock sizing takes twice the largest peak of at least four smoke seeds; and slurm/retry_node_failures.sh resubmits
+node failures once. The kernel cap was checked on HENON (job 1392918: the step's cgroup limit read back as the cap; a
+step allocating three times the cap was stopped by the kernel within 3 s, before the first poll; a process outside the
+step that named the same script was untouched).
+
+#### Gates, checks and provenance (consumer PR #34, merge 009257d)
+
+The review found that several checks of this record could not fail on what they name, and that some provenance fields
+named code that did not run. Each fix has a test that fails when its defect is put back, at the helper and at the
+command that calls it (a sweep of 52 such mutations, at least one per finding, catches all but one, which is
+equivalent: check 6's ratio and its budget compare the same equality). What follows changes no number of record.
+
+**Check 6, the gauge at consumption (finding C006, decision 10C).** Check 8 is an identity of lss's moments-gauge
+formula: the ratio it divides by is algebraically sum(wQ)/sum(w) with w = 1 - f_p C, built on the same rows, f_p and
+clip as the check, so it holds for every table (three deliberately wrong tables pass it). It never calls the code that
+applies the gauge at consumption and never reads the catalog store. So check 6 was **untested** in the run of record;
+the earlier lines "check 8 stands in" (amendment 1 and the tables of the rehearsal and of amendment 3) are withdrawn.
+Check 6 was then run (consumer `832f84b`, `phase12aq_gates.py consumption`, HENON job 1393095, CPU, about 8 minutes,
+peak 25 GB): for each of the ten map tables the arms of record consumed (the primary at build H0 70, 60 and 80, the
+runner-up, the rougher field, the four shuffles, and member 0 of the 16-member build), the lss map target built as
+every Q arm builds it, at the five a-priori points (20, 45, 67.74, 92.5, 140): the Q the target consumes (its own
+leaves through lss's consumption functions), its gauge ratio, the consumed missing density of the compact rows, and
+the per-redshift budget, against the gauge's definition R(z) = sum_g dN_miss,g Q_g / sum_g dN_miss,g with core's own
+missing density of all 119,457 fitted store rows. **Worst relative difference 4.4e-14 (tolerance 1e-10): pass for
+every table.** The gauge ratios range over 0.967 to 1.061 across tables and points (the gauge has work to do). The z =
+0 node, where core's dN_exp vanishes, holds no missing hosts and is left out (budget share below 1e-300). The unit
+table needs no gauge (check 5). The marginalised arm's members 1-15 are covered by construction (check 9 ties member 0
+inside the marginalised target to the member-0 map target at 2.3e-13, and check 6 passes on that map target); a direct
+check of every member is designed, not run. Check 8 is relabelled "the budget identity of lss's gauge formula on the
+stored rows (not a test of the gauge at consumption)"; its numbers stand. The output of check 6 is kept outside the
+run directory, at `reviews/consumer-2026-10-24/fix/notes/p08-qgates/gate6_real_all/gate6.json` on the data disk
+(sha256 299c2a0d9d4523c3a44a99c92fddc1ed0c2b1410f1104a45ff38f04e6bb34d3a; location-free: relative differences, ratios
+and counts), with its run script and log beside it. The gate-6 check on the merged consumer main (HENON 1395075) gives
+the same worst relative difference per table and the same tables' sha256. A future holder chain runs check 6 itself,
+on every map table a Q arm consumes, before the first Q arm, and stops on a miss.
+
+**Check 4's identity block (finding C037).** The block compared the field analysis with the floats it was built from,
+so its calibration flags could not fail; the ln L tie (9.1e-13) was what checked the calibration. The block now reads
+what the stock target's own program decodes (its evaluation body's selection spec) against core's decode of the field
+analysis. On the real stores (HENON 1392969): n0, delta, sigma_kde, z_depth, M0hat, sigma_M, m_lim, Om0 and the
+K-correction are equal exactly (relative difference 0) at H0 45, 70 and 92.5; the population vector is equal. The
+statement "equal exactly between the field analysis and the stock target" now rests on this.
+
+**Check 7(b) and 7(c) (finding C034).** The label "solver instability, not an H0 leak" asserted a cause that was not
+tested, and an excess could never be a miss. Now an excess over the bound is a miss unless check 7(a) passes in the
+same run and a rebuild at the same H0 reproduces it; 7(c) records an excess as a miss with no cause asserted. In this
+record no excess occurred (7(b): 7.5e-11 and 9.3e-15 against 1e-8; 7(c) bit for bit).
+
+**Check 10 and the derived tables' stamps (findings C099, C100).** The shuffled, unit and member-0 tables carry the
+source table's solve stamps (convergence, Laplace check, rails, budget residual) as their own; they ran no solve, and
+the shuffles' stored per-redshift budget residual is 0.030 to 0.033 (as in the check 8 paragraph), not the inherited
+3.6e-14. "All 10 tables pass as stamped" counted those inherited stamps. Check 10 now judges a derived table on its
+source table's stamps, read from the source file (its sha256 checked), treats a missing stamp as a miss, and tests the
+rail share against lss's 1% warning (the declared rougher field excepted). Applied to the stored tables: every table
+passes. The targets re-gauge every proposal, so no likelihood changes.
+
+**The clip (finding C061; owner default).** "No fitted cell is at the clip in any table" (amendment 1, systematics)
+counts cells after the gauge, where a cell the solver railed at +7 sits inside the clip. Read instead: "After the
+gauge no fitted cell sits at the clip. Before the gauge the solver set cells at the clip that hold at most 0.76%
+(primary; 5 cells), 0.74% (runner-up) and 5.05% (rougher field; 13 cells) of a redshift's missing hosts; the rougher
+field's share is above lss's 1% warning, which its arm recorded." The eligibility rule gated on the clip before the
+gauge (rule v3, opt-in: the subset build may hold no cell the solver set at the clip, and each full covered-sky build
+at most lss's 1% warning of a redshift's missing hosts in such cells), applied to the stored cross-validation records,
+gives the same 20 eligible settings, primary (sigma 0.5, ell_grid 2) and runner-up (sigma 0.5, ell_grid 4): no subset
+build railed a cell, and the largest full-sky share is 0.77%. `choice_v2.json` stays the choice of record.
+
+**The member variance (finding C108).** V_mem used population moments (low by (M - 1)/M = 15/16 at the member spread
+of record, more at large spread). With the sample variance the largest V_mem is 3.45e-4 instead of 3.24e-4 and
+sqrt(V_mem)/S at most 0.033 instead of 0.032 (rule: double M above 0.1): M = 16 is kept and the q-marg accuracy
+("about 0.04") is unchanged. The sample variance is the default from now on; `--member-variance-ddof 0` reproduces the
+stored V_mem. Both are delta-method approximations.
+
+**Provenance errata (findings C011, C097, C030).**
+
+- The "archives" block of every arm, table and check output repeats `q_scans/src/ARCHIVES.txt` (lss `881fce6`), which
+  was not imported; the lss that ran is the env's `57afebe` (the "packages" block; no frozen sources on the path). The
+  pre-check's three lss commits are the old env's metadata (`3429bb2`), the pin list (`881fce6`) and the imported
+  archive `lss_final` (= `57afebe`). Outputs now record the commit of each module actually imported and only the
+  archives on the path.
+- The four frozen archives (core `1022429`, lss `881fce6`, lss final `57afebe`, examples `dea180b`) each equal `git
+  archive` of their commit, file for file (checked 25 Oct); their content digests are committed in the consumer
+  (`config/phase12aq_archive_digests.json`) and checked by the env probe and the cross-validation.
+- The mock's 1,246 output files carry no code provenance. The mock ran from consumer `0d45dcb` with the frozen sources
+  core `1022429`, lss `881fce6`, examples `dea180b` (line 1 of each Slurm log); the mock tie from `ffccb39` in the
+  final env. Part 1 seeds 1 and 2 are the smoke run's outputs (same commit and env, as designed); the smoke records
+  `mock/smoke/seed001.json` and `seed002.json` were overwritten by the no-op Part 1 tasks (their peak memory reads
+  0.39 GB; `sizing.json` keeps the measured 25.9 GB).
+- `summary.json` and `owner_page_numbers_absolute.json` carry no commit or input hashes, and the owner-page file's
+  producer was not committed. The committed summary reproduces `summary.json` on every stored key and the owner-page
+  numbers file exactly (relative difference 0.0 on all 240 compared entries), reading all 13 arms with none refused;
+  it now records its code and the sha256 of every file it reads.
+
+**Latent defects, fixed; the run of record did not reach them (findings C031, C038, C040, C060, C098, C101, C102,
+C103, C105, C107, C109, C111, C112).** A rerun under another configuration now moves the previous outputs aside; the
+holder chain skips a step only on a mark made by the same commit, interpreter, environment (the venv: both record
+environments share one base interpreter) and PYTHONPATH; the value check is computed from every row and a miss holds
+the arm (no DONE, non-zero exit) and is refused by the summary; the mock tie reports missing outputs as "incomplete"
+with a non-zero exit; check 2 misses unless every reference file and input is the declared one; the fitted-row count
+119,457 is enforced; the shuffle registry reuses a certified seed on rerun; the pre-check falls back only when both
+certificates were measured and failed; the cross-validation refuses options it would ignore; check 12 also requires
+the first replicate to differ from the nominal arm (in the run of record every replicate differs); the spectral tie
+reads the arm's own event count (259, as hard-coded before); the mock skips a step only for the same code, environment
+and table; the wrapper arm is not value-checked (its value and record are one program); the cross-validation's
+reconstruct step refuses `--in`, which it never read; the summary ranks the per-event spread only when the per-event
+arrays close to the ln L difference (in this record q-map's close to 4.9e-13 and every arm's to at most 1.4e-12,
+against 1e-10, so the ranking of record stands). In the run of record every arm ran once and complete, every value
+check passed (worst 0.0), every reference matched its sha256, every DONE matches its scan, and the mock tie had all 10
+seeds and both arms: the record's checks stand as stated, with the wording above.

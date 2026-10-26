@@ -934,3 +934,70 @@ Reported as they are, without a declared reading:
   714,745 at 256).
 - The four nside-128/256 cells and the nside-64 1e-4 cell whose MC variance exceeds 2 read "no narrowing" because
   the MC condition gates only "narrows" and "hint"; their R values carry that variance.
+
+## Amendment (25 Oct 2026): independent review
+
+An independent multi-agent review of the consumer repo (desi_darksirens_selection at the review head 17a65bb, 24-25
+Oct 2026; report `darksirens-core-data/reviews/consumer-2026-10-24/out/REVIEW.md`) confirmed the findings cited in
+parentheses below; only confirmed findings are fixed. The owner took the review's recommended option in every decision
+on 25 Oct 2026. Each item names the consumer pull request that fixes it and its merge commit on the consumer's main
+branch. The final main is 6d0f800 (26 Oct 2026); `./ci.sh` passes there in both record environments (HENON, CPU;
+`ci_logs/20261026T051301Z_7566d8eb6d34_consumer_e7c3007batch_cuda12.log`, 1349 passed, and
+`ci_logs/20261026T051301Z_7566d8eb6d34_consumer_1022429_lss57afebe_cuda12.log`, 1364 passed; none failed).
+Location-free throughout. Unless an item says otherwise, no number of record changes. Findings whose fix packages are
+not merged yet (the catalog model, the GW inputs, the variance guard and estimator noise, resume markers, the 12AQ
+readings and 12AO's causes) are not amended here; the review's per-record table lists them.
+
+**The code and environment of record (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a; findings
+C008, C010, C050, C051, C143, G4.1).** The code of this record is on the consumer's main branch since the
+consolidation (PR #20) and its follow-up (PR #21). The environment it ran in is named, with its full pip freeze and
+sha256, in `config/record_envs/12AG.json`; `scripts/check_frozen_environment.py --record 12AG` checks that an
+environment is exactly it. The consumer commits this record names as code that ran are tagged `record/12AG/<sha7>` on
+GitHub (304c8ae, 09c4b62, 6337a56). The full test suite is run by `./ci.sh` in the record environments (CPU, HENON);
+it was green at the follow-up head (`ci_logs/20261025T163303Z_2b5695027bbb_<env>.log`) and is green at the final main
+(above).
+
+**Population of the spectral-only grids (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a; finding
+C052).** The spectral-only grids gave the population as an explicit mapping at the corrected pair (0.04, 0.10). From
+the consolidated main of PR #20 they evaluated the same values but recorded a `population.fixed_values` record (the
+declaration written over equal entries); after the follow-up (PR #21) they resolve and record exactly what they did
+when they ran (no `fixed_values` record; checked on the 12AG spectral reference at three H0 points: ln L difference
+0).
+
+**Run fingerprints (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a).** The code digests that the
+12AG to 12AQ drivers put into their run fingerprints cover the consumer code, so a run stored before the consolidation
+(or its follow-up) is evaluated again rather than resumed when it is rerun from main; the values it computes are the
+same.
+
+**What controls C1 and C2 require (consumer PR #28, merge 8f8a7b2; finding C076).** The record declares C1 at the
+ladder cell's own points (the same theta) and C2 "in the same job and on the same card as C1". The checker computed
+both conditions and wrote them to `controls.json`, but neither was part of a pass verdict. Both held in the run of
+record: equal theta, C1 and C2 in one job on one node and one device. C1 and C2 therefore pass as recorded. Since the
+merge, C1 passes only with equal theta and C2 only in the same job and on the same card (node and device, now written
+as `same_card_as_C1`).
+
+**Core settings at trace time (consumer PR #29, merge 0989df4; findings C054, C055).** Core reads its
+normalisation-grid settings and its missing-density form when a likelihood program is traced, at its first call, not
+when the target is built. From the merge the stock target and the spectral joint target take a snapshot of those
+settings at build and refuse a trace under other ones, as core's own bindings do since core 3cf8df7. Both numerics
+modes now also set the normalisation grid sizes, the pairing m1 grid (off) and the pairing edge rule, and the builder
+refuses a `DARKSIRENS_*` variable core reads as a numerics setting; the values set are the defaults of every record
+core (e7c3007, 32c6210, 1022429) and of the 12S pin, which this record ran with (no launcher set a `DARKSIRENS_GW_*`
+variable), so this record's numbers are unchanged. The target's record and provenance now carry every grid and
+catalog-evaluation setting and core's numerics semantic under `core_numerics.core_settings`. Because the provenance
+enters core's run fingerprint, a checkpoint written by an earlier main is not resumed by this one (it is refused,
+loudly); a run started afresh computes the same numbers.
+
+**Calibration anchor (consumer PR #29, merge 0989df4; finding C094).** A configured log10n0 outside the calibration
+prior's log10n0 bounds is now refused, and so is an anchor whose sampler coordinate does not decode back to the
+configured log10n0 within 1e-12 (which also happens inside the bounds, far in a conditional normal's tail, where the
+quantile rounds to 0 or 1 and decodes to the bound). Before, such an anchor evaluated at the bound without an error in
+the callers that did not check it themselves (the anchor gate before sampling, the 12U stage, the direct chains'
+anchor and the ladder-cell check). Every record's anchor lies inside its prior's bounds and decodes to within 2.3e-16,
+so this record is not affected.
+
+**Operations (consumer PR #30, merge 6d0f800; finding C049).** The controls and probe lanes were submitted afterok on
+the catalog job without --kill-on-invalid-dep, and the printed watcher waited only for REPORTS_DONE, so a failed
+catalog job would have left the watcher waiting forever. The catalog job passed, so nothing was affected. From the
+merge those jobs carry --kill-on-invalid-dep=yes and the watcher is slurm/watch_jobs.sh, which also ends on a failed,
+cancelled or never-satisfiable job.

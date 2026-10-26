@@ -354,3 +354,97 @@ no part needed the nested-point extension.
 **Where the +1.0 comes from:** with the DESI likelihood but the spectral target's guard penalty in place of its own (a diagnostic,
 not the declared result), the median is 67.9 [53.2, 80.0]. Most of the shift therefore comes from the DESI target's guard at limit 4,
 which penalises more draws than the spectral one does, not from the galaxies.
+
+## Amendment (25 Oct 2026): independent review
+
+An independent multi-agent review of the consumer repo (desi_darksirens_selection at the review head 17a65bb, 24-25
+Oct 2026; report `darksirens-core-data/reviews/consumer-2026-10-24/out/REVIEW.md`) confirmed the findings cited in
+parentheses below; only confirmed findings are fixed. The owner took the review's recommended option in every decision
+on 25 Oct 2026. Each item names the consumer pull request that fixes it and its merge commit on the consumer's main
+branch. The final main is 6d0f800 (26 Oct 2026); `./ci.sh` passes there in both record environments (HENON, CPU;
+`ci_logs/20261026T051301Z_7566d8eb6d34_consumer_e7c3007batch_cuda12.log`, 1349 passed, and
+`ci_logs/20261026T051301Z_7566d8eb6d34_consumer_1022429_lss57afebe_cuda12.log`, 1364 passed; none failed).
+Location-free throughout. Unless an item says otherwise, no number of record changes. Findings whose fix packages are
+not merged yet (the catalog model, the GW inputs, the variance guard and estimator noise, resume markers, the 12AQ
+readings and 12AO's causes) are not amended here; the review's per-record table lists them.
+
+**The code and environment of record (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a; findings
+C008, C010, C050, C051, C143, G4.1).** The code of this record is on the consumer's main branch since the
+consolidation (PR #20) and its follow-up (PR #21). The environment it ran in is named, with its full pip freeze and
+sha256, in `config/record_envs/12AD.json`; `scripts/check_frozen_environment.py --record 12AD` checks that an
+environment is exactly it. The consumer commits this record names as code that ran are tagged `record/12AD/<sha7>` on
+GitHub (cc5fb8e). The full test suite is run by `./ci.sh` in the record environments (CPU, HENON); it was green at the
+follow-up head (`ci_logs/20261025T163303Z_2b5695027bbb_<env>.log`) and is green at the final main (above).
+
+**What the reweighting reports, and the control's rule (consumer PR #22, merge 84a6b88; code commit 03794e5).**
+Numbers from the review's probes, run in the record's environment consumer_e7c3007_cuda12 (this record's summary
+rebuilt from its stored evaluations; the control's verdict from its stored draws).
+
+1. **Reference of the reading (G4.5).** The declaration reads the catalog's effect against A1's combination of record
+   (Delta = (median_B1 - median_A1)/sd_A1, R = sd_B1/sd_A1). The results table divided instead by the before-weights
+   resample of the A1 chains (the B1 draws with unit weights, recombined). Against A1's combination the shift is
+   +0.081 sd and R = 1.027 (1.03, not 1.04); against the matched resample they are +0.082 sd and 1.035. The two A1 sds
+   differ by 0.8% (resample over combination 0.992), about 1.5 times the resampling error of the two sds: Monte Carlo
+   of two resamples of the same chains. The matched ratio is a fair estimator, but not the declared one. The reading
+   does not change. From the merge the summary reports both, labelled (`combined.reading.against_a1_combination` and
+   `against_matched_resample`).
+2. **Catalog nuisances under the weights (C115, G4.5).** Declared as reported, they were not. On the combined
+   posterior they barely move: the medians shift by -0.010 (M0hat), +0.005 (sigma_M) and -0.014 (log10 n0 quantile) of
+   their prior sd, and their sds change by -0.7%, -0.1% and -1.3%. From the merge the summary (per part and combined)
+   and the control report them, with the physical log10 n0.
+3. **Effective sample size (C119).** The Kish ESS counts the 4,096 rows per chain as independent draws, but the rows
+   repeat nested points (14,450 and 14,567 distinct points of 16,384 per part). With the weights summed per distinct
+   point the Kish ESS is 6,818 in the lower part and 9,035 in the upper (reported 8,506 and 10,898), and 9,823
+   combined (reported 11,850). The effective size lies between the two counts, since a repeated row still carries its
+   own nuisance draw. Both are far above the minimum of 500; the reading is unchanged. From the merge the summary
+   reports both.
+4. **The control's median rule (C116, G4.4).** The control's draws sit on the grid's H0 nodes, 0.5 apart, and the
+   declared rule compared their midpoint-rule median, which is a node value, with the 12Y median within 0.3. One node
+   lay in that window, so Monte Carlo alone decided the verdict about a quarter of the time (23-26% of bootstrap
+   resamples of the stored draws fail), and the sentence "The tolerance covers the Monte Carlo of 4,096 draws" does
+   not hold. The recorded median difference (-0.023 of the 12Y sd) is mostly that quantization. With each node's
+   weight spread over its H0 cell, the interpolated median differs from the 12Y median by +0.006 of the 12Y sd. Its
+   bootstrap error is 0.021 sd and the 12Y chain's own error of its median 0.015 sd (0.026 sd combined). From the
+   merge the control's default rule (owner's default, 25 Oct 2026) is |interpolated median - 12Y median| within three
+   combined Monte Carlo errors (here 0.077 sd), with the sd within 10% as before. On the stored control draws it
+   passes, the difference being 0.08 of the tolerance. The rule as it ran stays available (`--median-rule node`) and
+   is reported beside it. The control passed as recorded under its declared rule, and the main result is unaffected.
+5. **The declared low-ESS extension (C041).** The rule "a part with Kish ESS below 500 is extended to every nested
+   point of its chains" could not have run on the A1 chains. Each chain stores 226 to 287 initial points at dynesty's
+   -1e300 stand-in for minus infinity, and some other zero-weight points match their stored value only to about 1e-7.
+   Both fail the 1e-8 stored-value check, so the command stopped before any DESI call. The rule did not fire (both
+   parts far above 500). From the merge the nested draw set holds only points of positive weight (37,575 to 40,067 per
+   chain; the 3,548 to 3,769 zero-weight points carry no proposal weight). These match their stored values: on
+   low_seed32, 12 rows including the six of lowest stored ln L match to 5e-13.
+6. **Code only, no number of record changes (C114).** The importance weights are now stabilised over the points with
+   proposal weight (in log q + log w). B1's equal-weight path is unchanged bit for bit. The stored summary is
+   reproduced: every value of `summary.json` and every array of `summary.npz` is equal bit for bit, and only keys are
+   added. The control's stored verdict, differences and bootstrap errors are reproduced bit for bit under the rule as
+   it ran.
+
+A unit test that compared an expression with itself now tests evaluate's slicing: the slices put together are the
+whole draw set, nuisance draws included (C118).
+
+**Core settings at trace time (consumer PR #29, merge 0989df4; findings C054, C055).** Core reads its
+normalisation-grid settings and its missing-density form when a likelihood program is traced, at its first call, not
+when the target is built. From the merge the stock target and the spectral joint target take a snapshot of those
+settings at build and refuse a trace under other ones, as core's own bindings do since core 3cf8df7. Both numerics
+modes now also set the normalisation grid sizes, the pairing m1 grid (off) and the pairing edge rule, and the builder
+refuses a `DARKSIRENS_*` variable core reads as a numerics setting; the values set are the defaults of every record
+core (e7c3007, 32c6210, 1022429) and of the 12S pin, which this record ran with (no launcher set a `DARKSIRENS_GW_*`
+variable), so this record's numbers are unchanged. The target's record and provenance now carry every grid and
+catalog-evaluation setting and core's numerics semantic under `core_numerics.core_settings`. Because the provenance
+enters core's run fingerprint, a checkpoint written by an earlier main is not resumed by this one (it is refused,
+loudly); a run started afresh computes the same numbers.
+
+**Writer commit (consumer PR #29, merge 0989df4; finding G4.10).** The summaries behind this record did not carry the
+commit of the code that wrote them (the commit is in the job logs and the record). From the merge each summary carries
+a `writer` block: the writing script, its checkout's commit, branch and changed-file count, and, where it reads a
+short list of files, their sha256 (here, B1's summary hashes every evaluation file). The stored summaries are
+unchanged; a summary rewritten from main carries the block.
+
+**Launch files (consumer PR #30, merge 6d0f800; finding C137).** The launch files of this record predate the owner's
+Slurm rules of 18-19 Oct 2026 (7-day limits; rita GPU jobs at 128 CPUs and 120G; holder steps only through the
+wrapper) and break them. They are kept unchanged in what they launch, as the record of how the record ran, and from
+the merge they refuse to run unless PHASE12_ALLOW_HISTORICAL names them (slurm/historical_launch_files.txt lists
+them). The B1 and B2 pipelines' HENON fallback now clears every SLURM_* variable first.

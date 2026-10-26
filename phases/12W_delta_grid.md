@@ -140,3 +140,34 @@ Against the empty-catalog scans of 12V (their H0 grid is 40 to 90 in steps of
    constrain to δ = -0.85 ± 0.35 and which moves H0 from 64.7 to about 70.
    How that term should enter, free, fixed at 0, or tied to an independent
    measurement of the host evolution, is the owner's decision.
+
+## Amendment (25 Oct 2026): independent review
+
+An independent multi-agent review of the consumer repo (desi_darksirens_selection at the review head 17a65bb, 24-25
+Oct 2026; report `darksirens-core-data/reviews/consumer-2026-10-24/out/REVIEW.md`) confirmed the findings cited in
+parentheses below; only confirmed findings are fixed. The owner took the review's recommended option in every decision
+on 25 Oct 2026. Each item names the consumer pull request that fixes it and its merge commit on the consumer's main
+branch. The final main is 6d0f800 (26 Oct 2026); `./ci.sh` passes there in both record environments (HENON, CPU;
+`ci_logs/20261026T051301Z_7566d8eb6d34_consumer_e7c3007batch_cuda12.log`, 1349 passed, and
+`ci_logs/20261026T051301Z_7566d8eb6d34_consumer_1022429_lss57afebe_cuda12.log`, 1364 passed; none failed).
+Location-free throughout. Unless an item says otherwise, no number of record changes. Findings whose fix packages are
+not merged yet (the catalog model, the GW inputs, the variance guard and estimator noise, resume markers, the 12AQ
+readings and 12AO's causes) are not amended here; the review's per-record table lists them.
+
+**The code and environment of record (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a; findings
+C008, C010, C050, C051, C143, G4.1).** The code of this record is on the consumer's main branch since the
+consolidation (PR #20) and its follow-up (PR #21). The environment it ran in is named, with its full pip freeze and
+sha256, in `config/record_envs/12W.json`; `scripts/check_frozen_environment.py --record 12W` checks that an
+environment is exactly it. The consumer commits this record names as code that ran are tagged `record/12W/<sha7>` on
+GitHub (ab226d6). The full test suite is run by `./ci.sh` in the record environments (CPU, HENON); it was green at the
+follow-up head (`ci_logs/20261025T163303Z_2b5695027bbb_<env>.log`) and is green at the final main (above).
+
+**Population of the base configuration (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a; finding
+C052).** This record's runs built the 'gwtc5' preset of their core as it is (core e7c3007: mu_chi 0.0633, sigma_chi
+0.3654); `population.fixed_values` did not exist yet (it came with 12Y's commit 0d75b40). Since the consolidation the
+base configurations declare `population.fixed_values` (0.04, 0.10) for the preset, so that they mean one population on
+every core (core #60 changed the preset to that pair). On a core before #60, a stage run from the consumer's main with
+the base configuration therefore uses (0.04, 0.10), not this record's population, and the gated P12.3 and P12.4
+runners refuse the base configuration there. This record is reproduced from its tagged commit (ab226d6), or from main
+with `--set population.fixed_values=null` (the configuration as it ran;
+`config/desi.fixed_population.core_preset.json` is the old base configuration byte for byte).
