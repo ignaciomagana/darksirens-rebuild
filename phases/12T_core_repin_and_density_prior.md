@@ -176,3 +176,69 @@ edge:
 Per the declared plan, step 4 (splitting the catalog into its spectroscopic
 and photometric parts) is the next candidate, because the catalog still adds
 no precision. The owner decides.
+
+## Amendment (25 Oct 2026): independent review
+
+An independent multi-agent review of the consumer repo (desi_darksirens_selection at the review head 17a65bb, 24-25
+Oct 2026; report `darksirens-core-data/reviews/consumer-2026-10-24/out/REVIEW.md`) confirmed the findings cited in
+parentheses below; only confirmed findings are fixed. The owner took the review's recommended option in every decision
+on 25 Oct 2026. Each item names the consumer pull request that fixes it and its merge commit on the consumer's main
+branch. The final main is 6d0f800 (26 Oct 2026); `./ci.sh` passes there in both record environments (HENON, CPU;
+`ci_logs/20261026T051301Z_7566d8eb6d34_consumer_e7c3007batch_cuda12.log`, 1349 passed, and
+`ci_logs/20261026T051301Z_7566d8eb6d34_consumer_1022429_lss57afebe_cuda12.log`, 1364 passed; none failed).
+Location-free throughout. Unless an item says otherwise, no number of record changes. Findings whose fix packages are
+not merged yet (the catalog model, the GW inputs, the variance guard and estimator noise, resume markers, the 12AQ
+readings and 12AO's causes) are not amended here; the review's per-record table lists them.
+
+**The code and environment of record (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a; findings
+C008, C010, C050, C051, C143, G4.1).** The code of this record is on the consumer's main branch since the
+consolidation (PR #20) and its follow-up (PR #21). The environment it ran in is named, with its full pip freeze and
+sha256, in `config/record_envs/12T.json`; `scripts/check_frozen_environment.py --record 12T` checks that an
+environment is exactly it. This record names no consumer commit, so no run commit is tagged. The full test suite is
+run by `./ci.sh` in the record environments (CPU, HENON); it was green at the follow-up head
+(`ci_logs/20261025T163303Z_2b5695027bbb_<env>.log`) and is green at the final main (above).
+
+**Population of the base configuration (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a; finding
+C052).** This record's runs built the 'gwtc5' preset of their core as it is (core e7c3007: mu_chi 0.0633, sigma_chi
+0.3654); `population.fixed_values` did not exist yet (it came with 12Y's commit 0d75b40). Since the consolidation the
+base configurations declare `population.fixed_values` (0.04, 0.10) for the preset, so that they mean one population on
+every core (core #60 changed the preset to that pair). On a core before #60, a stage run from the consumer's main with
+the base configuration therefore uses (0.04, 0.10), not this record's population, and the gated P12.3 and P12.4
+runners refuse the base configuration there. This record is reproduced from main with `--set
+population.fixed_values=null` (the configuration as it ran; `config/desi.fixed_population.core_preset.json` is the old
+base configuration byte for byte). The committed manifests (`config/phase12t_manifest*.json`,
+`config/phase12u_manifest*.json`) drop the base configuration's spin declaration in every stage that builds a target
+(`population.fixed_values=null`) and point the 12T parity arms at `config/desi.fixed_population.core_preset.json`:
+they resolve the configuration these runs used.
+
+**Chain stages (consumer PR #31, merge b9ec283; findings C029, C121, C122, C123, C124, C125).** From the merge: a
+chain stage given `--anchor-from` refuses a missing, unreadable or unaccepted spectral grid (it fell back to the
+default anchor silently), and the manifest's chain stages require their anchor grid (this record's two grids are
+accepted, so its anchors are unchanged); the spectral stage refuses a `numerics.core_numerics` override that differs
+from `--core-numerics` (no manifest gave one); the chain's result records the consumer commit and core's run
+fingerprint digest, its `status.json` and log carry no H0 location, a non-finite diagnostic value is written as null
+instead of aborting, and a finished checkpoint that did not converge is refused before the build (a chain run with
+`--allow-unconverged`, as the smoke manifest's are, resumes it and writes the capped result, as before).
+
+**Core settings at trace time (consumer PR #29, merge 0989df4; findings C054, C055).** Core reads its
+normalisation-grid settings and its missing-density form when a likelihood program is traced, at its first call, not
+when the target is built. From the merge the stock target and the spectral joint target take a snapshot of those
+settings at build and refuse a trace under other ones, as core's own bindings do since core 3cf8df7. Both numerics
+modes now also set the normalisation grid sizes, the pairing m1 grid (off) and the pairing edge rule, and the builder
+refuses a `DARKSIRENS_*` variable core reads as a numerics setting; the values set are the defaults of every record
+core (e7c3007, 32c6210, 1022429) and of the 12S pin, which this record ran with (no launcher set a `DARKSIRENS_GW_*`
+variable), so this record's numbers are unchanged. The target's record and provenance now carry every grid and
+catalog-evaluation setting and core's numerics semantic under `core_numerics.core_settings`. Because the provenance
+enters core's run fingerprint, a checkpoint written by an earlier main is not resumed by this one (it is refused,
+loudly); a run started afresh computes the same numbers.
+
+**Runner jobs (consumer PR #30, merge 6d0f800; finding C138).** This record's runner jobs ran from shared clones with
+no commit pin. Only 12AE Part 2 mixed commits; this record's runs did not. From the merge the runner job files refuse
+to start without PHASE12_EXPECT_SHA naming the commit of a clean checkout, and the stage runner repeats that check
+before every stage, stopping (exit 3) if the checkout moves.
+
+**Launch files (consumer PR #30, merge 6d0f800; finding C137).** The launch files of this record predate the owner's
+Slurm rules of 18-19 Oct 2026 (7-day limits; rita GPU jobs at 128 CPUs and 120G; holder steps only through the
+wrapper) and break them. They are kept unchanged in what they launch, as the record of how the record ran, and from
+the merge they refuse to run unless PHASE12_ALLOW_HISTORICAL names them (slurm/historical_launch_files.txt lists
+them). The B1 and B2 pipelines' HENON fallback now clears every SLURM_* variable first.

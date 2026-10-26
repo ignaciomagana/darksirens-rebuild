@@ -580,3 +580,73 @@ location written):**
    R90 0.87 to 0.90, ln L_cat − ln L_spec 2.1 nats ptp over the window, of which 0.5 from the selection part.
 7. Not tested here: the v2 (volume-limited Kibo x BGS) catalog against the union on the same events (A to G use the
    21 on v2, H and I the 44 on the union); the paper's event cut in the all-sky selections (known limits).
+
+## Amendment (25 Oct 2026): independent review
+
+An independent multi-agent review of the consumer repo (desi_darksirens_selection at the review head 17a65bb, 24-25
+Oct 2026; report `darksirens-core-data/reviews/consumer-2026-10-24/out/REVIEW.md`) confirmed the findings cited in
+parentheses below; only confirmed findings are fixed. The owner took the review's recommended option in every decision
+on 25 Oct 2026. Each item names the consumer pull request that fixes it and its merge commit on the consumer's main
+branch. The final main is 6d0f800 (26 Oct 2026); `./ci.sh` passes there in both record environments (HENON, CPU;
+`ci_logs/20261026T051301Z_7566d8eb6d34_consumer_e7c3007batch_cuda12.log`, 1349 passed, and
+`ci_logs/20261026T051301Z_7566d8eb6d34_consumer_1022429_lss57afebe_cuda12.log`, 1364 passed; none failed).
+Location-free throughout. Unless an item says otherwise, no number of record changes. Findings whose fix packages are
+not merged yet (the catalog model, the GW inputs, the variance guard and estimator noise, resume markers, the 12AQ
+readings and 12AO's causes) are not amended here; the review's per-record table lists them.
+
+**The code and environment of record (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a; findings
+C008, C010, C050, C051, C143, G4.1).** The code of this record is on the consumer's main branch since the
+consolidation (PR #20) and its follow-up (PR #21). The environment it ran in is named, with its full pip freeze and
+sha256, in `config/record_envs/12AO.json`; `scripts/check_frozen_environment.py --record 12AO` checks that an
+environment is exactly it. The consumer commits this record names as code that ran are tagged `record/12AO/<sha7>` on
+GitHub (f6100fc, 6cc7ae8, b0e9f03). The full test suite is run by `./ci.sh` in the record environments (CPU, HENON);
+it was green at the follow-up head (`ci_logs/20261025T163303Z_2b5695027bbb_<env>.log`) and is green at the final main
+(above).
+
+**Population of the spectral-only grids (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a; finding
+C052).** The spectral-only grids gave the population as an explicit mapping at the corrected pair (0.04, 0.10). From
+the consolidated main of PR #20 they evaluated the same values but recorded a `population.fixed_values` record (the
+declaration written over equal entries); after the follow-up (PR #21) they resolve and record exactly what they did
+when they ran (no `fixed_values` record; checked on the 12AG spectral reference at three H0 points: ln L difference
+0).
+
+**Input (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a).** The declared input `phase12_config`
+(sha256 b79ad777...) now names `config/desi.fixed_population.core_preset.json`, the file this record ran with, and
+step I reads it through the sha256 check (it read `config/desi.fixed_population.json` unchecked before). The
+configuration step I resolves is unchanged (the 12AG overrides set the spin pair).
+
+**Run fingerprints (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a).** The code digests that the
+12AG to 12AQ drivers put into their run fingerprints cover the consumer code, so a run stored before the consolidation
+(or its follow-up) is evaluated again rather than resumed when it is rerun from main; the values it computes are the
+same.
+
+**Core settings at trace time (consumer PR #29, merge 0989df4; findings C054, C055).** Core reads its
+normalisation-grid settings and its missing-density form when a likelihood program is traced, at its first call, not
+when the target is built. From the merge the stock target and the spectral joint target take a snapshot of those
+settings at build and refuse a trace under other ones, as core's own bindings do since core 3cf8df7. Both numerics
+modes now also set the normalisation grid sizes, the pairing m1 grid (off) and the pairing edge rule, and the builder
+refuses a `DARKSIRENS_*` variable core reads as a numerics setting; the values set are the defaults of every record
+core (e7c3007, 32c6210, 1022429) and of the 12S pin, which this record ran with (no launcher set a `DARKSIRENS_GW_*`
+variable), so this record's numbers are unchanged. The target's record and provenance now carry every grid and
+catalog-evaluation setting and core's numerics semantic under `core_numerics.core_settings`. Because the provenance
+enters core's run fingerprint, a checkpoint written by an earlier main is not resumed by this one (it is refused,
+loudly); a run started afresh computes the same numbers.
+
+**Calibration anchor (consumer PR #29, merge 0989df4; finding C094).** A configured log10n0 outside the calibration
+prior's log10n0 bounds is now refused, and so is an anchor whose sampler coordinate does not decode back to the
+configured log10n0 within 1e-12 (which also happens inside the bounds, far in a conditional normal's tail, where the
+quantile rounds to 0 or 1 and decodes to the bound). Before, such an anchor evaluated at the bound without an error in
+the callers that did not check it themselves (the anchor gate before sampling, the 12U stage, the direct chains'
+anchor and the ladder-cell check). Every record's anchor lies inside its prior's bounds and decodes to within 2.3e-16,
+so this record is not affected.
+
+**Writer commit (consumer PR #29, merge 0989df4; finding G4.10).** The summaries behind this record did not carry the
+commit of the code that wrote them (the commit is in the job logs and the record). From the merge each summary carries
+a `writer` block: the writing script, its checkout's commit, branch and changed-file count, and, where it reads a
+short list of files, their sha256. The stored summaries are unchanged; a summary rewritten from main carries the
+block.
+
+**Operations (consumer PR #30, merge 6d0f800; finding C139).** The build-stage CPU smoke (amendment B1) ran on the
+holder's CPUs with no memory check; its first C smoke held 25 GB resident there. From the merge
+slurm/phase12ao_cpu_smoke.sh is a HENON CPU job (the job's cgroup caps it) and refuses to run outside a Slurm job or
+inside the holder. The smoke's results are unchanged.

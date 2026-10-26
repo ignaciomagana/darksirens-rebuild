@@ -101,3 +101,26 @@ Continuity at one H0 does not remove the depth dependence. The jump's own
 H0 dependence (through the n0 H0^-3 scaling of the expected density against
 fixed counts) is the likely carrier. The owner decides whether this run is
 the result of record.
+
+## Amendment (25 Oct 2026): independent review
+
+An independent multi-agent review of the consumer repo (desi_darksirens_selection at the review head 17a65bb, 24-25
+Oct 2026; report `darksirens-core-data/reviews/consumer-2026-10-24/out/REVIEW.md`) confirmed the findings cited in
+parentheses below; only confirmed findings are fixed. The owner took the review's recommended option in every decision
+on 25 Oct 2026. Each item names the consumer pull request that fixes it and its merge commit on the consumer's main
+branch. The final main is 6d0f800 (26 Oct 2026); `./ci.sh` passes there in both record environments (HENON, CPU;
+`ci_logs/20261026T051301Z_7566d8eb6d34_consumer_e7c3007batch_cuda12.log`, 1349 passed, and
+`ci_logs/20261026T051301Z_7566d8eb6d34_consumer_1022429_lss57afebe_cuda12.log`, 1364 passed; none failed).
+Location-free throughout. Unless an item says otherwise, no number of record changes. Findings whose fix packages are
+not merged yet (the catalog model, the GW inputs, the variance guard and estimator noise, resume markers, the 12AQ
+readings and 12AO's causes) are not amended here; the review's per-record table lists them.
+
+**Population of the base configuration (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a; finding
+C052).** This record's runs built the 'gwtc5' preset of their core as it is (core a46dec7: mu_chi 0.0633, sigma_chi
+0.3654); `population.fixed_values` did not exist yet (it came with 12Y's commit 0d75b40). Since the consolidation the
+base configurations declare `population.fixed_values` (0.04, 0.10) for the preset, so that they mean one population on
+every core (core #60 changed the preset to that pair). On a core before #60, a stage run from the consumer's main with
+the base configuration therefore uses (0.04, 0.10), not this record's population, and the gated P12.3 and P12.4
+runners refuse the base configuration there. This record is reproduced from its tagged commit (559540e, c86629b), or
+from main with `--set population.fixed_values=null` (the configuration as it ran;
+`config/desi.fixed_population.core_preset.json` is the old base configuration byte for byte).

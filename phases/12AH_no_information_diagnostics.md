@@ -1608,3 +1608,103 @@ all 0.942.
      depth (depth share 0.040), and 92% of its PE samples.
    - The catalog supplies under 1% of the median event's host probability.
    - Where it dominates, it adds at most 0.37 nat of structure across [50, 90].
+
+## Amendment (25 Oct 2026): independent review
+
+An independent multi-agent review of the consumer repo (desi_darksirens_selection at the review head 17a65bb, 24-25
+Oct 2026; report `darksirens-core-data/reviews/consumer-2026-10-24/out/REVIEW.md`) confirmed the findings cited in
+parentheses below; only confirmed findings are fixed. The owner took the review's recommended option in every decision
+on 25 Oct 2026. Each item names the consumer pull request that fixes it and its merge commit on the consumer's main
+branch. The final main is 6d0f800 (26 Oct 2026); `./ci.sh` passes there in both record environments (HENON, CPU;
+`ci_logs/20261026T051301Z_7566d8eb6d34_consumer_e7c3007batch_cuda12.log`, 1349 passed, and
+`ci_logs/20261026T051301Z_7566d8eb6d34_consumer_1022429_lss57afebe_cuda12.log`, 1364 passed; none failed).
+Location-free throughout. Unless an item says otherwise, no number of record changes. Findings whose fix packages are
+not merged yet (the catalog model, the GW inputs, the variance guard and estimator noise, resume markers, the 12AQ
+readings and 12AO's causes) are not amended here; the review's per-record table lists them.
+
+**The code and environment of record (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a; findings
+C008, C010, C050, C051, C143, G4.1).** The code of this record is on the consumer's main branch since the
+consolidation (PR #20) and its follow-up (PR #21). The environment it ran in is named, with its full pip freeze and
+sha256, in `config/record_envs/12AH.json`; `scripts/check_frozen_environment.py --record 12AH` checks that an
+environment is exactly it. The consumer commits this record names as code that ran are tagged `record/12AH/<sha7>` on
+GitHub (416f5d7, 593221c, bf57e31, a90e7b9, 38f104d, f724d0f, 440ef36). The full test suite is run by `./ci.sh` in the
+record environments (CPU, HENON); it was green at the follow-up head
+(`ci_logs/20261025T163303Z_2b5695027bbb_<env>.log`) and is green at the final main (above).
+
+**Population of the spectral-only grids (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a; finding
+C052).** The spectral-only grids gave the population as an explicit mapping at the corrected pair (0.04, 0.10). From
+the consolidated main of PR #20 they evaluated the same values but recorded a `population.fixed_values` record (the
+declaration written over equal entries); after the follow-up (PR #21) they resolve and record exactly what they did
+when they ran (no `fixed_values` record; checked on the 12AG spectral reference at three H0 points: ln L difference
+0).
+
+**Run fingerprints (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a).** The code digests that the
+12AG to 12AQ drivers put into their run fingerprints cover the consumer code, so a run stored before the consolidation
+(or its follow-up) is evaluated again rather than resumed when it is rerun from main; the values it computes are the
+same.
+
+**Part B control 2 (consumer PR #28, merge 8f8a7b2; finding C007).** Amendment B1 and the Results report the per-event
+sum (control 2) as passed on every Part B grid (largest |residual| 4.5e-13). The check that produced this number
+compared ln L with core's selection correction taken from the same diagnostics call. Core builds ln L from exactly
+that correction, so the residual was float rounding and the check could not fail. The control as declared, with the
+correction recomputed from each point's ln mu, N_eff, N = 259, the soft guard, the limit 20 and the summed PE
+variances, does hold on the recorded grids: re-run from the branch on the 12 stored Part B grids (`scan.json` and
+`events.npz`), it closes to at most 4.5e-13 at every point of every grid, and every row's `guarded_minus_recomputed`
+is exactly 0. Since the merge, `phase12ah_b_scan.py` runs the declared recomputation (and keeps the terms it needs in
+`events.npz`), and the Part B summary and control C1 read an older check through `guarded_minus_recomputed`, the same
+recomputation stored by the 12AG driver. No Part B number or reading changes.
+
+**The overall reading's headline (consumer PR #28, merge 8f8a7b2; finding C022).** Rule 1 holds as declared: its
+trigger is that Part C reads "the catalog informs the well-covered events". Its declared text, "information exists but
+is diluted", says more than Part C established. Part C's own dilution test needs the complement of S to read "no
+narrowing"; it reads "a hint" (R 0.951; 0.958 in the hint cell), so Part C's key is plain "informs", not "informs ...
+and the other events dilute it". Read the headline as: **"the catalog informs the well-covered events; dilution by the
+other events is not established"**. Post-hoc observation 2 already says the effect is not diluted information. Since
+the merge the overall summary writes this text whenever Part C's key is plain "informs" (statement 1 still holds; the
+key `statement_1_dilution` says whether dilution was established).
+
+**Part C's edge flag (consumer PR #28, merge 8f8a7b2; finding C078).** "No subset grid is edge-limited" is true under
+the declared rule, which flags a grid only when its 99% interval comes within one grid step of an end of the prior
+box. The primary subset S still reaches the box: about 5% of its mass, catalog and spectral-only alike, lies within 5
+km/s/Mpc of one end, and the density there is 0.15 to 0.19 of the peak. The truncation does not make S's narrowing.
+With both ln L grids continued linearly 10 km/s/Mpc beyond the box, R of the primary S is 0.791 with the local slope
+at the end (the last 1 km/s/Mpc) and 0.846 with the slope of the last 5 km/s/Mpc, against the recorded 0.813: the
+catalog's ln L bends near that end, so the two bracket the continuation, and both stay below the 0.90 band. For S in
+the hint cell R is 0.780 with either slope (0.817 recorded); S' moves by at most 0.002 in both cells. The declared
+rule stands for this record (owner decision 12B). A tighter rule (density at an end above 1% of the peak) would send
+the four S and S' readings to the curvature fallback, which would read "coverage and depth do not explain it". Since
+the merge Part C reports, beside R and deciding nothing, whether each posterior reaches the box and both continued R
+values, and marks a reading that reaches the box without being edge-limited (re-run on the stored grids: S and S' in
+both cells are marked; no key and no other number changes).
+
+**Post-hoc observation 2 (consumer PR #28, merge 8f8a7b2; finding G4.6).** The second sentence mixes an absolute and a
+relative curvature. It should read: "In the window, S's change of curvature (-0.30, flatter) and the complement's
+(+0.21, sharper) add up to the all-event change, -0.09 nats per (10 km/s/Mpc)^2; divided by the size of the
+spectral-only curvature (3.80), that is the all-event F of -0.02." The additivity and the observation's conclusion are
+unchanged.
+
+**Core settings at trace time (consumer PR #29, merge 0989df4; findings C054, C055).** Core reads its
+normalisation-grid settings and its missing-density form when a likelihood program is traced, at its first call, not
+when the target is built. From the merge the stock target and the spectral joint target take a snapshot of those
+settings at build and refuse a trace under other ones, as core's own bindings do since core 3cf8df7. Both numerics
+modes now also set the normalisation grid sizes, the pairing m1 grid (off) and the pairing edge rule, and the builder
+refuses a `DARKSIRENS_*` variable core reads as a numerics setting; the values set are the defaults of every record
+core (e7c3007, 32c6210, 1022429) and of the 12S pin, which this record ran with (no launcher set a `DARKSIRENS_GW_*`
+variable), so this record's numbers are unchanged. The target's record and provenance now carry every grid and
+catalog-evaluation setting and core's numerics semantic under `core_numerics.core_settings`. Because the provenance
+enters core's run fingerprint, a checkpoint written by an earlier main is not resumed by this one (it is refused,
+loudly); a run started afresh computes the same numbers.
+
+**Calibration anchor (consumer PR #29, merge 0989df4; finding C094).** A configured log10n0 outside the calibration
+prior's log10n0 bounds is now refused, and so is an anchor whose sampler coordinate does not decode back to the
+configured log10n0 within 1e-12 (which also happens inside the bounds, far in a conditional normal's tail, where the
+quantile rounds to 0 or 1 and decodes to the bound). Before, such an anchor evaluated at the bound without an error in
+the callers that did not check it themselves (the anchor gate before sampling, the 12U stage, the direct chains'
+anchor and the ladder-cell check). Every record's anchor lies inside its prior's bounds and decodes to within 2.3e-16,
+so this record is not affected.
+
+**Writer commit (consumer PR #29, merge 0989df4; finding G4.10).** The summaries behind this record did not carry the
+commit of the code that wrote them (the commit is in the job logs and the record). From the merge each summary carries
+a `writer` block: the writing script, its checkout's commit, branch and changed-file count, and, where it reads a
+short list of files, their sha256 (here, the overall reading hashes the part summaries). The stored summaries are
+unchanged; a summary rewritten from main carries the block.

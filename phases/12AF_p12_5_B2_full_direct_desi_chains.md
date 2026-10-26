@@ -976,3 +976,84 @@ log10 n0) are reported above; their priors are in "The target".
 
 **Not done here:** B2's Monte Carlo error by the declared bootstrap (superseded by the owner's rule); the H0–μ1
 correlation and slope; the selection N_eff at the posterior points. They can be computed from the chains on request.
+
+## Amendment (25 Oct 2026): independent review
+
+An independent multi-agent review of the consumer repo (desi_darksirens_selection at the review head 17a65bb, 24-25
+Oct 2026; report `darksirens-core-data/reviews/consumer-2026-10-24/out/REVIEW.md`) confirmed the findings cited in
+parentheses below; only confirmed findings are fixed. The owner took the review's recommended option in every decision
+on 25 Oct 2026. Each item names the consumer pull request that fixes it and its merge commit on the consumer's main
+branch. The final main is 6d0f800 (26 Oct 2026); `./ci.sh` passes there in both record environments (HENON, CPU;
+`ci_logs/20261026T051301Z_7566d8eb6d34_consumer_e7c3007batch_cuda12.log`, 1349 passed, and
+`ci_logs/20261026T051301Z_7566d8eb6d34_consumer_1022429_lss57afebe_cuda12.log`, 1364 passed; none failed).
+Location-free throughout. Unless an item says otherwise, no number of record changes. Findings whose fix packages are
+not merged yet (the catalog model, the GW inputs, the variance guard and estimator noise, resume markers, the 12AQ
+readings and 12AO's causes) are not amended here; the review's per-record table lists them.
+
+**The code and environment of record (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a; findings
+C008, C010, C050, C051, C143, G4.1).** The code of this record is on the consumer's main branch since the
+consolidation (PR #20) and its follow-up (PR #21). The environment it ran in is named, with its full pip freeze and
+sha256, in `config/record_envs/12AF.json`; `scripts/check_frozen_environment.py --record 12AF` checks that an
+environment is exactly it. The consumer commits this record names as code that ran are tagged `record/12AF/<sha7>` on
+GitHub (0c9e6d7, 2d8007b, 6f2fb1c, fc5792c, 70a0731, 2b3d086, 78b84f9). The full test suite is run by `./ci.sh` in the
+record environments (CPU, HENON); it was green at the follow-up head
+(`ci_logs/20261025T163303Z_2b5695027bbb_<env>.log`) and is green at the final main (above).
+
+**Population (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a; finding C052).** This record's runs
+declared `population.fixed_values` (0.04, 0.10) themselves, in their manifests. The base configuration's declaration
+since the consolidation is the same pair, so they resolve the same configuration from main.
+
+**Environment and soft-guard convention (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a; findings
+C009, C010, C056; decision 16A).** `config/record_envs/12AF.json`: consumer_e7c3007batch_cuda12, core 32c6210 (tagged
+`consumer-12af-12ap-core-32c6210` in darksirens-core, so the side-branch cleanup cannot lose it), lss 3429bb2. These
+chains used the unnormalised one-catalog field density under the soft guard (core 32c6210 predates core PR #70); the
+stock target now records this in its provenance (`soft_guard_single_field_convention`) and refuses a core that divides
+by Z_1. The provenance key changes the target's run fingerprint, so a checkpoint written before the consolidation is
+not resumed after it (as the review advised for any move to core main).
+
+**Combination and blinding of the chain files (consumer PR #31, merge b9ec283; findings C016, C029, C120).** From the
+merge the combination needs all four chains (the manifest required two) and refuses chains of another analysis or
+commit; rerun on the stored chains it reproduces `combined.json` and the pooled samples bit for bit. The chains'
+`status.json` and `stage.log` written at 78b84f9 hold the H0 summary (as this record allowed): they are absolute
+files, as are `combined.json` and `runs/compare.json` (now marked so in the file). From the merge the drivers write
+`status.json` and the logs location-free.
+
+**Unconverged checkpoints (consumer PR #31, merge b9ec283; finding C125).** From the merge a chain driver refuses,
+before the build, a dynesty checkpoint whose run has finished without converging (a resume cannot extend it; restart
+with `--fresh` and, if the call cap stopped it, a larger `sampler.max_samples`). A finished converged checkpoint
+resumes as before, and the smoke chains run with `--allow-unconverged` still resume a finished capped run and write
+its result. The production checkpoints of this record all finished converged (checked on disk), so its chains resume
+as before.
+
+**Core settings at trace time (consumer PR #29, merge 0989df4; findings C054, C055).** Core reads its
+normalisation-grid settings and its missing-density form when a likelihood program is traced, at its first call, not
+when the target is built. From the merge the stock target and the spectral joint target take a snapshot of those
+settings at build and refuse a trace under other ones, as core's own bindings do since core 3cf8df7. Both numerics
+modes now also set the normalisation grid sizes, the pairing m1 grid (off) and the pairing edge rule, and the builder
+refuses a `DARKSIRENS_*` variable core reads as a numerics setting; the values set are the defaults of every record
+core (e7c3007, 32c6210, 1022429) and of the 12S pin, which this record ran with (no launcher set a `DARKSIRENS_GW_*`
+variable), so this record's numbers are unchanged. The target's record and provenance now carry every grid and
+catalog-evaluation setting and core's numerics semantic under `core_numerics.core_settings`. Because the provenance
+enters core's run fingerprint, a checkpoint written by an earlier main is not resumed by this one (it is refused,
+loudly); a run started afresh computes the same numbers.
+
+**Batched prior transform (consumer PR #29, merge 0989df4; finding C089).** The consumer's lockstep batched pool
+(`phase12/batched.py`, used only by `infer_batched`: the chain-equality checks and their serial reference, not by this
+record's chains, which ran core's `dynesty_batch` pool) now pads every prior-transform call to one of the batch shapes
+it probes (the powers of two below the queue size and the queue size), as core's pool does; before, the batched form
+was probed at sizes 1, 3, 32 and 256 and called at any size. No wrong value had been found at any size; the chains of
+record are unaffected.
+
+**Calibration anchor (consumer PR #29, merge 0989df4; finding C094).** A configured log10n0 outside the calibration
+prior's log10n0 bounds is now refused, and so is an anchor whose sampler coordinate does not decode back to the
+configured log10n0 within 1e-12 (which also happens inside the bounds, far in a conditional normal's tail, where the
+quantile rounds to 0 or 1 and decodes to the bound). Before, such an anchor evaluated at the bound without an error in
+the callers that did not check it themselves (the anchor gate before sampling, the 12U stage, the direct chains'
+anchor and the ladder-cell check). Every record's anchor lies inside its prior's bounds and decodes to within 2.3e-16,
+so this record is not affected.
+
+**Launch files (consumer PR #30, merge 6d0f800; finding C137).** The launch files of this record predate the owner's
+Slurm rules of 18-19 Oct 2026 (7-day limits; rita GPU jobs at 128 CPUs and 120G; holder steps only through the
+wrapper) and break them. They are kept unchanged in what they launch, as the record of how the record ran, and from
+the merge they refuse to run unless PHASE12_ALLOW_HISTORICAL names them (slurm/historical_launch_files.txt lists
+them). The B1 and B2 pipelines' HENON fallback now clears every SLURM_* variable first.

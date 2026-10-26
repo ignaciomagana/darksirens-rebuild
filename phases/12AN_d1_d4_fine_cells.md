@@ -1036,3 +1036,97 @@ Columns are the cells (nside / sigma_kde). Spectral-only reference: Var sel 0.69
 
 - The sky-averaged selection density (D2) had been proposed as part of the fiducial. It is **withdrawn**: the owner asked why DESI would be sky-averaged. D2 stays a diagnostic that separates selection noise from physics; a production estimator must keep DESI's sky structure. The fiducial (nside 128, sigma_kde 1e-3, density) is open.
 
+## Amendment (25 Oct 2026): independent review
+
+An independent multi-agent review of the consumer repo (desi_darksirens_selection at the review head 17a65bb, 24-25
+Oct 2026; report `darksirens-core-data/reviews/consumer-2026-10-24/out/REVIEW.md`) confirmed the findings cited in
+parentheses below; only confirmed findings are fixed. The owner took the review's recommended option in every decision
+on 25 Oct 2026. Each item names the consumer pull request that fixes it and its merge commit on the consumer's main
+branch. The final main is 6d0f800 (26 Oct 2026); `./ci.sh` passes there in both record environments (HENON, CPU;
+`ci_logs/20261026T051301Z_7566d8eb6d34_consumer_e7c3007batch_cuda12.log`, 1349 passed, and
+`ci_logs/20261026T051301Z_7566d8eb6d34_consumer_1022429_lss57afebe_cuda12.log`, 1364 passed; none failed).
+Location-free throughout. Unless an item says otherwise, no number of record changes. Findings whose fix packages are
+not merged yet (the catalog model, the GW inputs, the variance guard and estimator noise, resume markers, the 12AQ
+readings and 12AO's causes) are not amended here; the review's per-record table lists them.
+
+**The code and environment of record (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a; findings
+C008, C010, C050, C051, C143, G4.1).** The code of this record is on the consumer's main branch since the
+consolidation (PR #20) and its follow-up (PR #21). The environment it ran in is named, with its full pip freeze and
+sha256, in `config/record_envs/12AN.json`; `scripts/check_frozen_environment.py --record 12AN` checks that an
+environment is exactly it. The consumer commits this record names as code that ran are tagged `record/12AN/<sha7>` on
+GitHub (cabb3b6, cb7c638, ad0c0b9). The full test suite is run by `./ci.sh` in the record environments (CPU, HENON);
+it was green at the follow-up head (`ci_logs/20261025T163303Z_2b5695027bbb_<env>.log`) and is green at the final main
+(above).
+
+**Population of the spectral-only grids (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a; finding
+C052).** The spectral-only grids gave the population as an explicit mapping at the corrected pair (0.04, 0.10). From
+the consolidated main of PR #20 they evaluated the same values but recorded a `population.fixed_values` record (the
+declaration written over equal entries); after the follow-up (PR #21) they resolve and record exactly what they did
+when they ran (no `fixed_values` record; checked on the 12AG spectral reference at three H0 points: ln L difference
+0).
+
+**Inputs: the pinned base configuration (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a).**
+12AM's cell and table stages (`scripts/phase12am_cell.py`, `scripts/phase12am_table.py`), which 12AN's cell, D4 and
+table stages use, check the sha256 of the base configuration against the value 12AM pins (b79ad777...). The
+consolidation's spin declaration changed `config/desi.fixed_population.json`, so from the consolidated main of PR #20
+these stages refused to run ("inputs are not the declared files: [config]"). Since the follow-up (PR #21) they read
+`config/desi.fixed_population.core_preset.json`, which is that file byte for byte
+(`phase12t_stage.DESI_CONFIG_AS_RUN`); the 12AG overrides they apply set the spin pair (0.04, 0.10), so the
+configuration they resolve is the one this record ran. Checked with the record's own inputs in its environment: both
+checks pass at the review head and after the follow-up, and refused at PR #20's main. The input record names the new
+path with the pinned sha256.
+
+**The D4 path's code (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a; finding G4.1).**
+repo_12AK's sampler and writer at ad0c0b9 are now on the consumer's main with 12AK's merge.
+
+**Run fingerprints (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a).** The code digests that the
+12AG to 12AQ drivers put into their run fingerprints cover the consumer code, so a run stored before the consolidation
+(or its follow-up) is evaluated again rather than resumed when it is rerun from main; the values it computes are the
+same.
+
+**D0's wall at (256, 1e-4) (consumer PR #28, merge 8f8a7b2; finding C126).** D0 is reported, never withheld (C3(f) for
+D0 is reported). At (256, 1e-4) its guard wall lies inside the window (largest |wall| there about 1.3e4 nat; total
+variance up to 74), and the tables give D0's numbers there unmarked. D0's window roughness there, 537, is that wall
+(selection part 537.1, PE part 0.57), not PE structure. Every density's shift and Hellinger distance against D0 at
+that cell, and D0's nside 128-against-256 Hellinger at 1e-4, carry the wall. D0's own R and shift there are unchanged
+by the wall to the third decimal (12AM's uncapped coarse values equal the capped ones). Since the merge the summary
+marks D0, and every entry against D0, at a cell where D0's wall lies inside the window, and matrices.txt stars them.
+Re-run on the stored grids, (256, 1e-4) is the only such cell; no number of the summary changes.
+
+**Control C8's cause (consumer PR #28, merge 8f8a7b2; finding C127).** "dV_c/dz on two grids" should read: one grid,
+two interpolants (see 12AL's amendment of the same date).
+
+**The D4 member spread (consumer PR #28, merge 8f8a7b2; finding C128).** The spread over the five members is the sd of
+the **mean-removed** N ln mu_D4,m (each member's mean over the window removed), not "window-detrended": no line is
+removed, so each member's tilt stays in the spread. That is the quantity that matters for the posterior (a constant
+cancels, a tilt moves it); the number is unchanged. Since the merge the summary key is
+`max_over_window_sd_N_log_mu_mean_removed` (it was `..._detrended`).
+
+**The D4 spectral mode's options (consumer PR #28, merge 8f8a7b2; finding C132).** `phase12an_d4.py --mode spectral`
+accepted `--nside`, `--sigma-kde` and `--sel-batch-size` and ignored them (it runs one declared cell with the baseline
+numerics). No run of record passed them. Since the merge it refuses them.
+
+**Core settings at trace time (consumer PR #29, merge 0989df4; findings C054, C055).** Core reads its
+normalisation-grid settings and its missing-density form when a likelihood program is traced, at its first call, not
+when the target is built. From the merge the stock target and the spectral joint target take a snapshot of those
+settings at build and refuse a trace under other ones, as core's own bindings do since core 3cf8df7. Both numerics
+modes now also set the normalisation grid sizes, the pairing m1 grid (off) and the pairing edge rule, and the builder
+refuses a `DARKSIRENS_*` variable core reads as a numerics setting; the values set are the defaults of every record
+core (e7c3007, 32c6210, 1022429) and of the 12S pin, which this record ran with (no launcher set a `DARKSIRENS_GW_*`
+variable), so this record's numbers are unchanged. The target's record and provenance now carry every grid and
+catalog-evaluation setting and core's numerics semantic under `core_numerics.core_settings`. Because the provenance
+enters core's run fingerprint, a checkpoint written by an earlier main is not resumed by this one (it is refused,
+loudly); a run started afresh computes the same numbers.
+
+**Calibration anchor (consumer PR #29, merge 0989df4; finding C094).** A configured log10n0 outside the calibration
+prior's log10n0 bounds is now refused, and so is an anchor whose sampler coordinate does not decode back to the
+configured log10n0 within 1e-12 (which also happens inside the bounds, far in a conditional normal's tail, where the
+quantile rounds to 0 or 1 and decodes to the bound). Before, such an anchor evaluated at the bound without an error in
+the callers that did not check it themselves (the anchor gate before sampling, the 12U stage, the direct chains'
+anchor and the ladder-cell check). Every record's anchor lies inside its prior's bounds and decodes to within 2.3e-16,
+so this record is not affected.
+
+**Operations (consumer PR #30, merge 6d0f800; finding C133).** If squeue had failed persistently, the pool's lanes
+would have counted every dead claim as alive and held their GPUs until the job limit. All lanes ended normally, so
+nothing was affected. From the merge a lane that would wait while squeue has failed for 30 minutes in a row exits with
+code 2 and records why.

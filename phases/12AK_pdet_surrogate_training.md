@@ -11,6 +11,12 @@ records each before any training job, and then the 16-member ensemble was submit
 and the plumbing gate, X1, X2, U1 and U2 as numerical gates, U3's choice, and the synthetic product for record 12AN's
 D4.
 
+**VALIDATION DONE (2026-10-20); results recorded on 25 Oct 2026, after the independent review.** Every validation step
+finished (`validation/STATUS.json`: complete, no product failure) from a clean worktree of repo_12AK ad0c0b9;
+`D4_CHOICE.json` at 03:56 UTC and `VALIDATION.json` at 05:17 UTC on 2026-10-20. U3 chose **model A**, and every D4
+number is labelled **systematic**: X1, X2 and U2 fail for both models; U1 and the plumbing gate pass. Record 12AN's
+Results carry the same gate outcomes. See "Amendment (25 Oct 2026): independent review" at the end.
+
 **Blinding: location-free.** No H0 inference is involved. Later stages report only the H0-dependence of
 ln mu_D4(H0) − ln mu_MC(H0), never ln mu on its own, never a posterior, never an H0 value. The only H0 numbers here
 are fixed in advance: the grid [20, 140] at step 0.5, the window [50, 90], and the injections' generation cosmology
@@ -581,7 +587,7 @@ The first status job, 1390336, ran early when the lanes were cancelled; its part
 `summary/STATUS_1390336_paused_partial.json`. The status job 1390500 wrote `summary/STATUS.json`.
 
 Validation (V1/V2/X1/X2/U1–U3, the ensemble spread, the core-format writer, the null-surrogate check) is a separate
-step and has not started.
+step and has not started. *(25 Oct 2026: it ran on 2026-10-20; see "Validation results" in "Amendment (25 Oct 2026): independent review" at the end.)*
 
 ## Amendment B3 (validation, declared 2026-10-20 about 01:30 UTC, before any validation job)
 
@@ -828,3 +834,109 @@ closed forms (two equal samples give 0); the seeds and chunking (a chunk is the 
 - **Build-stage indication, not the validation:** X1 on one full-size chunk was 0.9495 for A_O3 member 1 and 0.9943
   to 0.9958 for B's members (A_O4 member 1: 0.9993). If production confirms this, no model passes X1 and every D4
   number is labelled "systematic". The production numbers are recorded here after the run.
+
+## Amendment (25 Oct 2026): independent review
+
+An independent multi-agent review of the consumer repo (desi_darksirens_selection at the review head 17a65bb, 24-25
+Oct 2026; report `darksirens-core-data/reviews/consumer-2026-10-24/out/REVIEW.md`) confirmed the findings cited in
+parentheses below; only confirmed findings are fixed. The owner took the review's recommended option in every decision
+on 25 Oct 2026. Each item names the consumer pull request that fixes it and its merge commit on the consumer's main
+branch. The final main is 6d0f800 (26 Oct 2026); `./ci.sh` passes there in both record environments (HENON, CPU;
+`ci_logs/20261026T051301Z_7566d8eb6d34_consumer_e7c3007batch_cuda12.log`, 1349 passed, and
+`ci_logs/20261026T051301Z_7566d8eb6d34_consumer_1022429_lss57afebe_cuda12.log`, 1364 passed; none failed).
+Location-free throughout. Unless an item says otherwise, no number of record changes. Findings whose fix packages are
+not merged yet (the catalog model, the GW inputs, the variance guard and estimator noise, resume markers, the 12AQ
+readings and 12AO's causes) are not amended here; the review's per-record table lists them.
+
+**The code and environment of record (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a; findings
+C008, C010, C050, C051, C143, G4.1).** The code of this record is on the consumer's main branch since the
+consolidation (PR #20) and its follow-up (PR #21). The environment it ran in is named, with its full pip freeze and
+sha256, in `config/record_envs/12AK.json`; `scripts/check_frozen_environment.py --record 12AK` checks that an
+environment is exactly it. The consumer commits this record names as code that ran are tagged `record/12AK/<sha7>` on
+GitHub (b803b26, cf8367a, 208bc9a, cf2a4bd, f5c33cd, 2b31955, ec2e3eb, 9173947, 170fae2, a136a28, 00eb483, c8d29e4,
+ad0c0b9). The full test suite is run by `./ci.sh` in the record environments (CPU, HENON); it was green at the
+follow-up head (`ci_logs/20261025T163303Z_2b5695027bbb_<env>.log`) and is green at the final main (above).
+
+**Code of record (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a; finding G4.1).**
+`phase12ak/validation` (which contains `phase12ak/pdet-surrogate`; up to ad0c0b9) is merged into the consumer's main
+(merge c03e04a); tags `side-branch/phase12ak/pdet-surrogate` and `side-branch/phase12ak/validation`. Its CPU tests
+pass in the 12AK venv at the consolidation (38 passed) and skip, with the reason, in the consumer environments (no
+equinox, flowjax, paramax). Environment manifest `config/record_envs/12AK.json` (the 12AK venv's freeze, unchanged
+since 19 Oct).
+
+**Operations (consumer PR #30, merge 6d0f800; finding C049).** This record's afterok Slurm submissions now carry
+--kill-on-invalid-dep=yes, so a failed upstream job ends its dependants instead of leaving them pending (as in 12AG).
+The flag changes only what happens when an upstream job fails.
+
+### Validation results (2026-10-20; recorded 25 Oct 2026; consumer PR #23, merge edabeb6; finding G4.11)
+
+B3.7 step 7 and B3.8 said the production numbers would be recorded here after the run; until the independent review
+they were only in record 12AN's Results. They are recorded here from `validation/VALIDATION.json` (2026-10-20 05:17
+UTC) and `validation/D4_CHOICE.json` (03:56 UTC), both at repo_12AK ad0c0b9 with no dirty file.
+`scripts/phase12_5_record_errata.py ak` (consumer commit 9a76252, merged with PR #23) recomputes every gate from its
+metric and tolerance, and U3's choice and the label from their rules; all agree with the stored verdicts. No posterior
+and no H0 value is involved; the H0 numbers are the declared windows [50, 90] and [50, 100].
+
+**Status.** All eight steps done (sample, write, V1/V2, core: null, core: A, core: B, core: P, choose); every product
+written and checked by sha256, no failure. The D4 product of the chosen model, `products/d4/A/pooled.h5`: 10,634,443
+rows, 9,335,484,607 draws, sha256 f01a6270aebe….
+
+**The gates and the choice** (B3.6):
+
+| check (tolerance) | model A | model B |
+|---|---|---|
+| X1: smallest ξ_emu/ξ over members (≥ 0.995) | 0.9450 (fail) | 0.9943 (fail) |
+| X2: μ_flow/μ_MC − 1, `p_O3` (≤ 0.01 in size) | -0.0074 | -0.0109 |
+| X2: μ_flow/μ_MC − 1, `p_O4` (≤ 0.01 in size) | -0.0132 | -0.0042 |
+| X2: μ_flow/μ_MC − 1, `q_mix` (≤ 0.01 in size) | -0.0126 | -0.0049 |
+| X2: μ_flow/μ_MC − 1, `spectral_population_gen_cosmology` (≤ 0.01 in size) | -0.0027 | +0.0069 |
+| X2 verdict | fail | fail |
+| U1: ensemble S_W[50, 90] (≤ 0.003) | 9.28e-04 (pass) | 1.49e-03 (pass) |
+| U1: ensemble S_W[50, 100] (reported) | 1.04e-03 | 1.61e-03 |
+| U1: members' S_W[50, 90] (reported) | 8.0e-04 to 4.0e-03 | 1.4e-03 to 5.9e-03 |
+| U2: largest member sd on [50, 90] (≤ 0.0015) | 0.0028 (fail) | 0.0032 (fail) |
+| U2: largest member sd on [50, 100] (reported) | 0.0034 | 0.0040 |
+| every check | fail | fail |
+
+- **X1.** Model A's smallest is O3 member 2 (O3 members 0.945 to 0.960; O4 members 0.9991 to 0.9994); B's members are
+  0.9943 to 0.9958. The build-stage indication of B3.8 (0.9495 for A's O3 member 1) is confirmed: no model passes X1.
+- **X2.** Core's relative Monte-Carlo sd of μ_MC, printed beside it: 0.0018 (p_O3), 0.0016 (p_O4), 0.0016 (q_mix),
+  0.0031 (the spectral population at the generation cosmology).
+- **U1.** Level mean_W Δ on [50, 90]: −0.0025 (A), +0.0071 (B). N × S_W[50, 90] with N = 259: 0.24 nat (A), 0.39 nat
+  (B). U1 of the D4 products themselves: S_W[50, 90] 5.0e-4 (A), 1.3e-3 (B).
+- **The plumbing gate passes:** shape max |δ − mean δ| 3.9e-9 against 1e-6 (null_S, reported: 5.2e-9); the rows the
+  catalog path reads match; no row changes its nside-256 pixel.
+- **U3:** both models fail some check, so the smaller ensemble S_W[50, 90] wins: **model A** (9.28e-4 against 1.49e-3,
+  outside the 5e-4 tie). **Label: systematic** (X1, X2 and U2 fail for A).
+- **P_control** (context, never a candidate): X1 0.9990 and X2 within 0.01 (both pass); its single-member S_W[50, 90]
+  is 2.95e-3.
+- **The ensemble's effective sample size** over the real Monte Carlo's, at its smallest over the grid: 46 (A) and 70
+  (B).
+
+**Diagnostics that decide nothing** (V1, V2, U0; B3.6). V1: flow draws (each model's five members' chunk 0 pooled;
+P_control's one member) against the held-out test rows, each beside its scale, the same distance between the test rows
+and an equal-size subset of the validation rows:
+
+| flow model | largest KS (scale) | largest W1/sd (scale) | PQMass TV (scale) | classifier 2\|AUC − 0.5\| (scale) | members: PQMass TV; classifier |
+|---|---|---|---|---|---|
+| A_O3 | 0.029 m2_src (0.018) | 0.043 m2_src (0.020) | 0.045 (0.067) | 0.026 (0.024) | 0.046 to 0.051; 0.030 to 0.065 |
+| A_O4 | 0.007 q (0.006) | 0.017 q (0.009) | 0.015 (0.017) | 0.002 (0.005) | 0.016 to 0.020; 0.016 to 0.022 |
+| B_joint | 0.011 m2_src (0.007) | 0.018 q (0.006) | 0.023 (0.024) | 0.008 (0.001) | 0.022 to 0.027; 0.015 to 0.027 |
+| P_control | 0.009 ra (0.003) | 0.018 z (0.007) | 0.013 (0.017) | 0.016 (0.005) | 0.013 to 0.013; 0.016 to 0.016 |
+
+V2, the per-bin ratios:
+
+| flow model | V2 bins off by more than 3%: against test | largest \|r − 1\| | against train | largest \|r − 1\| |
+|---|---|---|---|---|
+| A_O3 | 67 of 120 | 0.185 | 17 of 120 | 0.131 |
+| A_O4 | 13 of 122 | 0.063 | 1 of 122 | 0.033 |
+| B_joint | 30 of 122 | 0.105 | 3 of 122 | 0.086 |
+| P_control | 13 of 122 | 0.195 | 7 of 122 | 0.160 |
+
+U0 (100 Poisson bootstraps of the real rows, the real Monte Carlo's own shape noise): S_W[50, 90] rms 1.1e-03, largest
+3.1e-03. Beside it, model A's ensemble S_W[50, 90] is 9.3e-4 and its single members 8.0e-4 to 4.0e-3.
+
+**Reading.** The ensembles meet the shape bar (U1) but not the accuracy checks: model A's O3 flows keep 0.945 to 0.960
+of ξ under the clip and B's members 0.994 to 0.996, against 0.995 (X1); the μ ratios miss by up to 1.3% (A) and 1.1%
+(B) against 1% (X2); and the members' shapes scatter by 1.8 (A) and 2.1 (B) times the declared 1.5e-3 (U2). Every D4
+number in 12AN is therefore labelled systematic, as declared, and the D4 product is model A's.

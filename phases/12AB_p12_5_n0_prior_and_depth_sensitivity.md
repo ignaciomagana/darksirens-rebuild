@@ -61,6 +61,10 @@ depth goes into the robustness matrix as a systematic; the baseline is
 unchanged. Task 8 was rerun after a node fault (job 1389729). See "Part C
 (2026-10-19)" at the end of Results.
 
+**ERRATUM (independent review, 25 Oct 2026): the merged file predates Part C.** `n0_depth/summary_location_free.json`
+was written once, by the analysis job at 21:10 UTC on 2026-10-18, before Part C ran, and was not rewritten; its
+`part_c` block is stale. The record's text is right. See "Amendment (25 Oct 2026): independent review" at the end.
+
 **Blinding.** No H0 value from real data (median, interval or shift) is
 written here. Results will be appended location-free: shifts in units of the
 baseline posterior sd, width ratios, effective sample sizes. The absolute
@@ -840,7 +844,7 @@ each, 2,442 points in all, at the committed code 4cf6bd5. They were analysed
 by job 1389007 (`phase12_5_n0_depth.py analyse --require-complete`, 21:10
 UTC). Outputs: `n0_depth/B/summary.json` (location-free) and
 `B/summary_absolute.json` (absolute values, blinded). The merged file is
-`n0_depth/summary_location_free.json`.
+`n0_depth/summary_location_free.json` *(25 Oct 2026: written before Part C; its Part C block is stale. See the erratum in Status.)*.
 
 Δ is in units of the sd of the baseline (d245, n0_base) and R is the sd
 ratio. Each variant is a quadrature over the same scans, so Part B has no
@@ -1181,3 +1185,76 @@ population free.
   paired to it, so the shifts are not affected at their quoted errors.
 - The lower H0 part carries 37 draws. Its share of the shift is inside the
   bootstrap error but is not separated here.
+
+## Amendment (25 Oct 2026): independent review
+
+An independent multi-agent review of the consumer repo (desi_darksirens_selection at the review head 17a65bb, 24-25
+Oct 2026; report `darksirens-core-data/reviews/consumer-2026-10-24/out/REVIEW.md`) confirmed the findings cited in
+parentheses below; only confirmed findings are fixed. The owner took the review's recommended option in every decision
+on 25 Oct 2026. Each item names the consumer pull request that fixes it and its merge commit on the consumer's main
+branch. The final main is 6d0f800 (26 Oct 2026); `./ci.sh` passes there in both record environments (HENON, CPU;
+`ci_logs/20261026T051301Z_7566d8eb6d34_consumer_e7c3007batch_cuda12.log`, 1349 passed, and
+`ci_logs/20261026T051301Z_7566d8eb6d34_consumer_1022429_lss57afebe_cuda12.log`, 1364 passed; none failed).
+Location-free throughout. Unless an item says otherwise, no number of record changes. Findings whose fix packages are
+not merged yet (the catalog model, the GW inputs, the variance guard and estimator noise, resume markers, the 12AQ
+readings and 12AO's causes) are not amended here; the review's per-record table lists them.
+
+**The code and environment of record (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a; findings
+C008, C010, C050, C051, C143, G4.1).** The code of this record is on the consumer's main branch since the
+consolidation (PR #20) and its follow-up (PR #21). The environment it ran in is named, with its full pip freeze and
+sha256, in `config/record_envs/12AB.json`; `scripts/check_frozen_environment.py --record 12AB` checks that an
+environment is exactly it. The consumer commits this record names as code that ran are tagged `record/12AB/<sha7>` on
+GitHub (4cf6bd5, 0d75a0a, 794cfde, 10a42de, 596651c). The full test suite is run by `./ci.sh` in the record
+environments (CPU, HENON); it was green at the follow-up head (`ci_logs/20261025T163303Z_2b5695027bbb_<env>.log`) and
+is green at the final main (above).
+
+**Code of record (consolidation, consumer PRs #20 and #21, merges 3e27e1f and 77b3d0a; finding G4.1).**
+`phase12.5/n0-depth` (Parts A, B and C and the depth step, up to 794cfde) is merged into the consumer's main (merge
+cbbe0c3). The north/south part (`phase12.5/n0-north-south`, 10a42de) changes the stock target
+(`phase12/desi_selection.py`, +278 lines) and the base configuration and is **not merged**: it is tagged
+`side-branch/phase12.5/n0-north-south` and listed for review before any merge.
+
+**The merged file predates Part C (consumer PR #23, merge edabeb6; finding G4.9).**
+`n0_depth/summary_location_free.json` was written once, by the analysis job at 21:10 UTC on 2026-10-18, before Part C
+ran, and was not rewritten. Its Part B, Part A, north/south and step blocks equal their part files, but its `part_c`
+block is stale:
+
+- it says Part C is "not submitted: waits for stage B1's summary";
+- it looks for B1's summary at `phase12_5/B1/summary.json`, a path that does not exist (B1's summary is
+  `B1/summary/summary.json`, there from 10:56 UTC that day);
+- it stores d200 under `variants_flagged_by_part_b`, but Part B flagged no variant: d200 runs by the declared rule.
+
+The record's text is right: no variant was flagged, Part C ran for d200 only, and its results come from
+`n0_depth/C/summary.json`. The merge helper was never committed (it lived in the n0_depth directory). It is now
+`scripts/phase12_5_n0_depth.py merge` (consumer commits 9a76252 and a883683, merged with PR #23), which reads B1's
+summary where Part C reads it, carries Part C's summary and status, and lists Part C's variants as flagged by Part B
+or run by rule. It refuses to write when any number of the location-free file equals an H0 location of the absolute
+part files. It writes new names beside the as-run files, which are kept as written. The merged file after Part C
+(`n0_depth/summary_combined_location_free.json`) is not written yet: run outputs are read-only to the fix agents, and
+the merge (`phase12_5_n0_depth.py merge --require-part-c` from a clean checkout of consumer main, seconds of CPU) is
+the owner's step. A preview written to a scratch directory on 25 Oct 2026 gave: missing none; Part C "done"; variants
+run ['d200'], flagged by Part B [], run by rule only ['d200']; its Part A, Part B, north/south and step blocks equal
+the part files and the as-run merged file's; its Part C summary equals `C/summary.json`; and none of its numbers
+equals any of the 142 H0 locations of the absolute part files.
+
+**Core settings at trace time (consumer PR #29, merge 0989df4; findings C054, C055).** Core reads its
+normalisation-grid settings and its missing-density form when a likelihood program is traced, at its first call, not
+when the target is built. From the merge the stock target and the spectral joint target take a snapshot of those
+settings at build and refuse a trace under other ones, as core's own bindings do since core 3cf8df7. Both numerics
+modes now also set the normalisation grid sizes, the pairing m1 grid (off) and the pairing edge rule, and the builder
+refuses a `DARKSIRENS_*` variable core reads as a numerics setting; the values set are the defaults of every record
+core (e7c3007, 32c6210, 1022429) and of the 12S pin, which this record ran with (no launcher set a `DARKSIRENS_GW_*`
+variable), so this record's numbers are unchanged. The target's record and provenance now carry every grid and
+catalog-evaluation setting and core's numerics semantic under `core_numerics.core_settings`. Because the provenance
+enters core's run fingerprint, a checkpoint written by an earlier main is not resumed by this one (it is refused,
+loudly); a run started afresh computes the same numbers.
+
+**Writer commit (consumer PR #29, merge 0989df4; finding G4.10).** The summaries rewritten from main now carry the
+commit of the code that wrote them; 12AB's north/south summary is written by code on the side branch n0-north-south,
+which is not on main (tagged only), so its writer is not stamped.
+
+**Launch files (consumer PR #30, merge 6d0f800; finding C137).** The launch files of this record predate the owner's
+Slurm rules of 18-19 Oct 2026 (7-day limits; rita GPU jobs at 128 CPUs and 120G; holder steps only through the
+wrapper) and break them. They are kept unchanged in what they launch, as the record of how the record ran, and from
+the merge they refuse to run unless PHASE12_ALLOW_HISTORICAL names them (slurm/historical_launch_files.txt lists
+them). The B1 and B2 pipelines' HENON fallback now clears every SLURM_* variable first.
