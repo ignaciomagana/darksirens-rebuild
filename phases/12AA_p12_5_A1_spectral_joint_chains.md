@@ -1584,3 +1584,49 @@ correction over 800 A1 draws moves alpha2's mean by +0.22 ± 0.01 sd (median +0.
 0.008 sd (median -0.038 ± 0.016 sd). The resampled events' variance inflation (2.205, 3.066) enters the variance limit
 through their per-event variances. In the stored grids those carry under 1% of the PE variance sum; the chains store
 none, so the share at the chain's points is not measured.
+
+## Amendment (27 Oct 2026): independent review, final round
+
+An independent multi-agent review of the consumer repo (desi_darksirens_selection; report
+`darksirens-core-data/reviews/consumer-2026-10-24/out/REVIEW.md`) confirmed the findings cited in parentheses
+below. The amendments of 25 and 26 Oct 2026 above cover the fix packages merged first. This one covers the two that
+were still open: resume markers and fingerprints (consumer PR #25, merge 498a147) and the review follow-ups
+(consumer PR #35, merge d036f1e), which carry the owner's decisions of 26 Oct 2026 on a delta outside its prior's
+bounds and on the manifests' spectral-only note. Both were merged on 27 Oct 2026, after further fix rounds and an
+independent check of each. The consumer's main is now d036f1e. Its code is the tree that was tested, #25 and #35 on
+main bdf5150 (consumer commit ab9e656): `./ci.sh` passed there in all three record environments (HENON, CPU;
+`ci_logs/20261026T213714Z_ab9e6569b881_<env>.log`: consumer_e7c3007_cuda12 1644 passed,
+consumer_e7c3007batch_cuda12 1653, consumer_1022429_lss57afebe_cuda12 1668; none failed), and so did the steps of
+the GitHub contract job, run without JAX (`ci_logs/20261026T214140Z_ab9e6569b881_contract_job_nojax.log`: 1105
+passed, none failed). Location-free throughout. Unless an item says otherwise, no number of record changes.
+
+**Chain resume (consumer PR #25, merge 498a147).** The A1 chain driver (`scripts/phase12_5_spectral_joint.py`) resumed
+any checkpoint in its output directory under core's run fingerprint alone, and its `--fresh` left the old checkpoint
+in place, as the two DESI chain drivers did (findings C004 and C042, confirmed for those drivers). One chain of this
+record was killed and resumed, limit-2's high_seed41 (`runs_var2`): it sampled 3.9 million further calls after its
+resume, a real continuation of the same chain. Every other chain of this record ran with `resumed` false in one
+session, and no manifest or launcher passes `--fresh`. Since the merge, the A1 driver too stamps a run identity (the
+resolved configuration's sha256, the inputs' sha256, the code, the package commits and the backend) beside the
+checkpoint and resumes only under it; a checkpoint without a stamp, as every checkpoint of record is, is refused
+unless `--adopt-checkpoint` is passed; and `--fresh` moves the old chain aside (to `<out>/superseded-<UTC>/`). Core's
+run fingerprint and the recorded `run_fingerprint_digest` are unchanged.
+
+**DONE markers of the manifest runner (consumer PR #25, merge 498a147; finding C073).** The manifest runner treated a
+stage's DONE as final without comparing its recorded command or the inputs' checksums. At the reviewed commit every
+production run directory's DONE command equalled its manifest's (repository location aside); only smoke directories
+held stale DONEs. Since the merge, DONE records the command, the repository and commit, and the sha256 of every
+required input, and the runner refuses a DONE whose command or inputs changed and leaves its outputs untouched
+(`--rerun-stale` moves the stage aside and reruns it); a DONE written before the change is judged against the
+manifest's checksums. A read-only probe of the fixed runner on every production run directory, at the package's
+fifth-round head with main 402c947 merged
+(`darksirens-core-data/reviews/consumer-2026-10-24/fix/notes/p07-resume/probes/runner_dirs_of_record_37e6f26.json`),
+gives the state below; since then the manifests' commands have changed only by the named delta override that consumer
+PR #35 adds to two 12U stages already read stale (record 12U).
+
+For this record every stage of the A1, limit-8 and limit-2 manifests (9, 5 and 5 stages) still reads done.
+
+**Misspelt `--set` keys (consumer PR #25, merge 498a147; finding C088).** A misspelt `--set` key outside the sampler
+block was accepted, ignored and shown in config.resolved.json. No record path carries one: every `--set` key of the
+manifests in config/, of the 12AG and 12AH Part B plan builders and of the shell and Slurm scripts (slurm/,
+scripts/*.sh) is a key of the base configuration of the driver it reaches or a key that driver reads (a test of the
+consumer checks each of them, command by command). Since the merge, such a key is refused before anything runs.

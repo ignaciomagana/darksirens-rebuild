@@ -1532,13 +1532,15 @@ step that named the same script was untouched).
 
 The review found that several checks of this record could not fail on what they name, and that some provenance fields
 named code that did not run. Each fix has a test that fails when its defect is put back. The independent check of the
-pull request (at its head a11755d) put back 76 such defects, at least one for every finding and including the commands
-that call the checks, and the tests caught 71. Of the other five, one is equivalent (check 6's ratio and its budget
-compare the same equality). Four are secondary paths that no test on the consumer's main covers: the holder chain
-reusing a gate 6 pass after a table is rebuilt, the fitted-row refusals of the Laplace-robustness driver and of the
-cross-validation's full-sky step on the production grid, and the amendment step reading a gate 6 file that records a
-miss (it is tested only with a passing file). The code of all four is correct; tests for them are on consumer PR #35,
-which is not merged. *(Reworded 26 Oct 2026; see "Amendment (26 Oct 2026): independent review, round 3".)* What
+pull request (at its head a11755d) put back 76 such defects, at least one for every finding and including the
+commands that call the checks, and the tests caught 71. Of the other five, one is equivalent (check 6's ratio and its
+budget compare the same equality). Four are secondary paths that no test on the consumer's main covers: the holder
+chain reusing a gate 6 pass after a table is rebuilt, the fitted-row refusals of the Laplace-robustness driver and of
+the cross-validation's full-sky step on the production grid, and the amendment step reading a gate 6 file that
+records a miss (it is tested only with a passing file). The code of all four is correct; tests for them came with
+consumer PR #35 (merge d036f1e), and each fails when its defect is put back (the two fitted-row refusals are tested
+with a count below and a count above the declared one). *(Reworded 26 Oct 2026 and 27 Oct 2026; see "Amendment (26
+Oct 2026): independent review, round 3" and "Amendment (27 Oct 2026): independent review, final round".)* What
 follows changes no number of record.
 
 **Check 6, the gauge at consumption (finding C006, decision 10C).** Check 8 is an identity of lss's moments-gauge
@@ -1972,3 +1974,45 @@ cross-validation's full-sky step on the production grid (C101); and the amendmen
 file that records a miss, since it is tested only with a passing file (C006). The code of these paths is correct on
 the consumer's main; their tests are on consumer PR #35, which is not merged. The sentence is reworded in place; no
 number of record and no check result changes.
+
+### Amendment (27 Oct 2026): independent review, final round
+
+An independent multi-agent review of the consumer repo (desi_darksirens_selection; report
+`darksirens-core-data/reviews/consumer-2026-10-24/out/REVIEW.md`) confirmed the findings cited in parentheses
+below. The amendments of 25 and 26 Oct 2026 above cover the fix packages merged first. This one covers the two that
+were still open: resume markers and fingerprints (consumer PR #25, merge 498a147) and the review follow-ups
+(consumer PR #35, merge d036f1e), which carry the owner's decisions of 26 Oct 2026 on a delta outside its prior's
+bounds and on the manifests' spectral-only note. Both were merged on 27 Oct 2026, after further fix rounds and an
+independent check of each. The consumer's main is now d036f1e. Its code is the tree that was tested, #25 and #35 on
+main bdf5150 (consumer commit ab9e656): `./ci.sh` passed there in all three record environments (HENON, CPU;
+`ci_logs/20261026T213714Z_ab9e6569b881_<env>.log`: consumer_e7c3007_cuda12 1644 passed,
+consumer_e7c3007batch_cuda12 1653, consumer_1022429_lss57afebe_cuda12 1668; none failed), and so did the steps of
+the GitHub contract job, run without JAX (`ci_logs/20261026T214140Z_ab9e6569b881_contract_job_nojax.log`: 1105
+passed, none failed). Location-free throughout. Unless an item says otherwise, no number of record changes.
+
+**Grid fingerprint, clean-tree guard and digest cache (consumer PR #25, merge 498a147; findings C023, C095, C096).**
+The 12AQ grid fingerprint left out the base configuration read by the stock target, several modules of the row path,
+the device and the member batch size; the clean-tree guard passed when git failed; and the declared-input check, the
+table sidecars and the replicate-file check trusted a shared sha256 cache keyed by path, size and a 1-second mtime. No
+12AQ arm resumed; the 11 output files without a commit are gate and test tables of a code copy, not results of record;
+and the cached digest of every arm table and declared input equals a fresh re-hash. Since the merge, the fingerprint
+holds the run identity and the member batch size, the code digest covers the row path's modules, the guard refuses a
+git failure, and declared inputs, new table sidecars and replicate files are hashed once per process (the cache key
+also holds the inode and ctime). A rerun under another identity evaluates every point again, after moving the old
+scan.json, DONE, HELD marker and per-event arrays aside (`<name>.stale.<UTC>`).
+
+**Misspelt `--set` keys (consumer PR #25, merge 498a147; finding C088).** A misspelt `--set` key outside the sampler
+block was accepted, ignored and shown in config.resolved.json. No record path carries one: every `--set` key of the
+manifests in config/, of the 12AG and 12AH Part B plan builders and of the shell and Slurm scripts (slurm/,
+scripts/*.sh) is a key of the base configuration of the driver it reaches or a key that driver reads (a test of the
+consumer checks each of them, command by command). Since the merge, such a key is refused before anything runs.
+
+**Tests of four secondary paths (consumer PR #35, merge d036f1e; findings C006, C101).** The section "Gates, checks
+and provenance (consumer PR #34, merge 009257d)" of the 25 Oct amendment, as reworded on 26 Oct, named four secondary
+paths that no test on the consumer's main covered: the holder chain reusing a gate 6 pass after a table is rebuilt,
+the fitted-row refusals of the Laplace-robustness driver and of the cross-validation's full-sky step on the production
+grid, and the amendment step reading a gate 6 file that records a miss. Their tests came with consumer PR #35, and
+each fails when its defect is put back; the two fitted-row refusals are tested with a count below and a count above
+the declared one. The code of all four was correct, so no number of record and no check result changes. That sentence
+of the 25 Oct amendment is reworded in place again; the round-3 correction "what the tests of consumer PR #34 cover"
+above is kept as written on 26 Oct.

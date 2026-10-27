@@ -960,3 +960,23 @@ Still open and not amended here: resume markers and fingerprints (consumer PR #2
 
 **GW inputs (consumer PR #26, merge a152bed; findings C047, C057, G1.1).** See the GW inputs addendum
 (`phases/12_gw_inputs_addendum_2026-10-26.md`). No number of this record changes.
+
+## Amendment (27 Oct 2026): independent review, final round
+
+An independent multi-agent review of the consumer repo (desi_darksirens_selection; report
+`darksirens-core-data/reviews/consumer-2026-10-24/out/REVIEW.md`) confirmed the findings cited in parentheses
+below. The amendments of 25 and 26 Oct 2026 above cover the fix packages merged first. This one covers the two that
+were still open: resume markers and fingerprints (consumer PR #25, merge 498a147) and the review follow-ups
+(consumer PR #35, merge d036f1e), which carry the owner's decisions of 26 Oct 2026 on a delta outside its prior's
+bounds and on the manifests' spectral-only note. Both were merged on 27 Oct 2026, after further fix rounds and an
+independent check of each. The consumer's main is now d036f1e. Its code is the tree that was tested, #25 and #35 on
+main bdf5150 (consumer commit ab9e656): `./ci.sh` passed there in all three record environments (HENON, CPU;
+`ci_logs/20261026T213714Z_ab9e6569b881_<env>.log`: consumer_e7c3007_cuda12 1644 passed,
+consumer_e7c3007batch_cuda12 1653, consumer_1022429_lss57afebe_cuda12 1668; none failed), and so did the steps of
+the GitHub contract job, run without JAX (`ci_logs/20261026T214140Z_ab9e6569b881_contract_job_nojax.log`: 1105
+passed, none failed). Location-free throughout. Unless an item says otherwise, no number of record changes.
+
+**Tests of the gate recomputation (consumer PR #35, merge d036f1e).** The second check of the bookkeeping package
+(consumer PR #23) put defects back into its new code and left one uncaught in this record's recomputation
+(`scripts/phase12_5_record_errata.py ak`): the plumbing gate left out of the all-pass verdict. A test from consumer
+PR #35 now catches it, so the tests of the new code catch every mutation checked. No text of this record changes.
