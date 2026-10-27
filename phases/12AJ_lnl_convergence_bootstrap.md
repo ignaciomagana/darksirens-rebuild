@@ -862,3 +862,39 @@ sigma_kde about 1e-3 are not physical host-redshift kernels (G2.4, see 12AG's am
 
 **GW inputs (consumer PR #26, merge a152bed; findings C047, C057, G1.1).** See the GW inputs addendum
 (`phases/12_gw_inputs_addendum_2026-10-26.md`). No number of this record changes.
+
+## Amendment (27 Oct 2026): independent review, final round
+
+An independent multi-agent review of the consumer repo (desi_darksirens_selection; report
+`darksirens-core-data/reviews/consumer-2026-10-24/out/REVIEW.md`) confirmed the findings cited in parentheses
+below. The amendments of 25 and 26 Oct 2026 above cover the fix packages merged first. This one covers the two that
+were still open: resume markers and fingerprints (consumer PR #25, merge 498a147) and the review follow-ups
+(consumer PR #35, merge d036f1e), which carry the owner's decisions of 26 Oct 2026 on a delta outside its prior's
+bounds and on the manifests' spectral-only note. Both were merged on 27 Oct 2026, after further fix rounds and an
+independent check of each. The consumer's main is now d036f1e. Its code is the tree that was tested, #25 and #35 on
+main bdf5150 (consumer commit ab9e656): `./ci.sh` passed there in all three record environments (HENON, CPU;
+`ci_logs/20261026T213714Z_ab9e6569b881_<env>.log`: consumer_e7c3007_cuda12 1644 passed,
+consumer_e7c3007batch_cuda12 1653, consumer_1022429_lss57afebe_cuda12 1668; none failed), and so did the steps of
+the GitHub contract job, run without JAX (`ci_logs/20261026T214140Z_ab9e6569b881_contract_job_nojax.log`: 1105
+passed, none failed). Location-free throughout. Unless an item says otherwise, no number of record changes.
+
+**Grid resume, DONE markers and the lane runner (consumer PR #25, merge 498a147; findings C023, C074, C077, C095).**
+The grid driver's resume fingerprint left out the base configuration file, the package commits and the backend, the
+lane runner skipped any entry whose DONE existed, the driver wrote DONE before 12AH Part A's events.npz, a `--set` of
+catalog.sigma_kde would have been evaluated while scan.json recorded the `--sigma-kde` value, and a failing git was
+recorded as commit '' with 0 changed files. None of this touched an output of record: all 58 grids of 12AG-12AI carry
+one commit each, a clean tree and a DONE fingerprint equal to scan.json's; 0 of 215 completed scans resumed across
+sessions; the base configuration's sha256 is unchanged since 8 Oct; no plan passes a `--set` of sigma_kde; every Lane
+A DONE has its events.npz beside it, both spectral DONEs record equal grids and every branch DONE records passing
+identities. Since the merge, the fingerprint holds the run identity (the resolved configuration, the commit and
+tracked changes, the package commits and the backend), DONE is written last with its outputs' sha256, the lane runner
+skips an entry only when its lane record holds the entry's argv, code and python and that python's core build and
+backend (measured in a short probe process; the DONEs of record carry no lane record, so a resubmission into the
+record's output root refuses those entries and leaves their outputs untouched), and the driver refuses a `--set` of
+the keys its own flags set.
+
+**Misspelt `--set` keys (consumer PR #25, merge 498a147; finding C088).** A misspelt `--set` key outside the sampler
+block was accepted, ignored and shown in config.resolved.json. No record path carries one: every `--set` key of the
+manifests in config/, of the 12AG and 12AH Part B plan builders and of the shell and Slurm scripts (slurm/,
+scripts/*.sh) is a key of the base configuration of the driver it reaches or a key that driver reads (a test of the
+consumer checks each of them, command by command). Since the merge, such a key is refused before anything runs.

@@ -269,3 +269,59 @@ amendment of this date applies here too (C002).
 **GW inputs (consumer PR #26, merge a152bed; findings C047, C057, G1.1).** The last stage of this record reads the
 gwcat 8263ae9 exact-prior rebuilds; see the GW inputs addendum (`phases/12_gw_inputs_addendum_2026-10-26.md`). No
 number of this record changes.
+
+## Amendment (27 Oct 2026): independent review, final round
+
+An independent multi-agent review of the consumer repo (desi_darksirens_selection; report
+`darksirens-core-data/reviews/consumer-2026-10-24/out/REVIEW.md`) confirmed the findings cited in parentheses
+below. The amendments of 25 and 26 Oct 2026 above cover the fix packages merged first. This one covers the two that
+were still open: resume markers and fingerprints (consumer PR #25, merge 498a147) and the review follow-ups
+(consumer PR #35, merge d036f1e), which carry the owner's decisions of 26 Oct 2026 on a delta outside its prior's
+bounds and on the manifests' spectral-only note. Both were merged on 27 Oct 2026, after further fix rounds and an
+independent check of each. The consumer's main is now d036f1e. Its code is the tree that was tested, #25 and #35 on
+main bdf5150 (consumer commit ab9e656): `./ci.sh` passed there in all three record environments (HENON, CPU;
+`ci_logs/20261026T213714Z_ab9e6569b881_<env>.log`: consumer_e7c3007_cuda12 1644 passed,
+consumer_e7c3007batch_cuda12 1653, consumer_1022429_lss57afebe_cuda12 1668; none failed), and so did the steps of
+the GitHub contract job, run without JAX (`ci_logs/20261026T214140Z_ab9e6569b881_contract_job_nojax.log`: 1105
+passed, none failed). Location-free throughout. Unless an item says otherwise, no number of record changes.
+
+**Chain resume (consumer PR #25, merge 498a147; findings C004, C042).** The chain drivers of this record resumed any
+checkpoint in their output directory, guarded only by core's run fingerprint, which does not cover the catalog
+settings (m_lim, the K-correction, a fixed log10n0; sigma_kde only under kernel pin auto) or, for the 12T chain stage,
+the input files; and `--fresh` left the old checkpoint in place, so a fresh run killed before its first checkpoint
+save could have resumed the old chain. Neither happened for this record: every chain of record ran with `resumed`
+false in one session (the only production chain killed and resumed, A1's limit-2 chain high_seed41 of record 12AA,
+sampled 3.9 million further calls after its resume, a real continuation), no manifest or launcher passes `--fresh`,
+and each stage has its own output directory checked by the manifest runner's input checksums. Since the merge, the
+drivers stamp a run identity (the resolved configuration's sha256, the inputs' sha256, the code, the package commits
+and the backend) beside the checkpoint and resume only under it; a checkpoint without a stamp, as every checkpoint of
+record is, is refused unless `--adopt-checkpoint` is passed; and `--fresh` moves the old chain aside (to
+`<out>/superseded-<UTC>/`; nothing is deleted). Core's run fingerprint and the recorded `run_fingerprint_digest` are
+unchanged.
+
+**DONE markers of the manifest runner (consumer PR #25, merge 498a147; finding C073).** The manifest runner treated a
+stage's DONE as final without comparing its recorded command or the inputs' checksums. At the reviewed commit every
+production run directory's DONE command equalled its manifest's (repository location aside); only smoke directories
+held stale DONEs. Since the merge, DONE records the command, the repository and commit, and the sha256 of every
+required input, and the runner refuses a DONE whose command or inputs changed and leaves its outputs untouched
+(`--rerun-stale` moves the stage aside and reruns it); a DONE written before the change is judged against the
+manifest's checksums. A read-only probe of the fixed runner on every production run directory, at the package's
+fifth-round head with main 402c947 merged
+(`darksirens-core-data/reviews/consumer-2026-10-24/fix/notes/p07-resume/probes/runner_dirs_of_record_37e6f26.json`),
+gives the state below; since then the manifests' commands have changed only by the named delta override that consumer
+PR #35 adds to two 12U stages already read stale (record 12U).
+
+The consolidation of the consumer onto main (consumer PRs #20 and #21) added `--set population.fixed_values=null` to
+the six 12T spectral and chain stages and to all six 12U scan and chain stages, and the pinned base configuration
+(`--config config/desi.fixed_population.core_preset.json`) to the four 12T parity and benchmark stages that evaluate
+the DESI target, so that the resolved configuration stays the one of record after the base configuration gained its
+spin declaration. The DONEs of ten 12T stages and of all six 12U stages hold the command before that edit, so the
+fixed runner reports them stale and refuses them (outputs untouched); the other four 12T stages, three of the five 12U
+preparation stages and every stage of 12.5 step 1, A1, A1 var8, A1 var2, B2, the ladder cell and 12AP still read done,
+and so do nine of the eleven 12AE (gamma/mu1) stages.
+
+**Misspelt `--set` keys (consumer PR #25, merge 498a147; finding C088).** A misspelt `--set` key outside the sampler
+block was accepted, ignored and shown in config.resolved.json. No record path carries one: every `--set` key of the
+manifests in config/, of the 12AG and 12AH Part B plan builders and of the shell and Slurm scripts (slurm/,
+scripts/*.sh) is a key of the base configuration of the driver it reaches or a key that driver reads (a test of the
+consumer checks each of them, command by command). Since the merge, such a key is refused before anything runs.

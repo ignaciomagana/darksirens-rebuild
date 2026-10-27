@@ -2,6 +2,11 @@
 
 ## Status
 
+**RESULTS (27 Oct 2026).** The four chains finished on 25 Oct 2026; the estimator error and the comparison at a common
+guard and without the guard (owner decisions 7A and 6B) were attached on 27 Oct 2026. The location-free numbers are
+under "Results (27 Oct 2026): against B2 with its estimator error, at a common guard and without the guard" at the
+end; absolute values are on the owner page only.
+
 **DECLARED (owner, 2026-10-21), before any chain.** No 12AP chain has run. This record fixes the question, the
 changes against stage B2 (record 12AF), the inputs with their sha256, the checks before the go, what is reported
 and the compute. The checks are recorded under "Results: before the chains" as they finish. The main session
@@ -610,3 +615,182 @@ count_ridge_union_delta0, which the ridge matched at the preset's precision.
 holds the same rows as the exact build, so it carries the same PE items. The addendum's numbers were measured on the
 fixed-population spectral-only target, not on this record's DESI target. This record's chains carry the O3-support
 bias and the PE items; their size at the DESI target has not been measured.
+
+## Amendment (27 Oct 2026): independent review, final round
+
+An independent multi-agent review of the consumer repo (desi_darksirens_selection; report
+`darksirens-core-data/reviews/consumer-2026-10-24/out/REVIEW.md`) confirmed the findings cited in parentheses
+below. The amendments of 25 and 26 Oct 2026 above cover the fix packages merged first. This one covers the two that
+were still open: resume markers and fingerprints (consumer PR #25, merge 498a147) and the review follow-ups
+(consumer PR #35, merge d036f1e), which carry the owner's decisions of 26 Oct 2026 on a delta outside its prior's
+bounds and on the manifests' spectral-only note. Both were merged on 27 Oct 2026, after further fix rounds and an
+independent check of each. The consumer's main is now d036f1e. Its code is the tree that was tested, #25 and #35 on
+main bdf5150 (consumer commit ab9e656): `./ci.sh` passed there in all three record environments (HENON, CPU;
+`ci_logs/20261026T213714Z_ab9e6569b881_<env>.log`: consumer_e7c3007_cuda12 1644 passed,
+consumer_e7c3007batch_cuda12 1653, consumer_1022429_lss57afebe_cuda12 1668; none failed), and so did the steps of
+the GitHub contract job, run without JAX (`ci_logs/20261026T214140Z_ab9e6569b881_contract_job_nojax.log`: 1105
+passed, none failed). Location-free throughout. Unless an item says otherwise, no number of record changes.
+
+**Chain resume (consumer PR #25, merge 498a147; findings C004, C042).** The chain drivers of this record resumed any
+checkpoint in their output directory, guarded only by core's run fingerprint, which does not cover the catalog
+settings (m_lim, the K-correction, a fixed log10n0; sigma_kde only under kernel pin auto) or, for the 12T chain stage,
+the input files; and `--fresh` left the old checkpoint in place, so a fresh run killed before its first checkpoint
+save could have resumed the old chain. Neither happened for this record: every chain of record ran with `resumed`
+false in one session (the only production chain killed and resumed, A1's limit-2 chain high_seed41 of record 12AA,
+sampled 3.9 million further calls after its resume, a real continuation), no manifest or launcher passes `--fresh`,
+and each stage has its own output directory checked by the manifest runner's input checksums. Since the merge, the
+drivers stamp a run identity (the resolved configuration's sha256, the inputs' sha256, the code, the package commits
+and the backend) beside the checkpoint and resume only under it; a checkpoint without a stamp, as every checkpoint of
+record is, is refused unless `--adopt-checkpoint` is passed; and `--fresh` moves the old chain aside (to
+`<out>/superseded-<UTC>/`; nothing is deleted). Core's run fingerprint and the recorded `run_fingerprint_digest` are
+unchanged. The 12AP launcher comment (`slurm/phase12ap_run_js2h100.sh`) that core refuses a checkpoint written under
+other settings or env overclaimed: core's fingerprint covers the queue size, likelihood form and kernel pin, not the
+catalog settings, and its env record is advisory. The 12AP chains ran from repo_12AP, before the identity stamp, from
+one fixed manifest at one clean commit; the comment is corrected on main.
+
+**DONE markers of the manifest runner (consumer PR #25, merge 498a147; finding C073).** The manifest runner treated a
+stage's DONE as final without comparing its recorded command or the inputs' checksums. At the reviewed commit every
+production run directory's DONE command equalled its manifest's (repository location aside); only smoke directories
+held stale DONEs. Since the merge, DONE records the command, the repository and commit, and the sha256 of every
+required input, and the runner refuses a DONE whose command or inputs changed and leaves its outputs untouched
+(`--rerun-stale` moves the stage aside and reruns it); a DONE written before the change is judged against the
+manifest's checksums. A read-only probe of the fixed runner on every production run directory, at the package's
+fifth-round head with main 402c947 merged
+(`darksirens-core-data/reviews/consumer-2026-10-24/fix/notes/p07-resume/probes/runner_dirs_of_record_37e6f26.json`),
+gives the state below; since then the manifests' commands have changed only by the named delta override that consumer
+PR #35 adds to two 12U stages already read stale (record 12U).
+
+For this record every stage of the fine-cell manifest (`config/phase12ap_fine_cell_manifest.json`, 6 of 6) still reads
+done.
+
+**Misspelt `--set` keys (consumer PR #25, merge 498a147; finding C088).** A misspelt `--set` key outside the sampler
+block was accepted, ignored and shown in config.resolved.json. No record path carries one: every `--set` key of the
+manifests in config/, of the 12AG and 12AH Part B plan builders and of the shell and Slurm scripts (slurm/,
+scripts/*.sh) is a key of the base configuration of the driver it reaches or a key that driver reads (a test of the
+consumer checks each of them, command by command). Since the merge, such a key is refused before anything runs.
+
+## Results (27 Oct 2026): against B2 with its estimator error, at a common guard and without the guard
+
+*Location-free: shifts in the reference's posterior sd, sd and width ratios, part weights and their log-odds,
+fractions and counts. The absolute values are in `runs/compare/compare_absolute.json` and in the noise run's
+`compare_parts/compare_absolute.json`, for the owner page only. Numbers only, by the owner's rule of 20 Oct 2026: no
+bands, thresholds or verdicts. B2 is the reference throughout; "B2's sd" is the sd of B2's pooled posterior, and a
+per-part shift is in the sd of B2's same part.*
+
+**The runs.** The four chains ran one after another on js2h100 from the launch commit 2c06a3d, each in one session
+that did not resume: high_seed41 (41,962 iterations, 4.96 million calls, 22.1 h of sampling); low_seed31 (40,048
+iterations, 4.70 million calls, 20.9 h of sampling); high_seed42 (43,040 iterations, 5.09 million calls, 23.2 h of
+sampling); low_seed32 (40,428 iterations, 4.75 million calls, 20.7 h of sampling); dlogz 0.1 with 1000 live points,
+and each chain's convergence is verified in the comparison. The combination (40,000 pooled samples) and
+`runs/compare/compare.json` were written on 25 Oct 2026 at 04:49 UTC. The estimator error (owner decision 7A) and the
+comparison at a common guard and without the guard (6B) followed the review's design
+(`darksirens-core-data/reviews/consumer-2026-10-24/fix/notes/p04-guard-noise/design_12AP_vs_B2_estimator_error.md`) on
+HENON CPU on 26-27 Oct 2026: 96 captures (capture array 1395866; one capture rerun as job 1396083 after a node's task
+prolog failed twice) and the comparisons (job 1396084), with `scripts/phase12_5_estimator_noise.py` and
+`scripts/phase12ap_compare.py --readings` at consumer commit 6992475 (consumer PR #37, which reads a cell's four
+chains together; a clean checkout) in this record's environment, consumer_e7c3007batch_cuda12. Outputs:
+`darksirens-core-data/reviews/consumer-2026-10-24/runs_2026-10-26/12AP_vs_B2_noise_r2/` (`compare_noise.json`,
+`compare_noise_half.json`, `compare_parts/compare_parts.json`).
+
+**How the error is made.** Each cell is read at 512 stored draws per H0 part (256 distinct equal-weight rows of each
+chain). 200 paired bootstrap replicates resample the PE samples (each of the 259 events' 4096 samples with
+replacement) and the injections (a Poisson(1) count for each of the 1,067,946 found injections) with one plan, so that
+replicate b resamples the same rows at both cells; both cells read one PE file (sha256 822b3181...) and one injection
+file (56e51af2...). All 64 captures at a chain's own draws reproduce its stored log-likelihood to at most 1.1e-12 (the
+gate is 1e-8). The estimate is the reading at the draws; the error is the sd over the replicates, with its 5% to 95%
+range; the PE-only and selection-only errors are given beside it. "At B2's draws" reweights B2's draws to the fine
+cell, so both cells are read on one proposal: as run (each cell with its own guard), with either cell's guard on both,
+and with no guard. B2's draws stop at B2's own wall, so posterior mass beyond it is in none of these readings.
+
+**H0.**
+
+| 12AP against B2 | Shift in B2's sd (5% to 95%) | sd ratio | 68% width ratio | 90% width ratio | Lower part's log-odds change |
+|---|---|---|---|---|---|
+| Pooled chains (`compare.json`, 40,000 samples per cell; no error) | −0.417 | 1.146 | 1.238 | 1.076 | +0.48 |
+| Each cell at its own draws, as run | −0.548 ± 0.360 (−1.08 to +0.01) | 1.108 ± 0.172 | 1.286 ± 0.352 | 1.054 ± 0.177 | +0.48 ± 0.59 |
+| &nbsp;&nbsp;PE part alone | ± 0.131 | ± 0.062 | ± 0.143 | ± 0.061 | ± 0.17 |
+| &nbsp;&nbsp;selection part alone | ± 0.328 | ± 0.154 | ± 0.336 | ± 0.165 | ± 0.54 |
+| Both cells at B2's draws, as run | −0.072 ± 0.326 (−0.90 to +0.15) | 1.104 ± 0.139 | 1.265 ± 0.270 | 1.113 ± 0.159 | +0.31 ± 0.58 |
+| Both cells at B2's draws, both with the fine cell's guard | −0.119 ± 0.332 (−1.01 to +0.08) | 1.112 ± 0.122 | 1.302 ± 0.254 | 1.087 ± 0.137 | +0.52 ± 0.51 |
+| Both cells at B2's draws, both with B2's guard | −0.256 ± 0.342 (−1.06 to +0.07) | 1.127 ± 0.131 | 1.287 ± 0.259 | 1.088 ± 0.154 | +0.58 ± 0.50 |
+| Both cells at B2's draws, no guard | −0.249 ± 0.340 (−1.04 to +0.06) | 1.128 ± 0.131 | 1.288 ± 0.257 | 1.091 ± 0.153 | +0.58 ± 0.51 |
+
+The lower part's weight is 0.083 in 12AP (matched pairs 0.105 and 0.066; range over the four pairings 0.066 to 0.105)
+against 0.053 in B2 (0.047 and 0.060; 0.044 to 0.064); their ratio is 1.57 ± 1.24 (0.68 to 3.72) at the own draws.
+
+**Per H0 part.**
+
+| Own draws (pooled chains in brackets) | Shift (in the sd of B2's same part) | sd ratio | 68% width ratio | 90% width ratio |
+|---|---|---|---|---|
+| Lower part | −0.197 ± 0.406 (−0.148) | 0.862 ± 0.111 (0.848) | 0.857 ± 0.165 (0.833) | 0.857 ± 0.123 (0.898) |
+| Upper part | −0.552 ± 0.392 (−0.364) | 1.154 ± 0.154 (1.180) | 1.374 ± 0.306 (1.356) | 1.042 ± 0.165 (1.060) |
+| 12AP mixed at B2's part weights (shift in B2's sd) | −0.502 ± 0.345 (−0.365) | 1.073 ± 0.137 (1.110) | 1.277 ± 0.313 (1.228) | 0.976 ± 0.137 (0.992) |
+
+**The wall.** At B2's draws the fine cell's wall removes 0.316 ± 0.092 (5% to 95%: 0.10 to 0.43) of the guard-free
+fine-cell posterior, and 0.301 ± 0.089 with both cells at B2's guard. B2's own wall at its draws: 0.21% of B2's
+posterior carries a penalty below −1 nat (0.39% of the lower part, 0.20% of the upper), 6.1% lies within 5% above its
+threshold, and the fine cell's selection N_eff is under its threshold on 27% of it. The Kish effective size of the
+reweighting to the fine cell is 224 and 316 of 512 (lower, upper part) as run and 253 and 344 without the guard; over
+the replicates (as run, 5% to 95%) 24 to 148 and 23 to 179. In each chain's guard sample (sds from the nested sample's
+effective size), N_eff is under its threshold for 4.4% to 4.9% of 12AP's rows against 3.1% to 3.6% of B2's, within 5%
+above it for 7.1% to 9.5% against 6.2% to 6.9%, and the penalty is below −1 nat for 0.07% to 0.27% against 0.05% to
+0.15%; some penalty applies to 21.5% to 26.1% of 12AP's pooled samples against 17.8% to 19.1% of B2's.
+
+**Half the draws.** Read on the even slices only (256 draws per part), the errors are 1.02 to 1.14 times the full ones
+(the shift at the own draws 0.410 against 0.360), against about 1.41 if the draw set's own reweighting noise made
+them; the design reads this as the estimator's error making the spread.
+
+**Seed scatter (the sampler only; it holds none of the PE and injection noise that differs between the cells).**
+Against B2's upper part, 12AP's upper-part chains read −0.519 (seed 41) and −0.196 (seed 42), B2's own −0.040 and
++0.049; in the lower part 12AP's read −0.151 and −0.144, B2's +0.013 and −0.033. The matched pairs read −0.547 (seeds
+31 and 41) and −0.245 (32 and 42) in 12AP, −0.028 and +0.045 in B2. The seeds' ln Z difference is −0.48 (lower part)
+and +0.03 (upper) in 12AP, +0.34 and +0.07 in B2; each chain's reported ln Z error is 0.198 to 0.204.
+
+**The other twenty sampled parameters** (shift in B2's sd and sd ratio):
+
+| Parameter | Shift in B2's sd (pooled) | sd ratio (pooled) | Shift, own draws | sd ratio, own draws | Shift, B2's draws, no guard | sd ratio, B2's draws, no guard |
+|---|---|---|---|---|---|---|
+| M0hat | +0.009 | 0.992 | +0.032 ± 0.133 | 1.059 ± 0.074 | −0.031 ± 0.101 | 0.988 ± 0.042 |
+| alpha1 | −0.054 | 1.052 | −0.152 ± 0.108 | 1.061 ± 0.130 | −0.021 ± 0.078 | 0.948 ± 0.074 |
+| alpha2 | +0.056 | 0.985 | +0.144 ± 0.141 | 0.978 ± 0.074 | +0.013 ± 0.106 | 0.976 ± 0.047 |
+| beta_q | +0.061 | 1.014 | +0.071 ± 0.163 | 1.069 ± 0.060 | +0.038 ± 0.103 | 0.983 ± 0.038 |
+| delta_m1 | −0.090 | 0.978 | −0.029 ± 0.179 | 1.013 ± 0.057 | −0.205 ± 0.112 | 0.993 ± 0.036 |
+| delta_m2 | −0.016 | 1.018 | −0.037 ± 0.149 | 0.978 ± 0.044 | −0.000 ± 0.113 | 0.981 ± 0.032 |
+| gamma | +0.040 | 1.060 | +0.052 ± 0.133 | 1.167 ± 0.077 | +0.128 ± 0.129 | 1.015 ± 0.047 |
+| lambda0 | −0.073 | 0.977 | −0.133 ± 0.132 | 1.029 ± 0.055 | −0.086 ± 0.082 | 0.971 ± 0.044 |
+| lambda1 | +0.068 | 0.980 | +0.101 ± 0.138 | 1.028 ± 0.052 | +0.101 ± 0.095 | 0.967 ± 0.042 |
+| log10n0_q | −0.220 | 0.988 | −0.208 ± 0.154 | 1.019 ± 0.040 | −0.060 ± 0.121 | 1.000 ± 0.030 |
+| m1_low | +0.068 | 0.982 | +0.110 ± 0.175 | 0.933 ± 0.051 | +0.101 ± 0.131 | 1.002 ± 0.040 |
+| m2_low | +0.079 | 1.042 | +0.064 ± 0.125 | 0.994 ± 0.062 | +0.096 ± 0.156 | 1.015 ± 0.039 |
+| m_break | +0.124 | 0.968 | +0.185 ± 0.140 | 0.937 ± 0.052 | +0.102 ± 0.125 | 0.985 ± 0.050 |
+| mu1 | +0.238 | 1.142 | +0.331 ± 0.265 | 1.091 ± 0.149 | +0.194 ± 0.266 | 1.131 ± 0.121 |
+| mu2 | +0.048 | 1.025 | +0.098 ± 0.131 | 1.030 ± 0.140 | +0.062 ± 0.103 | 1.063 ± 0.106 |
+| mu_chi | −0.020 | 0.996 | +0.018 ± 0.102 | 0.988 ± 0.081 | −0.008 ± 0.098 | 0.988 ± 0.038 |
+| sigma1 | +0.197 | 0.978 | +0.136 ± 0.190 | 1.006 ± 0.077 | −0.099 ± 0.126 | 0.966 ± 0.070 |
+| sigma2 | +0.198 | 1.108 | +0.233 ± 0.194 | 1.172 ± 0.100 | +0.101 ± 0.184 | 1.067 ± 0.067 |
+| sigma_M | −0.035 | 1.018 | −0.182 ± 0.129 | 1.055 ± 0.065 | −0.047 ± 0.114 | 0.987 ± 0.042 |
+| sigma_chi | −0.013 | 0.994 | −0.045 ± 0.116 | 1.059 ± 0.076 | −0.031 ± 0.105 | 0.980 ± 0.043 |
+
+**Against B1 and A1** (pooled chains; the paired bootstrap covers the comparison with B2 only, so no estimator error
+is attached). Against B1: shift −0.314 in B1's sd, sd ratio 1.177, 68% and 90% width ratios 1.245 and 1.131; B1's
+lower-part weight is 0.042. Against A1: shift −0.242 in A1's sd, sd ratio 1.210, width ratios 1.314 and 1.146; A1's
+lower-part weight is 0.037 (range over its pairings 0.021 to 0.065).
+
+**In numbers.**
+
+- Every H0 difference between the cells is at most 1.52 times its estimator sd. The largest is the shift at the own
+  draws, −0.548 ± 0.360 (1.52 sd), then the upper part's, −0.552 ± 0.392 (1.41); at B2's draws every H0 number is at
+  most 1.19 times its sd.
+- Of the twenty other parameters, the largest at the own draws are the sd ratios of gamma (1.167 ± 0.077, 2.2 sd) and
+  sigma2 (1.172 ± 0.100, 1.7), and at B2's draws without the guard the shift of delta_m1 (−0.205 ± 0.112, 1.8); every
+  other is at most 1.4. The pooled chains give gamma's sd ratio as 1.060 and sigma2's as 1.108.
+- Without the guard the H0 numbers at B2's draws are those with both cells at B2's guard to within 0.01 (shift −0.249
+  against −0.256, sd ratio 1.128 against 1.127, log-odds change +0.58 against +0.58). With the fine cell's guard on
+  both the shift is −0.119, and as run −0.072.
+- The estimator's own error on the shift is 0.33 to 0.36 of B2's posterior sd, about a third; at the own draws its
+  selection part alone is 0.33 and its PE part 0.13.
+- The pooled shift (−0.417) and the shift at the own draws (−0.548) differ by the subsample's noise; the shift at the
+  own draws and the one at B2's draws as run (−0.072) read the fine cell on different proposals.
+- 12AP's two upper-part seeds differ by 0.32 of B2's upper-part sd; B2's two differ by 0.09.
+
+No number of an earlier record changes. Location-free throughout.
