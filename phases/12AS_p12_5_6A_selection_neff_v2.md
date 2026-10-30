@@ -234,9 +234,20 @@ pin declaration).
   A1 draws (8 per chain): ln mu at most 6.1e-16 relative and N_eff 7.2e-15 relative from 12AD's stored values
   (tolerance 1e-10), on CPU with core 1022429 against 12AD's GPU run with core e7c3007. Reported beside: the PE
   variance sum 1.6e-15 relative, the log-likelihood 1.2e-10 nat absolute.
-- **G0 (5), CI:** below when it finishes. The first run (d29657d) failed one contract test: the new script pins the
-  selection of record by sha256 and was not listed in `config/gw_inputs_of_record.json` (`pinned_by.modules`); the
-  entry is added (a1b4f24), no build changes. Step 1 and step 2 run from the commit CI passes.
+- **G0 (5), CI: passes.** `./ci.sh` at a1b4f24 on HENON: consumer_1022429_lss57afebe_cuda12 1,744 passed and 18
+  skipped; consumer_e7c3007batch_cuda12 1,722 and 40; consumer_e7c3007_cuda12 1,713 and 49; no failure (logs in the
+  consumer's `ci_logs/`, commit 76dacaf). The contract job reproduced without JAX: 1,143 passed, 221 skipped. The
+  first run (d29657d) failed one contract test: the new script pins the selection of record by sha256 and was not
+  listed in `config/gw_inputs_of_record.json` (`pinned_by.modules`); a1b4f24 adds the entry (no build changes).
+  Consumer PR #44 merged (3c8a5ee) after the three environments were green.
+
+**Amendment, submission (30 Oct 2026, 18:10 UTC; location-free).** Every job runs from the clean worktree of
+a1b4f24 in `consumer_1022429_lss57afebe_cuda12`, with the tables of step 0.
+- **Step 1** (HENON, `-A phy230014p --qos=henon --exclude=henon05,henon08`, 8 CPUs and 48 GB per task): arrays
+  1399681 (production cell, tasks 0-127) and 1399682 (fiducial cell, tasks 128-255), 256 tasks; finish 1399683
+  (afterany) writes `design_6A_2026-10-30/step1/summary.json` and `STEP1_DONE` or `STEP1_FAILED`.
+- **Step 2:** (a) 1399684 (HENON CPU); (b) 1399685 (one rita A100-80, both cells in turn); finish 1399686 (afterany)
+  writes `design_6A_2026-10-30/step2/summary.json` and `STEP2_DONE` or `STEP2_FAILED`.
 - **Smoke (not results; outputs in `design_6A_2026-10-30/smoke/`).** One point costs about 16 s (production cell)
   and 9 s (fiducial cell) on 8 HENON CPUs with 19 to 23 GB resident; the step-1 tasks are therefore 128 draws (or 8
   ladder draws, 96 points) each, 256 tasks in all. The right-ascension and D4 paths ran end to end (the D4
