@@ -212,4 +212,37 @@ selection density until the owner's G2 decision and a step-3 PR. D4 numbers carr
 
 ## Amendments
 
-(none yet)
+**Amendment, step 0 (30 Oct 2026, before any step-1 or step-2 job; location-free).** Code: consumer PR #44
+(branch `design/6a-v2-sizing`); the ties ran from the clean commit 4e7c0f5; the later commits do not touch the tie
+paths (the spectral-only profile without guard or floor, the task slicing, a D4 smoke mode, the summaries, the
+pin declaration).
+- **Tables.** Built by `phase6a_measure.py tables` (commit 6b9115a) on one rita A100-80 (12AN's device) in 8 to 19
+  s per cell; the HENON CPU builds declared under "Compute" used about 7 cores each and were cancelled after 10
+  minutes (departure, compute only). 12AL's control 7 passes on every table: D3r 7.9e-7 (ns64_sk3e-03), 9.1e-6
+  (ns128_sk1e-03) and 1.0e-5 (the version-1 tie table) against 1e-4; D2 4.3e-7 to 1.9e-6. 255 and 511 rings.
+  Table sha256: ns64_sk3e-03 `3deacbd9e791e43a…`, ns128_sk1e-03 `05947a59221bfeae…`, version-1 (128, 1e-3)
+  `9b2d9976acb12f76…`; the stores are 12AR's (`6c59d63a…`, `20841d18…`).
+- **G0 (2), the 12AN tie: passes, bit for bit.** D0 and D3r ln mu and N_eff at the five control points equal 12AN's
+  with difference 0.0 (tolerance 1e-12); the capture's mirror 4.5e-13.
+- **G0 (3), identical pixels: passes** (`tests/test_phase6a.py`, D3r and D2 equal D0 within 1e-4 per injection on
+  the floor-hosts target with the delta split; D1 does not).
+- **G0 (4): passes.** 12AL's control 7 on both version-2 tables (above). The kernel pin auto against off on the
+  version-2 target at four A1 draws: at most 7.1e-15 relative (ns64_sk3e-03) and 1.8e-16 (ns128_sk1e-03) on ln mu,
+  N_eff and the log-likelihood of D0, D3r and D1, against 1e-10.
+- **G0 (1), the 12AD tie: passes.** 12AD's target rebuilt from its evaluation files (version 1, production cell,
+  its population order restored: B1 wrote its configuration with sorted keys), D0 through the measuring path at 64
+  A1 draws (8 per chain): ln mu at most 6.1e-16 relative and N_eff 7.2e-15 relative from 12AD's stored values
+  (tolerance 1e-10), on CPU with core 1022429 against 12AD's GPU run with core e7c3007. Reported beside: the PE
+  variance sum 1.6e-15 relative, the log-likelihood 1.2e-10 nat absolute.
+- **G0 (5), CI:** below when it finishes. The first run (d29657d) failed one contract test: the new script pins the
+  selection of record by sha256 and was not listed in `config/gw_inputs_of_record.json` (`pinned_by.modules`); the
+  entry is added (a1b4f24), no build changes. Step 1 and step 2 run from the commit CI passes.
+- **Smoke (not results; outputs in `design_6A_2026-10-30/smoke/`).** One point costs about 16 s (production cell)
+  and 9 s (fiducial cell) on 8 HENON CPUs with 19 to 23 GB resident; the step-1 tasks are therefore 128 draws (or 8
+  ladder draws, 96 points) each, 256 tasks in all. The right-ascension and D4 paths ran end to end (the D4
+  controls bit for bit on the real injections and member 1).
+- **Added beside the declared readings (before any result):** `k_parity_capped`, the gain putting
+  x_DESI >= min(x_spectral, 1.02), i.e. parity only where either wall is within reach (the declared k_par compares
+  x everywhere, including far from both walls); the slope b also on 0.01 to 0.05 Msun; for the profile, the
+  log-likelihood without guard and without core's 5N floor (sum ln Z - N ln mu + N(N+3)/(2 N_eff)), since the
+  floor makes the unguarded value minus infinity at the smallest widths.
